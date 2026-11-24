@@ -8,3 +8,6 @@ build/
 .test-reports/
 playwright-report/
 test-results/
+
+# Personal Claude Code settings (not shared)
+.claude/settings.local.json

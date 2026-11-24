@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       task:
-        description: "Zadání pro agenta (co má implementovat)"
+        description: "Task for the agent (what to implement)"
         required: true
         type: string
       run_e2e:
-        description: "Spustit i E2E testy v prohlížeči (Playwright)?"
+        description: "Also run browser E2E tests (Playwright)?"
         required: false
         default: false
         type: boolean
@@ -20,12 +20,21 @@ permissions:
 jobs:
   build-feature-pr:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     outputs:
       pr_number: ${{ steps.pr.outputs.number }}
       pr_url: ${{ steps.pr.outputs.url }}
       branch: ${{ steps.branch.outputs.name }}
     steps:
+      - name: Check required secrets
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::error::Repository secret ANTHROPIC_API_KEY is not set (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -58,13 +67,15 @@ jobs:
           RUN_E2E: ${{ inputs.run_e2e }}
         run: |
           mkdir -p .test-reports
-          PROMPT="Jsi team-lead (viz .claude/agents/team-lead.md). Implementuj následující zadání podle pravidel v CLAUDE.md.
-          Běžíš v neinteraktivním CI – nečekej na schválení plánu.
+          PROMPT="Act as the team-lead agent (see .claude/agents/team-lead.md). Implement the task below following the rules in CLAUDE.md.
+          You are running in non-interactive CI: do not wait for plan approval and do not commit or push.
           run_e2e: ${RUN_E2E}
 
-          Zadání:
+          Task:
           ${TASK}"
-          claude -p "$PROMPT" --permission-mode acceptEdits 2>&1 | tee .test-reports/agent.log
+          # The workflow commits and opens the PR itself - the agent must not.
+          claude -p "$PROMPT" --permission-mode acceptEdits \
+            --disallowedTools "Bash(git commit *)" "Bash(git push *)" "Bash(gh pr *)" 2>&1 | tee .test-reports/agent.log
 
       - name: Typecheck, lint & unit tests
         id: unit_tests
@@ -101,11 +112,11 @@ jobs:
           E2E_EXIT: ${{ steps.e2e_tests.outputs.e2e_exit || 'skipped' }}
         run: |
           {
-            echo "## Běh agenta"
+            echo "## Agent run"
             echo ""
             echo "- typecheck: \`$TC_EXIT\`"
             echo "- lint: \`$LINT_EXIT\`"
-            echo "- unit / integrační testy: \`$TEST_EXIT\`"
+            echo "- unit / integration tests: \`$TEST_EXIT\`"
             echo "- E2E: \`$E2E_EXIT\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -135,12 +146,12 @@ jobs:
           E2E_EXIT: ${{ steps.e2e_tests.outputs.e2e_exit || 'skipped' }}
         run: |
           if [ -z "$(git status --porcelain)" ]; then
-            echo "Agent neprovedl žádné změny, Pull Request se nezakládá."
+            echo "The agent made no changes – no pull request will be opened."
             exit 0
           fi
 
           ADDED_TESTS="$(git status --porcelain | grep -E '\.(test|spec)\.(ts|tsx|js|jsx)$' || true)"
-          [ -z "$ADDED_TESTS" ] && ADDED_TESTS="(žádný nový/upravený soubor *.test.* / *.spec.* nebyl detekován)"
+          [ -z "$ADDED_TESTS" ] && ADDED_TESTS="(no new/changed *.test.* / *.spec.* files detected)"
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -151,23 +162,23 @@ jobs:
 
           PR_BODY_FILE="$(mktemp)"
           cat > "$PR_BODY_FILE" <<EOF
-          ## Automaticky vytvořené PR z GitHub Actions
+          ## Pull request created automatically by GitHub Actions
 
-          **Zadání:** $TASK
-          **Větev:** \`$BRANCH\`
+          **Task:** $TASK
+          **Branch:** \`$BRANCH\`
 
-          ### Přehled výsledků testů a kontrol z běhu agenta
+          ### Test and check results from the agent run
           - \`npm run typecheck\`: exit \`$TC_EXIT\`
           - \`npm run lint\`: exit \`$LINT_EXIT\`
-          - \`npm test\` (unit / integrační testy): exit \`$TEST_EXIT\`
-          - E2E testy (\`run_e2e=$RUN_E2E\`): exit \`$E2E_EXIT\`
+          - \`npm test\` (unit / integration tests): exit \`$TEST_EXIT\`
+          - E2E tests (\`run_e2e=$RUN_E2E\`): exit \`$E2E_EXIT\`
 
-          ### Dotčené testovací soubory
+          ### Affected test files
           \`\`\`text
           $ADDED_TESTS
           \`\`\`
 
-          Navazující nezávislé ověření běží v \`pr-checks.yml\` (viz **Checks** a **Actions**).
+          Independent verification runs in \`pr-checks.yml\` (see **Checks** and **Actions**).
           EOF
 
           PR_URL="$(gh pr create \
@@ -181,10 +192,10 @@ jobs:
           PR_NUMBER="$(echo "$PR_URL" | grep -oE '[0-9]+$' || true)"
           echo "url=$PR_URL" >> "$GITHUB_OUTPUT"
           echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
-          echo "Vytvořeno PR: $PR_URL"
+          echo "Created PR: $PR_URL"
 
-  # PR založené přes GITHUB_TOKEN nespouští workflow "pull_request",
-  # proto se ověření volá explicitně jako reusable workflow.
+  # PRs opened with GITHUB_TOKEN do not trigger "pull_request" workflows,
+  # so the verification is called explicitly as a reusable workflow.
   independent-pr-verification:
     needs: build-feature-pr
     if: ${{ needs.build-feature-pr.result == 'success' && needs.build-feature-pr.outputs.pr_number != '' }}
