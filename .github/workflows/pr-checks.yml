@@ -76,7 +76,12 @@ jobs:
 
       - name: Install Playwright Chromium & system deps
         if: ${{ inputs.run_e2e != false }}
-        run: npx playwright install --with-deps chromium
+        run: |
+          if [ -x node_modules/.bin/playwright ]; then
+            npx --no-install playwright install --with-deps chromium
+          else
+            echo "Playwright zatím není závislostí projektu – instalace prohlížeče přeskočena."
+          fi
 
       - name: E2E tests (Playwright)
         id: e2e_tests

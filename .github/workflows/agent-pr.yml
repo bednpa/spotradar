@@ -85,7 +85,9 @@ jobs:
         run: |
           set +e
           mkdir -p .test-reports
-          npx playwright install --with-deps chromium > .test-reports/e2e.log 2>&1
+          if [ -x node_modules/.bin/playwright ]; then
+            npx --no-install playwright install --with-deps chromium > .test-reports/e2e.log 2>&1
+          fi
           npm run test:e2e >> .test-reports/e2e.log 2>&1; echo "e2e_exit=$?" >> "$GITHUB_OUTPUT"
           cat .test-reports/e2e.log
           exit 0
