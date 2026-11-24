@@ -1,2 +1,0 @@
-# spotradar
-SpotRadar web app
