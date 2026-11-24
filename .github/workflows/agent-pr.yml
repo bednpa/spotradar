@@ -1,3 +1,22 @@
+name: Agent Feature PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "Zadání pro agenta (co má implementovat)"
+        required: true
+        type: string
+      run_e2e:
+        description: "Spustit i E2E testy v prohlížeči (Playwright)?"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   build-feature-pr:
     runs-on: ubuntu-latest
@@ -5,14 +24,111 @@ jobs:
     outputs:
       pr_number: ${{ steps.pr.outputs.number }}
       pr_url: ${{ steps.pr.outputs.url }}
+      branch: ${{ steps.branch.outputs.name }}
     steps:
-      # ... tvé existující kroky checkout, setup-node, npm ci, create branch, claude -p, testy, summary, artifact ...
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install project dependencies
+        run: npm ci
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Create feature branch
+        id: branch
+        run: |
+          BRANCH="agent/${GITHUB_RUN_ID}-$(date -u +%Y%m%d%H%M%S)"
+          git checkout -b "$BRANCH"
+          echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Run Claude agent
+        shell: bash
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TASK: ${{ inputs.task }}
+          RUN_E2E: ${{ inputs.run_e2e }}
+        run: |
+          mkdir -p .test-reports
+          PROMPT="Jsi team-lead (viz .claude/agents/team-lead.md). Implementuj následující zadání podle pravidel v CLAUDE.md.
+          Běžíš v neinteraktivním CI – nečekej na schválení plánu.
+          run_e2e: ${RUN_E2E}
+
+          Zadání:
+          ${TASK}"
+          claude -p "$PROMPT" --permission-mode acceptEdits 2>&1 | tee .test-reports/agent.log
+
+      - name: Typecheck, lint & unit tests
+        id: unit_tests
+        shell: bash
+        run: |
+          set +e
+          mkdir -p .test-reports
+          npm run typecheck > .test-reports/typecheck.log 2>&1; echo "typecheck_exit=$?" >> "$GITHUB_OUTPUT"
+          npm run lint      > .test-reports/lint.log 2>&1;      echo "lint_exit=$?" >> "$GITHUB_OUTPUT"
+          npm test          > .test-reports/unit-tests.log 2>&1; echo "test_exit=$?" >> "$GITHUB_OUTPUT"
+          cat .test-reports/typecheck.log .test-reports/lint.log .test-reports/unit-tests.log
+          exit 0
+
+      - name: E2E tests (Playwright)
+        id: e2e_tests
+        if: ${{ inputs.run_e2e }}
+        shell: bash
+        run: |
+          set +e
+          mkdir -p .test-reports
+          if [ -x node_modules/.bin/playwright ]; then
+            npx --no-install playwright install --with-deps chromium > .test-reports/e2e.log 2>&1
+          fi
+          npm run test:e2e >> .test-reports/e2e.log 2>&1; echo "e2e_exit=$?" >> "$GITHUB_OUTPUT"
+          cat .test-reports/e2e.log
+          exit 0
+
+      - name: Write summary
+        if: always()
+        env:
+          TC_EXIT: ${{ steps.unit_tests.outputs.typecheck_exit || 'n/a' }}
+          LINT_EXIT: ${{ steps.unit_tests.outputs.lint_exit || 'n/a' }}
+          TEST_EXIT: ${{ steps.unit_tests.outputs.test_exit || 'n/a' }}
+          E2E_EXIT: ${{ steps.e2e_tests.outputs.e2e_exit || 'skipped' }}
+        run: |
+          {
+            echo "## Běh agenta"
+            echo ""
+            echo "- typecheck: \`$TC_EXIT\`"
+            echo "- lint: \`$LINT_EXIT\`"
+            echo "- unit / integrační testy: \`$TEST_EXIT\`"
+            echo "- E2E: \`$E2E_EXIT\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload agent reports as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-reports-${{ github.run_id }}
+          path: |
+            .test-reports/
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
 
       - name: Commit changes and open Pull Request
         if: success()
         id: pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TASK: ${{ inputs.task }}
+          RUN_E2E: ${{ inputs.run_e2e }}
+          BRANCH: ${{ steps.branch.outputs.name }}
+          BASE: ${{ github.ref_name }}
           TC_EXIT: ${{ steps.unit_tests.outputs.typecheck_exit || '0' }}
           LINT_EXIT: ${{ steps.unit_tests.outputs.lint_exit || '0' }}
           TEST_EXIT: ${{ steps.unit_tests.outputs.test_exit || '0' }}
@@ -30,34 +146,34 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add -A
-          git commit -m "feat(agent): ${{ inputs.task }}"
-          git push -u origin "${{ steps.branch.outputs.name }}"
+          git commit -m "feat(agent): $TASK"
+          git push -u origin "$BRANCH"
 
           PR_BODY_FILE="$(mktemp)"
           cat > "$PR_BODY_FILE" <<EOF
-## Automaticky vytvořené PR z GitHub Actions
+          ## Automaticky vytvořené PR z GitHub Actions
 
-**Zadání:** ${{ inputs.task }}
-**Větev:** \`${{ steps.branch.outputs.name }}\`
+          **Zadání:** $TASK
+          **Větev:** \`$BRANCH\`
 
-### Přehled výsledků testů a kontrol z běhu agenta
-- \`npm run typecheck\`: exit \`$TC_EXIT\`
-- \`npm run lint\`: exit \`$LINT_EXIT\`
-- \`npm test\` (unit / integrační testy): exit \`$TEST_EXIT\`
-- E2E testy (\`run_e2e=${{ inputs.run_e2e }}\`): exit \`$E2E_EXIT\`
+          ### Přehled výsledků testů a kontrol z běhu agenta
+          - \`npm run typecheck\`: exit \`$TC_EXIT\`
+          - \`npm run lint\`: exit \`$LINT_EXIT\`
+          - \`npm test\` (unit / integrační testy): exit \`$TEST_EXIT\`
+          - E2E testy (\`run_e2e=$RUN_E2E\`): exit \`$E2E_EXIT\`
 
-### Dotčené testovací soubory
-\`\`\`text
-$ADDED_TESTS
-\`\`\`
+          ### Dotčené testovací soubory
+          \`\`\`text
+          $ADDED_TESTS
+          \`\`\`
 
-Navazující nezávislé ověření běží v \`pr-checks.yml\` (viz **Checks** a **Actions**).
-EOF
+          Navazující nezávislé ověření běží v \`pr-checks.yml\` (viz **Checks** a **Actions**).
+          EOF
 
           PR_URL="$(gh pr create \
-            --base "${{ github.ref_name }}" \
-            --head "${{ steps.branch.outputs.name }}" \
-            --title "Agent: ${{ inputs.task }}" \
+            --base "$BASE" \
+            --head "$BRANCH" \
+            --title "Agent: $TASK" \
             --body-file "$PR_BODY_FILE")"
 
           rm -f "$PR_BODY_FILE"
@@ -67,10 +183,15 @@ EOF
           echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
           echo "Vytvořeno PR: $PR_URL"
 
+  # PR založené přes GITHUB_TOKEN nespouští workflow "pull_request",
+  # proto se ověření volá explicitně jako reusable workflow.
   independent-pr-verification:
     needs: build-feature-pr
     if: ${{ needs.build-feature-pr.result == 'success' && needs.build-feature-pr.outputs.pr_number != '' }}
+    permissions:
+      contents: read
     uses: ./.github/workflows/pr-checks.yml
     with:
       run_e2e: ${{ inputs.run_e2e }}
       pr_number: ${{ needs.build-feature-pr.outputs.pr_number }}
+      ref: ${{ needs.build-feature-pr.outputs.branch }}
