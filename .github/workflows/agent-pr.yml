@@ -7,18 +7,29 @@ on:
         description: "Task for the agent (what to implement)"
         required: true
         type: string
-      run_e2e:
-        description: "Also run browser E2E tests (Playwright)?"
-        required: false
-        default: false
-        type: boolean
+  # Adding the "agent" label to an issue runs the agent with the issue as the task.
+  issues:
+    types: [labeled]
 
 permissions:
   contents: write
   pull-requests: write
+  issues: write
+
+# One run per issue at a time (re-adding the label while a run is active queues it).
+concurrency:
+  group: agent-pr-${{ github.event.issue.number || github.run_id }}
+  cancel-in-progress: false
 
 jobs:
   build-feature-pr:
+    # Issues: only the "agent" label, only open issues, and only issues written by
+    # people with write access - the issue body becomes the agent's prompt.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.label.name == 'agent' &&
+       github.event.issue.state == 'open' &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association))
     runs-on: ubuntu-latest
     timeout-minutes: 60
     outputs:
@@ -34,6 +45,51 @@ jobs:
             echo "::error::Repository secret CLAUDE_CODE_OAUTH_TOKEN is not set (run 'claude setup-token' locally, then add it under Settings → Secrets and variables → Actions)."
             exit 1
           fi
+
+      - name: Resolve task
+        id: task
+        shell: bash
+        env:
+          INPUT_TASK: ${{ inputs.task }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "issues" ]; then
+            if [ -z "${ISSUE_BODY//[[:space:]]/}" ]; then
+              echo "::error::Issue #$ISSUE_NUMBER has an empty body – describe the task there."
+              exit 1
+            fi
+            TASK="$(printf '%s\n\n%s' "$ISSUE_TITLE" "$ISSUE_BODY")"
+            SUMMARY="$ISSUE_TITLE"
+          else
+            TASK="$INPUT_TASK"
+            # First sentence of the task, collapsed to one line.
+            SUMMARY="$(printf '%s' "$TASK" | tr '\r\n\t' '   ' | sed -E 's/ +/ /g; s/^ //; s/([.!?]) .*/\1/; s/[.!?]$//')"
+          fi
+          SUMMARY="$(printf '%s' "$SUMMARY" | tr '\r\n\t' '   ' | sed -E 's/ +/ /g; s/^ //; s/ $//')"
+          if [ "${#SUMMARY}" -gt 72 ]; then
+            SUMMARY="${SUMMARY:0:69}"
+            SUMMARY="${SUMMARY% *}..."
+          fi
+          [ -z "$SUMMARY" ] && SUMMARY="agent task"
+
+          DELIM="EOF_$(openssl rand -hex 16)"
+          {
+            echo "summary=$SUMMARY"
+            echo "task<<$DELIM"
+            printf '%s\n' "$TASK"
+            echo "$DELIM"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Comment on issue (started)
+        if: github.event_name == 'issues'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "🤖 Agent started: $RUN_URL"
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -74,14 +130,13 @@ jobs:
         shell: bash
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          TASK: ${{ inputs.task }}
-          RUN_E2E: ${{ inputs.run_e2e }}
+          TASK: ${{ steps.task.outputs.task }}
         run: |
           mkdir -p .test-reports
           PROMPT="Act as the team-lead agent (see .claude/agents/team-lead.md). Implement the task below following the rules in CLAUDE.md,
           delegating to the backend-dev, frontend-dev and qa-reviewer subagents as described there.
           You are running in non-interactive CI: do not wait for plan approval and do not commit or push.
-          run_e2e: ${RUN_E2E}
+          run_e2e: true
 
           Task:
           ${TASK}"
@@ -103,7 +158,6 @@ jobs:
 
       - name: E2E tests (Playwright)
         id: e2e_tests
-        if: ${{ inputs.run_e2e }}
         shell: bash
         run: |
           set +e
@@ -148,10 +202,11 @@ jobs:
         id: pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TASK: ${{ inputs.task }}
-          RUN_E2E: ${{ inputs.run_e2e }}
+          TASK: ${{ steps.task.outputs.task }}
+          SUMMARY: ${{ steps.task.outputs.summary }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
           BRANCH: ${{ steps.branch.outputs.name }}
-          BASE: ${{ github.ref_name }}
+          BASE: ${{ github.event.repository.default_branch }}
           TC_EXIT: ${{ steps.unit_tests.outputs.typecheck_exit || '0' }}
           LINT_EXIT: ${{ steps.unit_tests.outputs.lint_exit || '0' }}
           TEST_EXIT: ${{ steps.unit_tests.outputs.test_exit || '0' }}
@@ -168,14 +223,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Short title: first sentence of the task, collapsed to one line, max 72 chars.
-          # The full task goes into the commit body and the PR description.
-          SUMMARY="$(printf '%s' "$TASK" | tr '\r\n\t' '   ' | sed -E 's/ +/ /g; s/^ //; s/([.!?]) .*/\1/; s/[.!?]$//')"
-          if [ "${#SUMMARY}" -gt 72 ]; then
-            SUMMARY="${SUMMARY:0:69}"
-            SUMMARY="${SUMMARY% *}..."
-          fi
-          [ -z "$SUMMARY" ] && SUMMARY="agent task"
+          # Short title from the "Resolve task" step; the full task goes into the
+          # commit body and the PR description.
+          CLOSES=""
+          [ -n "$ISSUE_NUMBER" ] && CLOSES="Closes #$ISSUE_NUMBER"
 
           git add -A
           git commit -m "feat(agent): $SUMMARY" -m "$TASK"
@@ -185,6 +236,8 @@ jobs:
           cat > "$PR_BODY_FILE" <<EOF
           ## Pull request created automatically by GitHub Actions
 
+          $CLOSES
+
           **Task:** $TASK
           **Branch:** \`$BRANCH\`
 
@@ -192,7 +245,7 @@ jobs:
           - \`npm run typecheck\`: exit \`$TC_EXIT\`
           - \`npm run lint\`: exit \`$LINT_EXIT\`
           - \`npm test\` (unit / integration tests): exit \`$TEST_EXIT\`
-          - E2E tests (\`run_e2e=$RUN_E2E\`): exit \`$E2E_EXIT\`
+          - \`npm run test:e2e\` (Playwright): exit \`$E2E_EXIT\`
 
           ### Affected test files
           \`\`\`text
@@ -215,6 +268,24 @@ jobs:
           echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
           echo "Created PR: $PR_URL"
 
+      - name: Comment on issue (result)
+        if: always() && github.event_name == 'issues'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          PR_URL: ${{ steps.pr.outputs.url }}
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -n "$PR_URL" ]; then
+            BODY="✅ Agent opened $PR_URL – independent checks (incl. E2E) run there."
+          elif [ "$JOB_STATUS" = "success" ]; then
+            BODY="ℹ️ Agent finished without changes, no PR opened. Log: $RUN_URL"
+          else
+            BODY="❌ Agent run failed ($JOB_STATUS). Log and reports: $RUN_URL – remove and re-add the \`agent\` label to retry."
+          fi
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "$BODY"
+
   # PRs opened with GITHUB_TOKEN do not trigger "pull_request" workflows,
   # so the verification is called explicitly as a reusable workflow.
   independent-pr-verification:
@@ -224,6 +295,6 @@ jobs:
       contents: read
     uses: ./.github/workflows/pr-checks.yml
     with:
-      run_e2e: ${{ inputs.run_e2e }}
+      run_e2e: true
       pr_number: ${{ needs.build-feature-pr.outputs.pr_number }}
       ref: ${{ needs.build-feature-pr.outputs.branch }}

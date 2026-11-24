@@ -29,11 +29,11 @@ Every workspace must therefore define its own `typecheck`, `lint`, `test` and `b
    - Import shared code via the workspace package name (e.g. `@spotradar/shared`), never via relative paths across workspaces.
 2. **Every change needs tests:**
    - Every new function, endpoint, filter or validation rule must have a matching **unit / integration test** (`npm test`).
-   - If E2E mode is enabled (`run_e2e: true`), also add or update a **Playwright E2E test** (`npm run test:e2e`) covering the main user scenario and the error/empty state.
+   - Every user-facing change also needs a new or updated **Playwright E2E test** (`npm run test:e2e`) covering the main user scenario and the error/empty state.
 3. **No fake mocks in the production UI:** The frontend must talk to the real endpoints defined by the contract in `shared/`.
 4. **Type safety:** Do not use `any`, `@ts-ignore` or linter suppressions without an explicit justification in a comment.
 5. **Dependencies:** Install packages with `npm install <pkg> -w <workspace>` and always keep `package-lock.json` in sync – CI uses `npm ci` and fails without it.
-6. **Verify before finishing:** No task is done until `npm run typecheck`, `npm run lint` and `npm test` pass (plus `npm run test:e2e` when E2E mode is enabled).
+6. **Verify before finishing:** No task is done until `npm run typecheck`, `npm run lint`, `npm test` and `npm run test:e2e` pass.
 
 ## Deployment (Render, free plan)
 
@@ -53,7 +53,7 @@ Render runs `npm ci && npm run build`, then `npm start`. To keep that working:
 - `.claude/agents/backend-dev.md` (Sonnet) – implements `backend/` against the frozen contract; never edits `shared/`.
 - `.claude/agents/frontend-dev.md` (Sonnet) – implements `frontend/` against the frozen contract; never edits `shared/`.
 - `.claude/agents/qa-reviewer.md` (Sonnet) – read-only code review and browser testing via Playwright MCP.
-- `.github/workflows/agent-pr.yml` – manually triggered: runs the agent on a task and opens a PR.
+- `.github/workflows/agent-pr.yml` – runs the agent on a task and opens a PR; triggered by the `agent` label on an issue (title + body = task) or manually.
 - `.github/workflows/pr-checks.yml` – runs typecheck, lint, tests, build and E2E on every PR.
 
 In CI the agent runs non-interactively: do not wait for plan approval, and do not commit or push –
