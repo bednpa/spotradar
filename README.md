@@ -59,7 +59,7 @@ The project is **contract-first**: every feature starts with types and validatio
 
 ```mermaid
 flowchart LR
-    A[You: describe a task<br/>in GitHub Actions] --> B[Agent Feature PR<br/>agent-pr.yml]
+    A[You: issue + agent label<br/>or manual run] --> B[Agent Feature PR<br/>agent-pr.yml]
     B --> C[Pull request]
     C --> D[PR Verification Checks<br/>pr-checks.yml]
     D --> E{You review<br/>and merge}
@@ -69,10 +69,15 @@ flowchart LR
 
 ### 1. Agent Feature PR (`agent-pr.yml`)
 
-Started manually: **Actions → Agent Feature PR → Run workflow**, with:
+Started from a GitHub issue:
 
-- `task` – what to implement, in plain language,
-- `run_e2e` – whether to also write and run browser (Playwright) E2E tests.
+1. Open an issue – the **title** becomes the PR title, the **body** is the full task in plain language.
+2. Add the **`agent`** label. The workflow starts, comments the run link on the issue and, when done, comments the PR link (or the failure).
+3. The PR contains `Closes #<issue>`, so merging it closes the issue. To retry, remove and re-add the label.
+
+Only issues written by the repository owner or collaborators are picked up, because the issue body becomes the agent's prompt.
+It can also be started manually: **Actions → Agent Feature PR → Run workflow** with a `task`.
+The agent always writes and runs Playwright E2E tests.
 
 The workflow creates a new branch and runs Claude Code (Opus) as the **team-lead** agent, which:
 
