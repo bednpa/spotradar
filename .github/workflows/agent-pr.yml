@@ -67,14 +67,15 @@ jobs:
           RUN_E2E: ${{ inputs.run_e2e }}
         run: |
           mkdir -p .test-reports
-          PROMPT="Act as the team-lead agent (see .claude/agents/team-lead.md). Implement the task below following the rules in CLAUDE.md.
+          PROMPT="Act as the team-lead agent (see .claude/agents/team-lead.md). Implement the task below following the rules in CLAUDE.md,
+          delegating to the backend-dev, frontend-dev and qa-reviewer subagents as described there.
           You are running in non-interactive CI: do not wait for plan approval and do not commit or push.
           run_e2e: ${RUN_E2E}
 
           Task:
           ${TASK}"
           # The workflow commits and opens the PR itself - the agent must not.
-          claude -p "$PROMPT" --permission-mode acceptEdits \
+          claude -p "$PROMPT" --model opus --permission-mode acceptEdits \
             --disallowedTools "Bash(git commit *)" "Bash(git push *)" "Bash(gh pr *)" 2>&1 | tee .test-reports/agent.log
 
       - name: Typecheck, lint & unit tests
