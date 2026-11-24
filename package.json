@@ -12,6 +12,10 @@
     "typecheck": "npm --workspaces --if-present run typecheck",
     "lint": "npm --workspaces --if-present run lint",
     "test": "npm --workspaces --if-present run test",
-    "test:e2e": "npm --workspaces --if-present run test:e2e"
+    "test:e2e": "npm --workspaces --if-present run test:e2e",
+    "start": "npm run start -w @spotradar/backend"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

@@ -1,6 +1,9 @@
 name: PR Verification Checks
 
 on:
+  # Runs on main too: Render deploys a main commit only when these checks pass.
+  push:
+    branches: [main]
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_call:

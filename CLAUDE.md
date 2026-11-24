@@ -35,6 +35,18 @@ Every workspace must therefore define its own `typecheck`, `lint`, `test` and `b
 5. **Dependencies:** Install packages with `npm install <pkg> -w <workspace>` and always keep `package-lock.json` in sync – CI uses `npm ci` and fails without it.
 6. **Verify before finishing:** No task is done until `npm run typecheck`, `npm run lint` and `npm test` pass (plus `npm run test:e2e` when E2E mode is enabled).
 
+## Deployment (Render, free plan)
+
+The app is deployed from `main` to Render as a single Node web service (see `render.yaml`).
+Render runs `npm ci && npm run build`, then `npm start`. To keep that working:
+
+- Root `npm start` runs the `start` script of `@spotradar/backend` – it must start the **production** server (built code, no watch mode).
+- The backend listens on `process.env.PORT` (fallback e.g. `3000`) on host `0.0.0.0`.
+- The backend serves the built frontend as static files (with SPA fallback to `index.html`) and the API under `/api`.
+- The frontend calls the API with relative URLs (`/api/...`); in development use the dev server proxy instead of hard-coded hosts.
+- `GET /api/health` must return HTTP 200 – Render uses it as the health check.
+- State is ephemeral on the free plan: memory and local JSON files reset on every deploy, restart or sleep (after 15 min idle). Seed sensible initial data on startup.
+
 ## Agents and CI
 
 - `.claude/agents/team-lead.md` – designs the contract, implements the change, coordinates QA.
