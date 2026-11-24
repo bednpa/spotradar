@@ -1,165 +1,110 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseAvailabilityQuery, parseCreateReservationRequest } from './validation.ts';
+import { parseGeocodeQuery, parseSearchQuery } from './validation.ts';
 import type { ValidationIssue } from './types.ts';
 
 function fields(issues: ValidationIssue[]): string[] {
   return issues.map((i) => i.field).sort();
 }
 
-test('parseAvailabilityQuery: minimal valid query gets defaults', () => {
-  const result = parseAvailabilityQuery({ sport: 'tennis', date: '2026-11-25', time: '18:00' });
+test('parseSearchQuery: minimal valid query (time optional)', () => {
+  assert.deepEqual(parseSearchQuery({ sport: 'badminton', date: '2026-11-25' }), {
+    ok: true,
+    value: { sport: 'badminton', date: '2026-11-25' },
+  });
+});
+
+test('parseSearchQuery: full valid query is trimmed and parsed', () => {
+  const result = parseSearchQuery({
+    sport: ' badminton ',
+    date: '2026-11-25',
+    time: '18:15',
+    lat: '49.19',
+    lng: '16.6',
+    maxDistanceKm: '5',
+  });
   assert.deepEqual(result, {
     ok: true,
     value: {
-      sport: 'tennis',
+      sport: 'badminton',
       date: '2026-11-25',
-      time: '18:00',
-      durationMinutes: 60,
-      cityId: 'brno',
+      time: '18:15',
+      lat: 49.19,
+      lng: 16.6,
+      maxDistanceKm: 5,
     },
   });
 });
 
-test('parseAvailabilityQuery: full valid query with location', () => {
-  const result = parseAvailabilityQuery({
+test('parseSearchQuery: empty strings are treated as not provided', () => {
+  const result = parseSearchQuery({
     sport: 'badminton',
     date: '2026-11-25',
-    time: '07:30',
-    durationMinutes: '90',
-    cityId: 'brno',
-    lat: '49.2',
-    lng: '16.61',
-    maxDistanceKm: '5',
-  });
-  assert.equal(result.ok, true);
-  if (result.ok) {
-    assert.equal(result.value.durationMinutes, 90);
-    assert.equal(result.value.lat, 49.2);
-    assert.equal(result.value.lng, 16.61);
-    assert.equal(result.value.maxDistanceKm, 5);
-  }
-});
-
-test('parseAvailabilityQuery: empty strings count as missing', () => {
-  const result = parseAvailabilityQuery({
-    sport: 'squash',
-    date: '2026-11-25',
-    time: '10:00',
+    time: '',
     lat: '',
-    lng: '',
+    lng: ' ',
     maxDistanceKm: '',
-    durationMinutes: '',
   });
-  assert.equal(result.ok, true);
+  assert.deepEqual(result, { ok: true, value: { sport: 'badminton', date: '2026-11-25' } });
 });
 
-test('parseAvailabilityQuery: missing required fields', () => {
-  const result = parseAvailabilityQuery({});
+test('parseSearchQuery: missing required fields', () => {
+  const result = parseSearchQuery({});
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.deepEqual(fields(result.issues), ['date', 'sport']);
+});
+
+test('parseSearchQuery: unknown sport, bad date and time', () => {
+  const result = parseSearchQuery({ sport: 'tennis', date: '2026-02-30', time: '25:00' });
   assert.equal(result.ok, false);
   if (!result.ok) assert.deepEqual(fields(result.issues), ['date', 'sport', 'time']);
 });
 
-test('parseAvailabilityQuery: invalid values', () => {
-  const result = parseAvailabilityQuery({
-    sport: 'football',
-    date: '2026-02-30',
-    time: '18:15',
-    durationMinutes: '45',
-    cityId: 'praha',
-  });
-  assert.equal(result.ok, false);
-  if (!result.ok)
-    assert.deepEqual(fields(result.issues), ['cityId', 'date', 'durationMinutes', 'sport', 'time']);
+test('parseSearchQuery: lat and lng must come together', () => {
+  const onlyLat = parseSearchQuery({ sport: 'badminton', date: '2026-11-25', lat: '49.2' });
+  assert.equal(onlyLat.ok, false);
+  if (!onlyLat.ok) assert.deepEqual(fields(onlyLat.issues), ['lng']);
+  const onlyLng = parseSearchQuery({ sport: 'badminton', date: '2026-11-25', lng: '16.6' });
+  assert.equal(onlyLng.ok, false);
+  if (!onlyLng.ok) assert.deepEqual(fields(onlyLng.issues), ['lat']);
 });
 
-test('parseAvailabilityQuery: lat without lng is rejected', () => {
-  const result = parseAvailabilityQuery({
-    sport: 'tennis',
+test('parseSearchQuery: lat/lng ranges and number format', () => {
+  const result = parseSearchQuery({
+    sport: 'badminton',
     date: '2026-11-25',
-    time: '18:00',
-    lat: '49.2',
-  });
-  assert.equal(result.ok, false);
-  if (!result.ok) assert.deepEqual(fields(result.issues), ['lng']);
-});
-
-test('parseAvailabilityQuery: out-of-range coordinates and distance', () => {
-  const result = parseAvailabilityQuery({
-    sport: 'tennis',
-    date: '2026-11-25',
-    time: '18:00',
     lat: '91',
     lng: 'abc',
-    maxDistanceKm: '0',
   });
   assert.equal(result.ok, false);
-  if (!result.ok) assert.deepEqual(fields(result.issues), ['lat', 'lng', 'maxDistanceKm']);
+  if (!result.ok) assert.deepEqual(fields(result.issues), ['lat', 'lng']);
 });
 
-test('parseAvailabilityQuery: maxDistanceKm requires a location', () => {
-  const result = parseAvailabilityQuery({
-    sport: 'tennis',
-    date: '2026-11-25',
-    time: '18:00',
-    maxDistanceKm: '5',
-  });
-  assert.equal(result.ok, false);
-  if (!result.ok) assert.deepEqual(fields(result.issues), ['maxDistanceKm']);
-});
+test('parseSearchQuery: maxDistanceKm requires lat/lng and a sane value', () => {
+  const noOrigin = parseSearchQuery({ sport: 'badminton', date: '2026-11-25', maxDistanceKm: '5' });
+  assert.equal(noOrigin.ok, false);
+  if (!noOrigin.ok) assert.match(noOrigin.issues[0]?.message ?? '', /requires lat and lng/);
 
-const validReservation = {
-  venueId: 'v1',
-  courtId: 'c1',
-  sport: 'tennis',
-  date: '2026-11-25',
-  time: '18:00',
-  durationMinutes: 60,
-  customerName: '  Jana Nováková ',
-  customerEmail: 'jana@example.com',
-};
-
-test('parseCreateReservationRequest: valid body is trimmed', () => {
-  const result = parseCreateReservationRequest(validReservation);
-  assert.equal(result.ok, true);
-  if (result.ok) assert.equal(result.value.customerName, 'Jana Nováková');
-});
-
-test('parseCreateReservationRequest: rejects non-object bodies', () => {
-  for (const body of [null, 'x', 42, []]) {
-    const result = parseCreateReservationRequest(body);
-    assert.equal(result.ok, false);
-    if (!result.ok) assert.deepEqual(fields(result.issues), ['body']);
+  for (const bad of ['0', '-1', '101', 'far']) {
+    const r = parseSearchQuery({
+      sport: 'badminton',
+      date: '2026-11-25',
+      lat: '49.2',
+      lng: '16.6',
+      maxDistanceKm: bad,
+    });
+    assert.equal(r.ok, false, bad);
   }
 });
 
-test('parseCreateReservationRequest: reports every invalid field', () => {
-  const result = parseCreateReservationRequest({
-    venueId: '',
-    courtId: 5,
-    sport: 'golf',
-    date: '25.11.2026',
-    time: '18:10',
-    durationMinutes: '60',
-    customerName: 'J',
-    customerEmail: 'not-an-email',
+test('parseGeocodeQuery trims and checks length', () => {
+  assert.deepEqual(parseGeocodeQuery({ q: '  Lidická 1, Brno ' }), {
+    ok: true,
+    value: { q: 'Lidická 1, Brno' },
   });
-  assert.equal(result.ok, false);
-  if (!result.ok)
-    assert.deepEqual(fields(result.issues), [
-      'courtId',
-      'customerEmail',
-      'customerName',
-      'date',
-      'durationMinutes',
-      'sport',
-      'time',
-      'venueId',
-    ]);
-});
-
-test('parseCreateReservationRequest: rejects overly long ids', () => {
-  const result = parseCreateReservationRequest({ ...validReservation, venueId: 'x'.repeat(101) });
-  assert.equal(result.ok, false);
-  if (!result.ok) assert.deepEqual(fields(result.issues), ['venueId']);
+  for (const bad of [undefined, '', ' a ', 'x'.repeat(201)]) {
+    const r = parseGeocodeQuery({ q: bad });
+    assert.equal(r.ok, false);
+    if (!r.ok) assert.deepEqual(fields(r.issues), ['q']);
+  }
 });

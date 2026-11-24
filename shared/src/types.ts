@@ -2,7 +2,7 @@
  * API DTOs – the single source of truth for request/response shapes.
  * Dates are "YYYY-MM-DD", times are "HH:MM" (local time in Europe/Prague).
  */
-import type { CityId, DurationMinutes, GeoPoint, SportId } from './catalog.ts';
+import type { AvailabilitySource, GeoPoint, SportId } from './catalog.ts';
 import type { ErrorCode } from './errors.ts';
 
 /** GET /api/health → 200 */
@@ -10,43 +10,58 @@ export interface HealthResponse {
   status: 'ok';
 }
 
-export interface OpeningHours {
-  /** "HH:MM", inclusive */
+export const WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+export type Weekday = (typeof WEEKDAYS)[number];
+
+export interface DayOpeningHours {
+  /** "HH:MM" */
   open: string;
-  /** "HH:MM", exclusive – a reservation must end at or before this time */
+  /** "HH:MM" */
   close: string;
 }
 
-export interface VenueSummary {
+export interface OpeningHours {
+  /** True when the hours are an estimate (not confirmed by the venue). */
+  approximate: boolean;
+  /** null = closed that day. */
+  days: Record<Weekday, DayOpeningHours | null>;
+}
+
+/** Public venue information (what the API returns). */
+export interface Venue {
   id: string;
   name: string;
-  cityId: CityId;
+  /** City district, e.g. "Brno-Židenice". */
+  district: string;
   address: string;
   location: GeoPoint;
-  openingHours: OpeningHours;
-}
-
-export interface Court {
-  id: string;
-  name: string;
   sports: SportId[];
-  indoor: boolean;
-  surface: string;
+  /** Number of courts for the sport; absent when not known. */
+  courts?: number;
+  openingHours: OpeningHours;
+  /** The venue's own booking page – SpotRadar never books anything itself. */
+  bookingUrl: string;
+  phone?: string;
+  availabilitySource: AvailabilitySource;
 }
 
-export interface Venue extends VenueSummary {
-  /** Price per hour in CZK for each sport the venue offers. */
-  pricePerHourCzk: Partial<Record<SportId, number>>;
-  courts: Court[];
-}
+/**
+ * Backend-only connector configuration for a venue's booking system
+ * (stored in the venue data file, never sent to clients).
+ */
+export type AvailabilitySourceConfig =
+  | { type: 'clubspire'; baseUrl: string; tabIdx: number }
+  | { type: 'bizzy'; scheduleUrl: string }
+  | { type: 'memberzone'; url: string }
+  | { type: 'memberpro'; url: string }
+  | { type: 'none' };
 
-/** Parsed query of GET /api/availability. */
-export interface AvailabilityQuery {
+/** Parsed query of GET /api/search. */
+export interface SearchQuery {
   sport: SportId;
   date: string;
-  time: string;
-  durationMinutes: DurationMinutes;
-  cityId: CityId;
+  /** Optional "HH:MM". */
+  time?: string;
   /** lat and lng are either both present or both absent. */
   lat?: number;
   lng?: number;
@@ -54,57 +69,71 @@ export interface AvailabilityQuery {
   maxDistanceKm?: number;
 }
 
+/** Raw query string parameters of GET /api/search (all strings). */
+export type SearchQueryParams = Partial<Record<keyof SearchQuery, string>>;
+
+/** A time interval on the requested date with at least one free court. */
+export interface FreeSlot {
+  /** "HH:MM", inclusive */
+  start: string;
+  /** "HH:MM", exclusive */
+  end: string;
+  /** Number of courts free for the whole interval (always ≥ 1). */
+  freeCourts: number;
+}
+
 /**
- * Raw query string parameters of GET /api/availability (all strings).
- * Names: sport, date, time, durationMinutes, cityId, lat, lng, maxDistanceKm.
+ * - live: read from the venue's booking page,
+ * - unavailable: a connector exists but reading the page failed,
+ * - unknown: no connector for this booking system yet.
  */
-export type AvailabilityQueryParams = Partial<Record<keyof AvailabilityQuery, string>>;
+export type AvailabilityStatus = 'live' | 'unavailable' | 'unknown';
 
-export interface AvailableCourt {
-  id: string;
-  name: string;
-  indoor: boolean;
-  surface: string;
+export interface VenueAvailability {
+  status: AvailabilityStatus;
+  /** ISO 8601 timestamp of when the data was read (status "live" only). */
+  checkedAt?: string;
+  /** Free slots for the day sorted by start; empty unless status is "live". */
+  freeSlots: FreeSlot[];
 }
 
-export interface AvailabilityResult {
-  venue: VenueSummary;
-  /** Distance from the user's location in km (1 decimal), null if no location given. */
-  distanceKm: number | null;
-  pricePerHourCzk: number;
-  /** pricePerHourCzk * durationMinutes / 60, rounded to whole CZK. */
-  totalPriceCzk: number;
-  /** Courts free for the whole requested interval (never empty). */
-  availableCourts: AvailableCourt[];
+export interface SearchResult {
+  venue: Venue;
+  /** Distance from the origin in km (1 decimal); present only when lat/lng were given. */
+  distanceKm?: number;
+  availability: VenueAvailability;
+  /**
+   * Free courts in the slot containing the requested time; present only when
+   * `time` was given and availability status is "live" (0 = nothing free then).
+   */
+  freeCourtsAtTime?: number;
 }
 
-/** GET /api/availability → 200 */
-export interface AvailabilityResponse {
-  query: AvailabilityQuery;
-  /** Sorted by distanceKm ascending when a location is given, otherwise by totalPriceCzk, then venue name. */
-  results: AvailabilityResult[];
+/** GET /api/search → 200 */
+export interface SearchResponse {
+  query: SearchQuery;
+  /**
+   * Sorted: venues with a free court first (at `time` when given, otherwise
+   * anywhere during the day), then by distanceKm when an origin was given,
+   * otherwise by venue name.
+   */
+  results: SearchResult[];
 }
 
-/** POST /api/reservations body */
-export interface CreateReservationRequest {
-  venueId: string;
-  courtId: string;
-  sport: SportId;
-  date: string;
-  time: string;
-  durationMinutes: DurationMinutes;
-  customerName: string;
-  customerEmail: string;
+/** Parsed query of GET /api/geocode. */
+export interface GeocodeQuery {
+  /** Trimmed free-text address. */
+  q: string;
 }
 
-/** POST /api/reservations → 201, GET /api/reservations/:id → 200 */
-export interface Reservation extends CreateReservationRequest {
-  id: string;
-  venueName: string;
-  courtName: string;
-  totalPriceCzk: number;
-  /** ISO 8601 timestamp */
-  createdAt: string;
+export type GeocodeQueryParams = Partial<Record<keyof GeocodeQuery, string>>;
+
+/** GET /api/geocode → 200 */
+export interface GeocodeResponse {
+  lat: number;
+  lng: number;
+  /** Human-readable place name. */
+  label: string;
 }
 
 export interface ValidationIssue {

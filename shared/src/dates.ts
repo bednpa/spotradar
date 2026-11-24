@@ -2,7 +2,9 @@
  * Date/time helpers shared by backend and frontend.
  * Dates are "YYYY-MM-DD", times are "HH:MM", both local to TIME_ZONE.
  */
-import { BOOKING_WINDOW_DAYS, SLOT_MINUTES, TIME_ZONE } from './catalog.ts';
+import { SEARCH_WINDOW_DAYS, TIME_ZONE } from './catalog.ts';
+import { WEEKDAYS } from './types.ts';
+import type { Weekday } from './types.ts';
 
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -23,18 +25,13 @@ export function isValidTime(value: string): boolean {
   return TIME_RE.test(value);
 }
 
-/** True for "HH:MM" aligned to the SLOT_MINUTES grid (HH:00 or HH:30). */
-export function isValidSlotTime(value: string): boolean {
-  return isValidTime(value) && timeToMinutes(value) % SLOT_MINUTES === 0;
-}
-
-/** "HH:MM" → minutes since midnight. Assumes a valid time. */
+/** "HH:MM" → minutes since midnight ("24:00" → 1440). Assumes a valid time. */
 export function timeToMinutes(time: string): number {
   const [h, m] = time.split(':');
   return Number(h) * 60 + Number(m);
 }
 
-/** Minutes since midnight → "HH:MM" (0 ≤ minutes < 1440). */
+/** Minutes since midnight → "HH:MM" (0 ≤ minutes ≤ 1440; 1440 → "24:00"). */
 export function minutesToTime(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
@@ -46,6 +43,13 @@ export function addDays(date: string, days: number): string {
   const [y, m, d] = date.split('-').map(Number);
   const utc = new Date(Date.UTC(y ?? 0, (m ?? 1) - 1, (d ?? 1) + days));
   return utc.toISOString().slice(0, 10);
+}
+
+/** Day of week of a "YYYY-MM-DD" date. */
+export function weekdayOf(date: string): Weekday {
+  const [y, m, d] = date.split('-').map(Number);
+  const jsDay = new Date(Date.UTC(y ?? 0, (m ?? 1) - 1, d ?? 1)).getUTCDay(); // 0 = Sunday
+  return WEEKDAYS[(jsDay + 6) % 7] as Weekday;
 }
 
 export interface LocalDateTime {
@@ -73,21 +77,33 @@ export function toLocalDateTime(now: Date, timeZone: string = TIME_ZONE): LocalD
   };
 }
 
-export interface BookingWindow {
-  /** First bookable date (today). */
+/** Epoch milliseconds of local midnight (00:00 in TIME_ZONE) at the start of `date`. */
+export function zonedMidnightEpochMs(date: string, timeZone: string = TIME_ZONE): number {
+  const utcMidnight = Date.parse(`${date}T00:00:00Z`);
+  // Try offsets from +14h to -12h; the first one that lands on local 00:00 of `date` wins.
+  for (let offsetHours = 14; offsetHours >= -12; offsetHours--) {
+    const candidate = utcMidnight - offsetHours * 3_600_000;
+    const local = toLocalDateTime(new Date(candidate), timeZone);
+    if (local.date === date && local.minutes === 0) return candidate;
+  }
+  return utcMidnight;
+}
+
+export interface SearchWindow {
+  /** First searchable date (today). */
   from: string;
-  /** Last bookable date (inclusive). */
+  /** Last searchable date (inclusive, today + SEARCH_WINDOW_DAYS). */
   to: string;
 }
 
-/** Bookable date range for the given instant. */
-export function getBookingWindow(now: Date): BookingWindow {
+/** Searchable date range for the given instant. */
+export function getSearchWindow(now: Date): SearchWindow {
   const today = toLocalDateTime(now).date;
-  return { from: today, to: addDays(today, BOOKING_WINDOW_DAYS - 1) };
+  return { from: today, to: addDays(today, SEARCH_WINDOW_DAYS) };
 }
 
-/** True if date lies inside the booking window (string comparison works for YYYY-MM-DD). */
-export function isDateInBookingWindow(date: string, now: Date): boolean {
-  const { from, to } = getBookingWindow(now);
+/** True if date lies inside the search window (string comparison works for YYYY-MM-DD). */
+export function isDateInSearchWindow(date: string, now: Date): boolean {
+  const { from, to } = getSearchWindow(now);
   return date >= from && date <= to;
 }

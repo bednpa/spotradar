@@ -2,32 +2,18 @@
  * Validation "schemas" for API input. Dependency-free on purpose: they run in
  * Node (backend) and in the browser (frontend) without a bundler.
  */
-import {
-  DEFAULT_CITY_ID,
-  DEFAULT_DURATION_MINUTES,
-  MAX_DISTANCE_KM,
-  isCityId,
-  isDurationMinutes,
-  isSportId,
-} from './catalog.ts';
-import { isValidDate, isValidSlotTime } from './dates.ts';
+import { GEOCODE_QUERY_MAX, GEOCODE_QUERY_MIN, MAX_DISTANCE_KM, isSportId } from './catalog.ts';
+import { isValidDate, isValidTime } from './dates.ts';
 import type {
-  AvailabilityQuery,
-  AvailabilityQueryParams,
-  CreateReservationRequest,
+  GeocodeQuery,
+  GeocodeQueryParams,
+  SearchQuery,
+  SearchQueryParams,
   ValidationIssue,
 } from './types.ts';
 
-export type ValidationResult<T> =
-  | { ok: true; value: T }
-  | { ok: false; issues: ValidationIssue[] };
+export type ValidationResult<T> = { ok: true; value: T } | { ok: false; issues: ValidationIssue[] };
 
-export const CUSTOMER_NAME_MIN = 2;
-export const CUSTOMER_NAME_MAX = 100;
-export const EMAIL_MAX = 254;
-export const ID_MAX = 100;
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const NUMBER_RE = /^-?\d+(\.\d+)?$/;
 
 function parseNumber(raw: string): number | undefined {
@@ -40,12 +26,11 @@ function isBlank(raw: string | undefined): raw is undefined {
 }
 
 /**
- * Validates the raw query string of GET /api/availability.
- * Empty strings are treated as "not provided".
+ * Validates the raw query string of GET /api/search.
+ * Empty strings are treated as "not provided". The date window (today …
+ * today + SEARCH_WINDOW_DAYS) is checked separately with isDateInSearchWindow.
  */
-export function parseAvailabilityQuery(
-  params: AvailabilityQueryParams,
-): ValidationResult<AvailabilityQuery> {
+export function parseSearchQuery(params: SearchQueryParams): ValidationResult<SearchQuery> {
   const issues: ValidationIssue[] = [];
 
   const sport = params.sport?.trim();
@@ -55,23 +40,14 @@ export function parseAvailabilityQuery(
   const date = params.date?.trim();
   if (isBlank(date)) issues.push({ field: 'date', message: 'date is required' });
   else if (!isValidDate(date))
-    issues.push({ field: 'date', message: 'date must be a valid YYYY-MM-DD date' });
+    issues.push({
+      field: 'date',
+      message: 'date must be a valid YYYY-MM-DD date',
+    });
 
   const time = params.time?.trim();
-  if (isBlank(time)) issues.push({ field: 'time', message: 'time is required' });
-  else if (!isValidSlotTime(time))
-    issues.push({ field: 'time', message: 'time must be HH:00 or HH:30' });
-
-  let durationMinutes: number = DEFAULT_DURATION_MINUTES;
-  if (!isBlank(params.durationMinutes)) {
-    const parsed = parseNumber(params.durationMinutes);
-    if (parsed === undefined || !isDurationMinutes(parsed))
-      issues.push({ field: 'durationMinutes', message: 'durationMinutes must be 60, 90 or 120' });
-    else durationMinutes = parsed;
-  }
-
-  const cityId = isBlank(params.cityId) ? DEFAULT_CITY_ID : params.cityId.trim();
-  if (!isCityId(cityId)) issues.push({ field: 'cityId', message: 'unknown city' });
+  if (!isBlank(time) && !isValidTime(time))
+    issues.push({ field: 'time', message: 'time must be HH:MM (00:00–23:59)' });
 
   const hasLat = !isBlank(params.lat);
   const hasLng = !isBlank(params.lng);
@@ -86,11 +62,17 @@ export function parseAvailabilityQuery(
     lat = parseNumber(params.lat ?? '');
     lng = parseNumber(params.lng ?? '');
     if (lat === undefined || lat < -90 || lat > 90) {
-      issues.push({ field: 'lat', message: 'lat must be a number between -90 and 90' });
+      issues.push({
+        field: 'lat',
+        message: 'lat must be a number between -90 and 90',
+      });
       lat = undefined;
     }
     if (lng === undefined || lng < -180 || lng > 180) {
-      issues.push({ field: 'lng', message: 'lng must be a number between -180 and 180' });
+      issues.push({
+        field: 'lng',
+        message: 'lng must be a number between -180 and 180',
+      });
       lng = undefined;
     }
   }
@@ -104,7 +86,10 @@ export function parseAvailabilityQuery(
         message: `maxDistanceKm must be a number greater than 0 and at most ${MAX_DISTANCE_KM}`,
       });
     } else if (!hasLat || !hasLng) {
-      issues.push({ field: 'maxDistanceKm', message: 'maxDistanceKm requires lat and lng' });
+      issues.push({
+        field: 'maxDistanceKm',
+        message: 'maxDistanceKm requires lat and lng',
+      });
     } else {
       maxDistanceKm = parsed;
     }
@@ -112,13 +97,11 @@ export function parseAvailabilityQuery(
 
   if (issues.length > 0) return { ok: false, issues };
 
-  const value: AvailabilityQuery = {
-    sport: sport as AvailabilityQuery['sport'],
+  const value: SearchQuery = {
+    sport: sport as SearchQuery['sport'],
     date: date as string,
-    time: time as string,
-    durationMinutes: durationMinutes as AvailabilityQuery['durationMinutes'],
-    cityId: cityId as AvailabilityQuery['cityId'],
   };
+  if (!isBlank(time)) value.time = time;
   if (lat !== undefined && lng !== undefined) {
     value.lat = lat;
     value.lng = lng;
@@ -127,78 +110,19 @@ export function parseAvailabilityQuery(
   return { ok: true, value };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function requireId(
-  body: Record<string, unknown>,
-  field: string,
-  issues: ValidationIssue[],
-): string | undefined {
-  const raw = body[field];
-  if (typeof raw !== 'string' || raw.trim() === '') {
-    issues.push({ field, message: `${field} is required` });
-    return undefined;
+/** Validates the raw query string of GET /api/geocode. `q` is trimmed. */
+export function parseGeocodeQuery(params: GeocodeQueryParams): ValidationResult<GeocodeQuery> {
+  const q = params.q?.trim() ?? '';
+  if (q.length < GEOCODE_QUERY_MIN || q.length > GEOCODE_QUERY_MAX) {
+    return {
+      ok: false,
+      issues: [
+        {
+          field: 'q',
+          message: `q must be ${GEOCODE_QUERY_MIN}–${GEOCODE_QUERY_MAX} characters`,
+        },
+      ],
+    };
   }
-  if (raw.length > ID_MAX) {
-    issues.push({ field, message: `${field} is too long` });
-    return undefined;
-  }
-  return raw.trim();
-}
-
-/** Validates the JSON body of POST /api/reservations. Strings are trimmed. */
-export function parseCreateReservationRequest(
-  body: unknown,
-): ValidationResult<CreateReservationRequest> {
-  if (!isRecord(body)) {
-    return { ok: false, issues: [{ field: 'body', message: 'body must be a JSON object' }] };
-  }
-  const issues: ValidationIssue[] = [];
-
-  const venueId = requireId(body, 'venueId', issues);
-  const courtId = requireId(body, 'courtId', issues);
-
-  const sport = body.sport;
-  if (!isSportId(sport)) issues.push({ field: 'sport', message: 'unknown or missing sport' });
-
-  const date = body.date;
-  if (typeof date !== 'string' || !isValidDate(date))
-    issues.push({ field: 'date', message: 'date must be a valid YYYY-MM-DD date' });
-
-  const time = body.time;
-  if (typeof time !== 'string' || !isValidSlotTime(time))
-    issues.push({ field: 'time', message: 'time must be HH:00 or HH:30' });
-
-  const durationMinutes = body.durationMinutes;
-  if (!isDurationMinutes(durationMinutes))
-    issues.push({ field: 'durationMinutes', message: 'durationMinutes must be 60, 90 or 120' });
-
-  const customerName = typeof body.customerName === 'string' ? body.customerName.trim() : '';
-  if (customerName.length < CUSTOMER_NAME_MIN || customerName.length > CUSTOMER_NAME_MAX)
-    issues.push({
-      field: 'customerName',
-      message: `customerName must be ${CUSTOMER_NAME_MIN}–${CUSTOMER_NAME_MAX} characters`,
-    });
-
-  const customerEmail = typeof body.customerEmail === 'string' ? body.customerEmail.trim() : '';
-  if (customerEmail.length > EMAIL_MAX || !EMAIL_RE.test(customerEmail))
-    issues.push({ field: 'customerEmail', message: 'customerEmail must be a valid e-mail address' });
-
-  if (issues.length > 0) return { ok: false, issues };
-
-  return {
-    ok: true,
-    value: {
-      venueId: venueId as string,
-      courtId: courtId as string,
-      sport: sport as CreateReservationRequest['sport'],
-      date: date as string,
-      time: time as string,
-      durationMinutes: durationMinutes as CreateReservationRequest['durationMinutes'],
-      customerName,
-      customerEmail,
-    },
-  };
+  return { ok: true, value: { q } };
 }

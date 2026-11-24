@@ -1,11 +1,10 @@
 /** API client for the SpotRadar REST API (relative URLs, injectable fetch). */
 import { ERROR_STATUS } from '@spotradar/shared';
 import type {
-  AvailabilityQuery,
-  AvailabilityResponse,
-  CreateReservationRequest,
   ErrorCode,
-  Reservation,
+  GeocodeResponse,
+  SearchQuery,
+  SearchResponse,
   ValidationIssue,
 } from '@spotradar/shared';
 import { queryToSearchParams } from './query.ts';
@@ -70,13 +69,12 @@ function errorFromResponse(status: number, body: unknown): ApiRequestError {
 
 async function requestJson<T>(
   url: string,
-  init: RequestInit,
   isValid: (body: unknown) => body is T,
   fetchFn: FetchFn,
 ): Promise<T> {
   let response: Response;
   try {
-    response = await fetchFn(url, init);
+    response = await fetchFn(url, { headers: { Accept: 'application/json' } });
   } catch {
     throw new ApiRequestError(
       0,
@@ -103,36 +101,39 @@ async function requestJson<T>(
   return body;
 }
 
-function isAvailabilityResponse(body: unknown): body is AvailabilityResponse {
+function isSearchResponse(body: unknown): body is SearchResponse {
   return isRecord(body) && isRecord(body.query) && Array.isArray(body.results);
 }
 
-function isReservation(body: unknown): body is Reservation {
-  return isRecord(body) && typeof body.id === 'string' && typeof body.venueName === 'string';
+function isGeocodeResponse(body: unknown): body is GeocodeResponse {
+  return (
+    isRecord(body) &&
+    typeof body.lat === 'number' &&
+    typeof body.lng === 'number' &&
+    typeof body.label === 'string'
+  );
 }
 
-/** GET /api/availability */
-export function searchAvailability(
-  query: AvailabilityQuery,
+/** GET /api/search */
+export function searchCourts(
+  query: SearchQuery,
   fetchFn: FetchFn = defaultFetch,
-): Promise<AvailabilityResponse> {
-  const url = `/api/availability?${queryToSearchParams(query).toString()}`;
-  return requestJson(url, { headers: { Accept: 'application/json' } }, isAvailabilityResponse, fetchFn);
-}
-
-/** POST /api/reservations */
-export function createReservation(
-  request: CreateReservationRequest,
-  fetchFn: FetchFn = defaultFetch,
-): Promise<Reservation> {
+): Promise<SearchResponse> {
   return requestJson(
-    '/api/reservations',
-    {
-      method: 'POST',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-    },
-    isReservation,
+    `/api/search?${queryToSearchParams(query).toString()}`,
+    isSearchResponse,
+    fetchFn,
+  );
+}
+
+/** GET /api/geocode */
+export function geocodeAddress(
+  q: string,
+  fetchFn: FetchFn = defaultFetch,
+): Promise<GeocodeResponse> {
+  return requestJson(
+    `/api/geocode?${new URLSearchParams({ q }).toString()}`,
+    isGeocodeResponse,
     fetchFn,
   );
 }

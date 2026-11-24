@@ -1,0 +1,29 @@
+<section id='schedule_holder'>
+<div id='hours_head'>
+  <table class='schedule'>
+    <tr>
+      <td id='time_col_1' colspan="1">8:00</td>
+      <td id='time_col_2' colspan="1">9:00</td>
+      <td id='time_col_3' colspan="1">10:00</td>
+      <td id='time_col_4' colspan="1">11:00</td>
+    </tr>
+  </table>
+</div>
+<div id='hours_body'>
+  <table class='schedule'>
+    <tr class='empty_day_row'><td>&nbsp;</td></tr>
+    <!-- Court A: closed 8:00, one free cell spanning 9:00-11:00 (colspan 2, no data-time-id), booked 11:00 -->
+    <tr data-parent-row-id="hall" data-row-id="hall_a">
+      <td class="disabled"></td>
+      <td class="can_book" colspan="2" data-time-id="time_col_2"></td>
+      <td class="full" data-time-id="time_col_4"></td>
+    </tr>
+    <!-- Court B: closed 8:00-10:00 (one disabled cell, colspan 2), free 10:00, booked-with-substitute 11:00 -->
+    <tr data-parent-row-id="hall" data-row-id="hall_b">
+      <td class="disabled" colspan="2"></td>
+      <td class="can_book" data-time-id="time_col_3"></td>
+      <td class="full_substitute can_book_substitute" data-time-id="time_col_4"></td>
+    </tr>
+  </table>
+</div>
+</section>

@@ -1,19 +1,17 @@
-/** Pure HTML-string renderers. Every dynamic string is escaped. */
-import { DISTANCE_OPTIONS_KM, DURATIONS_MINUTES, SPORTS } from '@spotradar/shared';
-import type { AvailabilityResult, ValidationIssue } from '@spotradar/shared';
+/** Pure render-to-string functions. All dynamic text is escaped. */
+import { DISTANCE_OPTIONS_KM, SPORTS, getSearchWindow, weekdayOf } from '@spotradar/shared';
+import type { SearchResult } from '@spotradar/shared';
 import {
-  formatCzk,
+  formatCheckedAgo,
+  formatCourts,
   formatDateLabel,
   formatDistance,
-  formatDuration,
-  formatOpeningHours,
-  formatPrice,
-  formatTimeRange,
+  formatSlotRange,
 } from './format.ts';
-import { TIME_OPTIONS } from './query.ts';
-import type { SearchFormValues } from './query.ts';
+import { getDateChips } from './query.ts';
+import type { FormValues } from './query.ts';
 import { isDistanceFilterEnabled, locationStatusText } from './state.ts';
-import type { LocationState, ReservationState, ReservationTarget, SearchState } from './state.ts';
+import type { LocationState, SearchState } from './state.ts';
 
 export function escapeHtml(value: string): string {
   return value
@@ -24,206 +22,222 @@ export function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
-function option(value: string, label: string, selected: boolean): string {
-  return `<option value="${escapeHtml(value)}"${selected ? ' selected' : ''}>${escapeHtml(label)}</option>`;
+/** Only http(s) links are rendered as hrefs. */
+export function safeHref(url: string): string | null {
+  return /^https?:\/\//i.test(url) ? url : null;
+}
+
+/** "+420 123 456 789" → "+420123456789" for tel: links. */
+export function telHref(phone: string): string {
+  return `tel:${phone.replace(/[^\d+]/g, '')}`;
 }
 
 // ---------- search form ----------
 
-export interface SearchFormOptions {
-  values: SearchFormValues;
-  location: LocationState;
-  /** Booking window (min/max of the date input). */
-  minDate: string;
-  maxDate: string;
+export function renderDateChips(selectedDate: string, now: Date): string {
+  return getDateChips(now)
+    .map(
+      (chip) =>
+        `<button type="button" class="chip" data-date="${chip.date}" aria-pressed="${chip.date === selectedDate}">${escapeHtml(chip.label)}</button>`,
+    )
+    .join('');
 }
 
-export function renderSearchForm(options: SearchFormOptions): string {
-  const { values, location, minDate, maxDate } = options;
-  const sports = SPORTS.map((s) => option(s.id, s.name, s.id === values.sport)).join('');
-  const times = TIME_OPTIONS.map((t) => option(t, t, t === values.time)).join('');
-  const durations = DURATIONS_MINUTES.map((d) =>
-    option(String(d), formatDuration(d), String(d) === values.durationMinutes),
+export function renderDistanceChips(selectedKm: string, enabled: boolean): string {
+  const disabled = enabled ? '' : ' disabled';
+  const any = `<button type="button" class="chip" data-km="" aria-pressed="${selectedKm === ''}"${disabled}>Any</button>`;
+  const options = DISTANCE_OPTIONS_KM.map(
+    (km) =>
+      `<button type="button" class="chip" data-km="${km}" aria-pressed="${String(km) === selectedKm}"${disabled}>${km} km</button>`,
   ).join('');
-  const distances = [
-    option('', 'Any distance', values.maxDistanceKm === ''),
-    ...DISTANCE_OPTIONS_KM.map((km) =>
-      option(String(km), `Within ${km} km`, String(km) === values.maxDistanceKm),
-    ),
-  ].join('');
-  const distanceDisabled = isDistanceFilterEnabled(location) ? '' : ' disabled';
+  return any + options;
+}
 
-  return `<form id="search-form" class="search-form" aria-label="Search courts" novalidate>
-  <div class="field">
+export interface SearchFormProps {
+  values: FormValues;
+  location: LocationState;
+  now: Date;
+}
+
+export function renderSearchForm({ values, location, now }: SearchFormProps): string {
+  const window = getSearchWindow(now);
+  const sportOptions = SPORTS.map(
+    (sport) =>
+      `<option value="${sport.id}"${sport.id === values.sport ? ' selected' : ''}>${escapeHtml(sport.name)}</option>`,
+  ).join('');
+  const distanceEnabled = isDistanceFilterEnabled(location);
+  const status = locationStatusText(location);
+  const statusClass = location.status === 'error' ? ' is-error' : '';
+  return `
+<form id="search-form" class="search-form" novalidate>
+  <div class="field field-sport">
     <label for="sport">Sport</label>
-    <select id="sport" name="sport">${sports}</select>
+    <select id="sport" name="sport">${sportOptions}</select>
   </div>
-  <div class="field">
-    <label for="date">Date</label>
-    <input id="date" name="date" type="date" required min="${escapeHtml(minDate)}" max="${escapeHtml(maxDate)}" value="${escapeHtml(values.date)}">
+
+  <fieldset class="field field-date">
+    <legend>Date</legend>
+    <div id="date-chips" class="chips">${renderDateChips(values.date, now)}</div>
+    <label for="date" class="subtle-label">Or pick another day</label>
+    <input id="date" name="date" type="date" required value="${escapeHtml(values.date)}" min="${window.from}" max="${window.to}">
+  </fieldset>
+
+  <div class="field field-time">
+    <label for="time">Time (optional)</label>
+    <div class="row">
+      <input id="time" name="time" type="time" value="${escapeHtml(values.time)}">
+      <button type="button" id="clear-time" class="btn btn-ghost">Any time</button>
+    </div>
   </div>
-  <div class="field">
-    <label for="time">Start time</label>
-    <select id="time" name="time">${times}</select>
-  </div>
-  <div class="field">
-    <label for="duration">Duration</label>
-    <select id="duration" name="durationMinutes">${durations}</select>
-  </div>
-  <div class="field field-location">
-    <button type="button" id="use-location" class="button-secondary">Use my location</button>
-    <p id="location-status" class="hint">${escapeHtml(locationStatusText(location))}</p>
-  </div>
-  <div class="field">
-    <label for="max-distance">Max distance</label>
-    <select id="max-distance" name="maxDistanceKm"${distanceDisabled}>${distances}</select>
-  </div>
-  <div class="field field-submit">
-    <button type="submit" id="search-submit" class="button-primary">Search</button>
-  </div>
+
+  <fieldset class="field field-where">
+    <legend>Distance from you (optional)</legend>
+    <div class="row row-wrap">
+      <button type="button" id="use-location" class="btn btn-secondary"${location.status === 'locating' ? ' disabled' : ''}>Use my location</button>
+    </div>
+    <label for="address">Or enter an address</label>
+    <div class="row">
+      <input id="address" name="address" type="search" autocomplete="street-address" placeholder="e.g. Česká, Brno" value="${values.origin?.source === 'address' ? escapeHtml(values.origin.label) : ''}">
+      <button type="button" id="find-address" class="btn btn-secondary"${location.status === 'resolving' ? ' disabled' : ''}>Find address</button>
+    </div>
+    <p id="location-status" class="location-status${statusClass}" role="status">${escapeHtml(status)}</p>
+    <div class="chips-label" id="distance-label">Maximum distance</div>
+    <div id="distance-chips" class="chips" role="group" aria-labelledby="distance-label">${renderDistanceChips(values.maxDistanceKm, distanceEnabled)}</div>
+  </fieldset>
+
+  <button type="submit" id="search-submit" class="btn btn-primary">Search courts</button>
 </form>`;
 }
 
 // ---------- results ----------
 
-function renderIssues(issues: ValidationIssue[]): string {
-  if (issues.length === 0) return '';
-  const items = issues
-    .map((i) => `<li><strong>${escapeHtml(i.field)}</strong>: ${escapeHtml(i.message)}</li>`)
+/** "Live · checked 3 min ago" etc. */
+export function renderBadge(result: SearchResult, now: Date): string {
+  const { status, checkedAt } = result.availability;
+  if (status === 'live') {
+    return `<span class="badge badge-live">Live · checked ${escapeHtml(formatCheckedAgo(checkedAt, now))}</span>`;
+  }
+  if (status === 'unavailable') {
+    return `<span class="badge badge-warn">Couldn't read availability right now – check on website</span>`;
+  }
+  return `<span class="badge badge-unknown">Availability unknown – check on website</span>`;
+}
+
+/** The big "3 courts free at 18:00" line (live venues only). */
+export function renderHeadline(result: SearchResult, time: string | undefined): string {
+  const { status, freeSlots } = result.availability;
+  if (status !== 'live') return '';
+  if (time !== undefined && result.freeCourtsAtTime !== undefined) {
+    return result.freeCourtsAtTime > 0
+      ? `<p class="headline is-free">${escapeHtml(formatCourts(result.freeCourtsAtTime))} free at ${escapeHtml(time)}</p>`
+      : `<p class="headline is-full">Fully booked at ${escapeHtml(time)}</p>`;
+  }
+  if (freeSlots.length === 0) return `<p class="headline is-full">Fully booked this day</p>`;
+  const max = Math.max(...freeSlots.map((s) => s.freeCourts));
+  return `<p class="headline is-free">Up to ${escapeHtml(formatCourts(max))} free</p>`;
+}
+
+function renderSlots(result: SearchResult): string {
+  const { status, freeSlots } = result.availability;
+  if (status !== 'live' || freeSlots.length === 0) return '';
+  const items = freeSlots
+    .map(
+      (slot) =>
+        `<li class="slot"><span class="slot-time">${escapeHtml(formatSlotRange(slot))}</span> <span class="slot-courts">${escapeHtml(formatCourts(slot.freeCourts))}</span></li>`,
+    )
     .join('');
-  return `<ul class="issues">${items}</ul>`;
+  return `<ul class="slots" aria-label="Free time slots">${items}</ul>`;
 }
 
-function renderCourt(result: AvailabilityResult, court: AvailabilityResult['availableCourts'][number]): string {
-  const label = `Reserve ${court.name} at ${result.venue.name}`;
-  const meta = `${court.indoor ? 'Indoor' : 'Outdoor'} · ${court.surface}`;
-  return `<li class="court">
-        <span class="court-info"><span class="court-name">${escapeHtml(court.name)}</span> <span class="court-meta">${escapeHtml(meta)}</span></span>
-        <button type="button" class="button-primary" data-action="reserve" data-venue-id="${escapeHtml(result.venue.id)}" data-court-id="${escapeHtml(court.id)}" aria-label="${escapeHtml(label)}">Reserve</button>
-      </li>`;
+function renderHours(result: SearchResult, date: string): string {
+  const hours = result.venue.openingHours.days[weekdayOf(date)];
+  const approx = result.venue.openingHours.approximate ? ' (approx.)' : '';
+  const text = hours ? `Open ${hours.open}–${hours.close}${approx}` : `Closed${approx}`;
+  return `<span class="meta-item">${escapeHtml(text)}</span>`;
 }
 
-export function renderVenueCard(result: AvailabilityResult, index: number): string {
-  const headingId = `venue-heading-${index}`;
+export function renderResultCard(
+  result: SearchResult,
+  query: { date: string; time?: string },
+  now: Date,
+): string {
+  const { venue, availability } = result;
+  const href = safeHref(venue.bookingUrl);
+  const book = href
+    ? `<a class="btn btn-primary" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">Book on venue's website<span class="visually-hidden"> (opens in a new tab)</span></a>`
+    : '';
+  const phone = venue.phone
+    ? `<a class="btn btn-secondary" href="${escapeHtml(telHref(venue.phone))}">Call ${escapeHtml(venue.phone)}</a>`
+    : '';
   const distance =
-    result.distanceKm === null
+    result.distanceKm !== undefined
+      ? `<span class="meta-item meta-distance">${escapeHtml(formatDistance(result.distanceKm))} away</span>`
+      : '';
+  const courts =
+    venue.courts !== undefined
+      ? `<span class="meta-item">${escapeHtml(formatCourts(venue.courts))} in total</span>`
+      : '';
+  const note =
+    availability.status === 'live'
       ? ''
-      : `\n      <p class="venue-distance">${escapeHtml(formatDistance(result.distanceKm))} away</p>`;
-  const courts = result.availableCourts.map((c) => renderCourt(result, c)).join('');
-  return `<li><article class="venue-card" aria-labelledby="${headingId}">
-      <h3 id="${headingId}">${escapeHtml(result.venue.name)}</h3>
-      <p class="venue-address">${escapeHtml(result.venue.address)}</p>${distance}
-      <p class="venue-price">${escapeHtml(formatPrice(result.pricePerHourCzk, result.totalPriceCzk))}</p>
-      <p class="venue-hours">Open ${escapeHtml(formatOpeningHours(result.venue.openingHours))}</p>
-      <ul class="court-list" aria-label="Free courts at ${escapeHtml(result.venue.name)}">${courts}</ul>
-    </article></li>`;
+      : `<p class="note">Free courts can't be shown here – open the venue's booking page to see them.</p>`;
+  return `
+<li class="card" data-venue-id="${escapeHtml(venue.id)}" data-status="${availability.status}">
+  <article aria-labelledby="venue-${escapeHtml(venue.id)}">
+    <header class="card-head">
+      <h3 id="venue-${escapeHtml(venue.id)}">${escapeHtml(venue.name)}</h3>
+      <p class="district">${escapeHtml(venue.district)}</p>
+    </header>
+    <p class="meta">${distance}${courts}${renderHours(result, query.date)}</p>
+    ${renderHeadline(result, query.time)}
+    ${renderSlots(result)}
+    ${note}
+    <p class="badge-row">${renderBadge(result, now)}</p>
+    <div class="actions">${book}${phone}</div>
+  </article>
+</li>`;
 }
 
-/** Content of the results region for the given search state. */
-export function renderResults(state: SearchState): string {
+export function renderSkeletons(count = 3): string {
+  const card = `<li class="card skeleton" aria-hidden="true"><div class="sk sk-title"></div><div class="sk sk-line"></div><div class="sk sk-big"></div><div class="sk sk-line"></div><div class="sk sk-button"></div></li>`;
+  return `<p class="visually-hidden">Loading results…</p><ul class="cards" aria-hidden="true">${card.repeat(count)}</ul>`;
+}
+
+export function renderEmpty(): string {
+  return `
+<div class="state state-empty">
+  <p class="state-title">No courts found</p>
+  <p>No venues match your search. Try another time or day, or a larger distance.</p>
+</div>`;
+}
+
+export function renderError(message: string, issues: { field: string; message: string }[]): string {
+  const list = issues.length
+    ? `<ul>${issues.map((i) => `<li>${escapeHtml(i.field)}: ${escapeHtml(i.message)}</li>`).join('')}</ul>`
+    : '';
+  return `
+<div class="state state-error" role="alert">
+  <p class="state-title">Search failed</p>
+  <p>${escapeHtml(message)}</p>${list}
+</div>`;
+}
+
+export function renderResults(state: SearchState, now: Date): string {
   switch (state.status) {
     case 'idle':
-      return '<p class="hint">Choose a sport, date and time, then press Search.</p>';
+      return `<div class="state state-idle"><p>Pick a day and press <strong>Search courts</strong> to see free badminton courts in Brno.</p></div>`;
     case 'loading':
-      return '<p role="status" class="loading">Searching for free courts…</p>';
+      return renderSkeletons();
     case 'error':
-      return `<div role="alert" class="error"><p>${escapeHtml(state.message)}</p>${renderIssues(state.issues)}</div>`;
+      return renderError(state.message, state.issues);
     case 'success': {
-      const { results } = state.response;
-      if (results.length === 0) {
-        return '<div class="empty"><p><strong>No free courts found for this slot.</strong></p><p>Try a different time, another date or a larger max distance.</p></div>';
-      }
-      const count = `${results.length} ${results.length === 1 ? 'venue' : 'venues'} with free courts`;
-      return `<p class="result-count">${escapeHtml(count)}</p>
-<ul class="venue-list">${results.map((r, i) => renderVenueCard(r, i)).join('')}</ul>`;
+      const { query, results } = state.response;
+      if (results.length === 0) return renderEmpty();
+      const when = `${formatDateLabel(query.date)}${query.time ? ` at ${query.time}` : ''}`;
+      const count = `${results.length} ${results.length === 1 ? 'venue' : 'venues'}`;
+      return `<p class="summary">${escapeHtml(count)} · ${escapeHtml(when)}</p><ul class="cards">${results
+        .map((r) => renderResultCard(r, query, now))
+        .join('')}</ul>`;
     }
   }
-}
-
-// ---------- reservation dialog ----------
-
-function renderSummary(target: ReservationTarget): string {
-  const rows: Array<[string, string]> = [
-    ['Venue', target.venueName],
-    ['Court', target.courtName],
-    ['Date', formatDateLabel(target.date)],
-    ['Time', `${formatTimeRange(target.time, target.durationMinutes)} (${formatDuration(target.durationMinutes)})`],
-    ['Total price', formatCzk(target.totalPriceCzk)],
-  ];
-  const items = rows
-    .map(([k, v]) => `<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`)
-    .join('');
-  return `<dl class="summary">${items}</dl>`;
-}
-
-function renderTextField(opts: {
-  id: string;
-  name: string;
-  label: string;
-  type: string;
-  value: string;
-  error: string | undefined;
-  disabled: boolean;
-  autocomplete: string;
-  autofocus?: boolean;
-}): string {
-  const errorId = `${opts.id}-error`;
-  const invalid = opts.error !== undefined;
-  const error = invalid ? `<p class="field-error" id="${errorId}">${escapeHtml(opts.error ?? '')}</p>` : '';
-  return `<div class="field">
-      <label for="${opts.id}">${escapeHtml(opts.label)}</label>
-      <input id="${opts.id}" name="${opts.name}" type="${opts.type}" value="${escapeHtml(opts.value)}" autocomplete="${opts.autocomplete}" required${invalid ? ` aria-invalid="true" aria-describedby="${errorId}"` : ''}${opts.disabled ? ' disabled' : ''}${opts.autofocus ? ' autofocus' : ''}>
-      ${error}
-    </div>`;
-}
-
-/** Inner HTML of the reservation <dialog>; empty string when closed. */
-export function renderReservationDialog(state: ReservationState): string {
-  if (state.status === 'closed') return '';
-
-  if (state.status === 'success') {
-    const r = state.reservation;
-    return `<h2 id="reservation-title">Reservation confirmed</h2>
-<div role="status" class="success">
-  <p>Thank you, ${escapeHtml(r.customerName)}! Your court is booked.</p>
-  <dl class="summary">
-    <div><dt>Reservation ID</dt><dd>${escapeHtml(r.id)}</dd></div>
-    <div><dt>Venue</dt><dd>${escapeHtml(r.venueName)}</dd></div>
-    <div><dt>Court</dt><dd>${escapeHtml(r.courtName)}</dd></div>
-    <div><dt>Date</dt><dd>${escapeHtml(formatDateLabel(r.date))}</dd></div>
-    <div><dt>Time</dt><dd>${escapeHtml(formatTimeRange(r.time, r.durationMinutes))}</dd></div>
-    <div><dt>Total price</dt><dd>${escapeHtml(formatCzk(r.totalPriceCzk))}</dd></div>
-  </dl>
-</div>
-<div class="dialog-actions"><button type="button" class="button-primary" data-action="close">Close</button></div>`;
-  }
-
-  const submitting = state.status === 'submitting';
-  const fieldErrors = state.status === 'editing' ? state.fieldErrors : {};
-  const failure = state.status === 'editing' ? state.failure : null;
-  const { target, values } = state;
-
-  const failureHtml = failure
-    ? `<div role="alert" class="error"><p>${escapeHtml(failure.message)}</p>${
-        failure.canRefresh
-          ? '<p><button type="button" class="button-secondary" data-action="refresh">Refresh results</button></p>'
-          : ''
-      }</div>`
-    : '';
-  const submittingHtml = submitting
-    ? '<p role="status" class="loading">Reserving your court…</p>'
-    : '';
-
-  return `<h2 id="reservation-title">Reserve a court</h2>
-${renderSummary(target)}
-<form id="reservation-form" aria-label="Reservation" novalidate${submitting ? ' aria-busy="true"' : ''}>
-    ${renderTextField({ id: 'res-name', name: 'customerName', label: 'Name', type: 'text', value: values.customerName, error: fieldErrors.customerName, disabled: submitting, autocomplete: 'name', autofocus: true })}
-    ${renderTextField({ id: 'res-email', name: 'customerEmail', label: 'E-mail', type: 'email', value: values.customerEmail, error: fieldErrors.customerEmail, disabled: submitting, autocomplete: 'email' })}
-    ${failureHtml}
-    ${submittingHtml}
-    <div class="dialog-actions">
-      <button type="submit" class="button-primary"${submitting ? ' disabled' : ''}>Confirm</button>
-      <button type="button" class="button-secondary" data-action="cancel"${submitting ? ' disabled' : ''}>Cancel</button>
-    </div>
-  </form>`;
 }

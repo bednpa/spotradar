@@ -1,111 +1,107 @@
-/** Search form values, defaults and conversion to the API query. */
-import {
-  DEFAULT_CITY_ID,
-  DEFAULT_DURATION_MINUTES,
-  SLOT_MINUTES,
-  SPORTS,
-  addDays,
-  minutesToTime,
-  parseAvailabilityQuery,
-  toLocalDateTime,
-} from '@spotradar/shared';
-import type {
-  AvailabilityQuery,
-  AvailabilityQueryParams,
-  ValidationResult,
-} from '@spotradar/shared';
+/** Form values ↔ SearchQuery ↔ URL query string. Pure functions. */
+import { DEFAULT_SPORT_ID, addDays, getSearchWindow, parseSearchQuery } from '@spotradar/shared';
+import type { SearchQuery, SearchQueryParams, ValidationResult } from '@spotradar/shared';
+import { formatShortDate } from './format.ts';
 
-/** Seed venues open at 07:00 at the earliest and close by 22:00, so later starts can't fit 60 min. */
-export const FIRST_START_MINUTES = 7 * 60;
-export const LAST_START_MINUTES = 21 * 60;
-export const FALLBACK_TIME = '18:00';
-
-/** "07:00", "07:30", … "21:00" */
-export const TIME_OPTIONS: readonly string[] = buildTimeOptions();
-
-function buildTimeOptions(): string[] {
-  const options: string[] = [];
-  for (let m = FIRST_START_MINUTES; m <= LAST_START_MINUTES; m += SLOT_MINUTES) {
-    options.push(minutesToTime(m));
-  }
-  return options;
+/** Where the search origin came from. */
+export interface Origin {
+  lat: number;
+  lng: number;
+  label: string;
+  source: 'geolocation' | 'address' | 'url';
 }
 
 /** Raw (string) values of the search form. */
-export interface SearchFormValues {
+export interface FormValues {
   sport: string;
   date: string;
+  /** "" = any time */
   time: string;
-  durationMinutes: string;
-  /** Empty when no location is set. */
-  lat: string;
-  lng: string;
-  /** Empty = any distance. */
+  /** "" = any distance; only meaningful together with an origin. */
   maxDistanceKm: string;
+  origin: Origin | null;
 }
 
-/**
- * Default date and start time: today and the next half-hour slot after `now`
- * (clamped to the first bookable slot). When no slot is left today (after 20:30),
- * tomorrow at 18:00.
- */
-export function getDefaultDateTime(now: Date): { date: string; time: string } {
-  const local = toLocalDateTime(now);
-  const next = (Math.floor(local.minutes / SLOT_MINUTES) + 1) * SLOT_MINUTES;
-  if (next > LAST_START_MINUTES) {
-    return { date: addDays(local.date, 1), time: FALLBACK_TIME };
-  }
-  return { date: local.date, time: minutesToTime(Math.max(next, FIRST_START_MINUTES)) };
-}
-
-export function getDefaultFormValues(now: Date): SearchFormValues {
-  const { date, time } = getDefaultDateTime(now);
+export function getDefaultFormValues(now: Date): FormValues {
   return {
-    sport: SPORTS[0]?.id ?? '',
-    date,
-    time,
-    durationMinutes: String(DEFAULT_DURATION_MINUTES),
-    lat: '',
-    lng: '',
+    sport: DEFAULT_SPORT_ID,
+    date: getSearchWindow(now).from,
+    time: '',
     maxDistanceKm: '',
+    origin: null,
   };
 }
 
-/** Builds the raw query params; distance is only sent together with a location. */
-export function formValuesToParams(values: SearchFormValues): AvailabilityQueryParams {
-  const params: AvailabilityQueryParams = {
-    sport: values.sport,
-    date: values.date,
-    time: values.time,
-    durationMinutes: values.durationMinutes,
-    cityId: DEFAULT_CITY_ID,
-  };
-  const hasLocation = values.lat.trim() !== '' && values.lng.trim() !== '';
-  if (hasLocation) {
-    params.lat = values.lat;
-    params.lng = values.lng;
-    if (values.maxDistanceKm.trim() !== '') params.maxDistanceKm = values.maxDistanceKm;
+export interface DateChip {
+  date: string;
+  label: string;
+}
+
+/** "Today", "Tomorrow" and the following 5 days labelled e.g. "Thu 27 Nov". */
+export function getDateChips(now: Date): DateChip[] {
+  const today = getSearchWindow(now).from;
+  const chips: DateChip[] = [
+    { date: today, label: 'Today' },
+    { date: addDays(today, 1), label: 'Tomorrow' },
+  ];
+  for (let offset = 2; offset <= 6; offset++) {
+    const date = addDays(today, offset);
+    chips.push({ date, label: formatShortDate(date) });
   }
+  return chips;
+}
+
+/** Raw API params for the form values; blank values are omitted. */
+export function formToParams(values: FormValues): SearchQueryParams {
+  const params: SearchQueryParams = { sport: values.sport, date: values.date };
+  if (values.time !== '') params.time = values.time;
+  if (values.origin) {
+    params.lat = String(values.origin.lat);
+    params.lng = String(values.origin.lng);
+  }
+  if (values.maxDistanceKm !== '') params.maxDistanceKm = values.maxDistanceKm;
   return params;
 }
 
-/** Validates the form with the shared contract validator. */
-export function buildSearchQuery(values: SearchFormValues): ValidationResult<AvailabilityQuery> {
-  return parseAvailabilityQuery(formValuesToParams(values));
+/** Validates the form with the shared contract schema. A distance without an origin is invalid. */
+export function buildSearchQuery(values: FormValues): ValidationResult<SearchQuery> {
+  return parseSearchQuery(formToParams(values));
 }
 
-/** Serialises a validated query for GET /api/availability. */
-export function queryToSearchParams(query: AvailabilityQuery): URLSearchParams {
+/** SearchQuery → URLSearchParams (used for both the API call and the page URL). */
+export function queryToSearchParams(query: SearchQuery): URLSearchParams {
   const params = new URLSearchParams();
   params.set('sport', query.sport);
   params.set('date', query.date);
-  params.set('time', query.time);
-  params.set('durationMinutes', String(query.durationMinutes));
-  params.set('cityId', query.cityId);
+  if (query.time !== undefined) params.set('time', query.time);
   if (query.lat !== undefined && query.lng !== undefined) {
     params.set('lat', String(query.lat));
     params.set('lng', String(query.lng));
-    if (query.maxDistanceKm !== undefined) params.set('maxDistanceKm', String(query.maxDistanceKm));
   }
+  if (query.maxDistanceKm !== undefined) params.set('maxDistanceKm', String(query.maxDistanceKm));
   return params;
+}
+
+/**
+ * Restores form values from a page query string. Returns null when the URL holds
+ * no search (no `date` parameter). An origin from the URL is labelled generically.
+ */
+export function formFromQueryString(search: string, now: Date): FormValues | null {
+  const params = new URLSearchParams(search);
+  if (!params.has('date')) return null;
+  const defaults = getDefaultFormValues(now);
+  const lat = Number(params.get('lat'));
+  const lng = Number(params.get('lng'));
+  const hasOrigin =
+    params.get('lat') !== null &&
+    params.get('lng') !== null &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lng);
+  return {
+    sport: params.get('sport') ?? defaults.sport,
+    date: params.get('date') ?? defaults.date,
+    time: params.get('time') ?? '',
+    maxDistanceKm: hasOrigin ? (params.get('maxDistanceKm') ?? '') : '',
+    origin: hasOrigin ? { lat, lng, label: 'Selected location', source: 'url' } : null,
+  };
 }

@@ -10,28 +10,65 @@ _(on the free plan the first request after 15 minutes of inactivity takes about 
 
 ## What it does
 
-Pick a **sport** (tennis, badminton, squash, table tennis, padel, beach volleyball), a **date**, a **start time** and a **duration**, and optionally share your **location** with a **max distance**. SpotRadar lists the venues in Brno that have a free court for exactly that slot (nearest or cheapest first), and you can reserve the court right away. No more checking ten booking websites.
+SpotRadar is a **badminton court finder for Brno**. Pick a **sport** (badminton for now), a **date** (today … +14 days),
+optionally a **time**, and optionally a **max distance** from your location or an address. SpotRadar lists real Brno venues
+with the **free courts read from their own public booking pages** (where a connector exists) and a button that opens the
+venue's booking page. **SpotRadar never books anything itself** – booking always happens on the venue's website.
 
-> **Demo data:** the venues are fictional and the occupancy from external booking systems is simulated (deterministic per court/date/slot). Reservations made in SpotRadar are kept in memory and reset on every restart or deploy.
+Availability is read live (cached for 15 minutes per venue and date) and may be a few minutes old.
+
+### Data sources and connector status
+
+Venues are a static data file in the backend (`backend/src/data/venues.ts`). Each venue declares its booking system
+(`availabilitySource`) and a backend-only connector configuration. Connectors implement a pluggable
+`AvailabilityConnector` interface, so new booking systems can be added without touching the search logic.
+
+| Venue                  | District          | Courts | Booking system | Connector status              |
+| ---------------------- | ----------------- | ------ | -------------- | ----------------------------- |
+| Sportcentrum Kuklenská | Brno-Židenice     | 4      | ClubSpire      | ✅ live                       |
+| Centrum Viktoria       | Brno-Komárov      | 3      | ClubSpire      | ✅ live                       |
+| Badminton Jehnice      | Brno-Jehnice      | 5      | Bizzy          | ⏳ not yet – status `unknown` |
+| Badminton Líšeň        | Brno-Líšeň        | 6      | Bizzy          | ⏳ not yet – status `unknown` |
+| X-Arena Slatina        | Brno-Slatina      | 6      | Bizzy          | ⏳ not yet – status `unknown` |
+| Hala Sprint            | Brno-Královo Pole | 6      | MemberZone     | ⏳ not yet – status `unknown` |
+| Sportcentrum Ivanovice | Brno-Ivanovice    | ?      | MemberPro      | ⏳ not yet – status `unknown` |
+
+Availability status per venue: `live` (read from the booking page), `unavailable` (a connector exists but reading failed –
+the search still succeeds), `unknown` (no connector yet). Opening hours marked `approximate` are estimates.
+
+**ClubSpire connector:** fetches the server-rendered day timeline
+`{base}/timeline/day?tabIdx={tabIdx}&criteriaTimestamp={local midnight Europe/Prague in epoch ms}&resetFilter=true`
+and parses it with cheerio: each court is a `tr[data-row-id]` in `table.schedule`, column start times come from the page
+header, `can_book` / `can_book_substitute` cells are free unless also marked `full` / `full_substitute` / `disabled`;
+half-hour "zoom" cells are split into sub-slots. It is polite to the venues: `User-Agent: SpotRadar/1.0`, 8 s timeout, at
+most one concurrent request per host and a 15-minute cache per venue + date. Tests use sanitized HTML fixtures recorded from
+the real pages – never the live sites. Refresh a raw page with
+`npm run fetch:clubspire -w @spotradar/backend -- <baseUrl> <tabIdx> <YYYY-MM-DD> <outFile>`.
+
+**Geocoding:** `/api/geocode` proxies [OpenStreetMap Nominatim](https://nominatim.org/) (`countrycodes=cz`,
+`User-Agent: SpotRadar/1.0`, in-memory cache, max 1 request per second) in line with the
+[Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/). Data © OpenStreetMap contributors.
 
 ### API (contract in `shared/src`)
 
-| Method | Path                     | Success                      | Errors                                                                                                                                                    |
-| ------ | ------------------------ | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/api/health`            | 200 `{ status: 'ok' }`       | –                                                                                                                                                         |
-| GET    | `/api/availability`      | 200 `AvailabilityResponse`   | 400 `VALIDATION_ERROR`, 422 `DATE_OUT_OF_RANGE`                                                                                                           |
-| POST   | `/api/reservations`      | 201 `Reservation`            | 400 `VALIDATION_ERROR`, 404 `VENUE_NOT_FOUND` / `COURT_NOT_FOUND`, 409 `SLOT_UNAVAILABLE`, 413, 422 `SPORT_NOT_OFFERED` / `DATE_OUT_OF_RANGE` / `SLOT_IN_PAST` / `OUTSIDE_OPENING_HOURS` |
-| GET    | `/api/reservations/:id`  | 200 `Reservation`            | 404 `RESERVATION_NOT_FOUND`                                                                                                                               |
+| Method | Path           | Success                | Errors                                                                       |
+| ------ | -------------- | ---------------------- | ---------------------------------------------------------------------------- |
+| GET    | `/api/health`  | 200 `{ status: 'ok' }` | –                                                                            |
+| GET    | `/api/search`  | 200 `SearchResponse`   | 400 `VALIDATION_ERROR`, 422 `DATE_OUT_OF_RANGE`                              |
+| GET    | `/api/geocode` | 200 `GeocodeResponse`  | 400 `VALIDATION_ERROR`, 404 `LOCATION_NOT_FOUND`, 502 `GEOCODER_UNAVAILABLE` |
 
-`/api/availability` query: `sport`, `date` (YYYY-MM-DD, today … today + 13 days, Europe/Prague), `time` (HH:00 or HH:30), `durationMinutes` (60/90/120, default 60), `cityId` (default `brno`), optional `lat` + `lng`, optional `maxDistanceKm` (requires `lat`/`lng`).
+`/api/search` query: `sport`, `date` (YYYY-MM-DD, today … today + 14 days, Europe/Prague), optional `time` (HH:MM),
+optional `lat` + `lng` (together), optional `maxDistanceKm` (requires `lat`/`lng`). Results list venues with a free court
+(at `time`, or anytime that day) first, then sort by distance (or name). `/api/geocode` query: `q` (2–200 characters).
 
-### Toolchain (no third-party dependencies yet)
+### Toolchain
 
-The first version was built in an environment where `npm install` was not available, so it uses only Node 22 built-ins:
-TypeScript runs directly via Node's type stripping (erasable syntax only, relative imports with `.ts` extensions), tests use `node:test`,
-the backend uses `node:http`, and the frontend is vanilla TypeScript turned into browser ES modules by `frontend/scripts/build.mjs`
-(with an import map for `@spotradar/shared`). **Not set up yet:** `typecheck` (TypeScript), `lint` (ESLint) and Playwright E2E tests –
-these need dev dependencies to be installed and the lockfile updated.
+TypeScript runs directly via Node 22 type stripping (erasable syntax only, relative imports with `.ts` extensions), tests use
+`node:test`, the backend uses `node:http` (+ `cheerio` for HTML parsing), and the frontend is vanilla TypeScript turned into
+browser ES modules by `frontend/scripts/build.mjs` (with an import map for `@spotradar/shared`). `typecheck` uses `tsc`
+(`tsconfig.base.json`), `lint` uses ESLint (`eslint.config.js`), formatting uses Prettier (`.prettierrc.json`), and E2E tests
+use Playwright (`frontend/e2e`) against the backend started in stub mode (`npm run start:e2e -w @spotradar/backend`:
+recorded fixtures instead of live booking pages and a fake geocoder).
 
 ## Repository structure
 

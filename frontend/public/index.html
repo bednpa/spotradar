@@ -1,37 +1,50 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SpotRadar – find a free court in Brno</title>
-    <meta name="description" content="Find a free sports court in Brno without checking 10 websites.">
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/styles.css">
-    <script type="importmap">{"imports":{"@spotradar/shared":"/shared/index.js"}}</script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>SpotRadar – free badminton courts in Brno</title>
+    <meta
+      name="description"
+      content="Find free badminton courts in Brno in seconds. Live availability from venues' own booking pages, then book on their website."
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script type="importmap">
+      { "imports": { "@spotradar/shared": "/shared/index.js" } }
+    </script>
     <script type="module" src="/app/main.js"></script>
   </head>
   <body>
+    <a class="skip-link" href="#results-heading">Skip to results</a>
+
     <header class="site-header">
-      <h1>SpotRadar</h1>
-      <p class="tagline">Find a free court in Brno without checking 10 websites.</p>
+      <div class="container">
+        <h1>SpotRadar</h1>
+        <p class="tagline">Free badminton courts in Brno, without checking ten websites.</p>
+      </div>
     </header>
 
-    <main>
-      <section class="panel" aria-labelledby="search-heading">
-        <h2 id="search-heading">Search courts</h2>
+    <main class="container layout">
+      <section class="panel search-panel" aria-labelledby="search-heading">
+        <h2 id="search-heading" class="visually-hidden">Search courts</h2>
         <div id="search-root"></div>
       </section>
 
-      <section class="panel" aria-labelledby="results-heading" aria-live="polite">
+      <section class="results-panel" aria-labelledby="results-heading">
         <h2 id="results-heading">Results</h2>
-        <div id="results"></div>
+        <div id="results" aria-live="polite"></div>
       </section>
     </main>
 
-    <dialog id="reservation-dialog" aria-labelledby="reservation-title"></dialog>
-
     <footer class="site-footer">
-      <p>Demo: venues and availability from other booking systems are simulated.</p>
+      <div class="container">
+        <p>
+          Availability is read from venues' public booking pages and may be a few minutes old.
+          SpotRadar never books anything – booking happens on the venue's website.
+        </p>
+      </div>
     </footer>
   </body>
 </html>

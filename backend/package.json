@@ -6,6 +6,13 @@
   "scripts": {
     "dev": "node --disable-warning=ExperimentalWarning --watch src/server.ts",
     "start": "node --disable-warning=ExperimentalWarning src/server.ts",
-    "test": "node --disable-warning=ExperimentalWarning --test \"src/**/*.test.ts\""
+    "start:e2e": "SPOTRADAR_STUB_EXTERNAL=1 node --disable-warning=ExperimentalWarning src/server.ts",
+    "test": "node --disable-warning=ExperimentalWarning --test \"src/**/*.test.ts\"",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "fetch:clubspire": "node --disable-warning=ExperimentalWarning scripts/fetch-clubspire.ts"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0"
   }
 }
