@@ -1,5 +1,12 @@
 {
   "name": "@spotradar/shared",
   "version": "0.0.0",
-  "private": true
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --disable-warning=ExperimentalWarning --test \"src/**/*.test.ts\""
+  }
 }

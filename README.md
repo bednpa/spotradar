@@ -8,7 +8,30 @@ The app is developed mainly by AI agents (Claude Code) running in GitHub Actions
 **Live app:** https://spotradar.onrender.com
 _(on the free plan the first request after 15 minutes of inactivity takes about a minute while the app wakes up)_
 
-> **Status:** the repository is currently a template – deployment and CI are set up, but the app itself has not been implemented yet, so the live address will start working after the first feature is built and merged.
+## What it does
+
+Pick a **sport** (tennis, badminton, squash, table tennis, padel, beach volleyball), a **date**, a **start time** and a **duration**, and optionally share your **location** with a **max distance**. SpotRadar lists the venues in Brno that have a free court for exactly that slot (nearest or cheapest first), and you can reserve the court right away. No more checking ten booking websites.
+
+> **Demo data:** the venues are fictional and the occupancy from external booking systems is simulated (deterministic per court/date/slot). Reservations made in SpotRadar are kept in memory and reset on every restart or deploy.
+
+### API (contract in `shared/src`)
+
+| Method | Path                     | Success                      | Errors                                                                                                                                                    |
+| ------ | ------------------------ | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/health`            | 200 `{ status: 'ok' }`       | –                                                                                                                                                         |
+| GET    | `/api/availability`      | 200 `AvailabilityResponse`   | 400 `VALIDATION_ERROR`, 422 `DATE_OUT_OF_RANGE`                                                                                                           |
+| POST   | `/api/reservations`      | 201 `Reservation`            | 400 `VALIDATION_ERROR`, 404 `VENUE_NOT_FOUND` / `COURT_NOT_FOUND`, 409 `SLOT_UNAVAILABLE`, 413, 422 `SPORT_NOT_OFFERED` / `DATE_OUT_OF_RANGE` / `SLOT_IN_PAST` / `OUTSIDE_OPENING_HOURS` |
+| GET    | `/api/reservations/:id`  | 200 `Reservation`            | 404 `RESERVATION_NOT_FOUND`                                                                                                                               |
+
+`/api/availability` query: `sport`, `date` (YYYY-MM-DD, today … today + 13 days, Europe/Prague), `time` (HH:00 or HH:30), `durationMinutes` (60/90/120, default 60), `cityId` (default `brno`), optional `lat` + `lng`, optional `maxDistanceKm` (requires `lat`/`lng`).
+
+### Toolchain (no third-party dependencies yet)
+
+The first version was built in an environment where `npm install` was not available, so it uses only Node 22 built-ins:
+TypeScript runs directly via Node's type stripping (erasable syntax only, relative imports with `.ts` extensions), tests use `node:test`,
+the backend uses `node:http`, and the frontend is vanilla TypeScript turned into browser ES modules by `frontend/scripts/build.mjs`
+(with an import map for `@spotradar/shared`). **Not set up yet:** `typecheck` (TypeScript), `lint` (ESLint) and Playwright E2E tests –
+these need dev dependencies to be installed and the lockfile updated.
 
 ## Repository structure
 

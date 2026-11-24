@@ -1,5 +1,11 @@
 {
   "name": "@spotradar/frontend",
   "version": "0.0.0",
-  "private": true
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node --disable-warning=ExperimentalWarning scripts/build.mjs",
+    "dev": "node --disable-warning=ExperimentalWarning scripts/build.mjs --watch",
+    "test": "node --disable-warning=ExperimentalWarning --test \"src/**/*.test.ts\" \"scripts/**/*.test.mjs\""
+  }
 }
