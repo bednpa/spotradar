@@ -1,16 +1,28 @@
 import { fileURLToPath } from 'node:url';
 import { createApp } from './app.ts';
-import { SEED_VENUES } from './data/seedVenues.ts';
-import { createInMemoryReservationRepository } from './repositories/reservationRepository.ts';
+import {
+  createAvailabilityService,
+  createDefaultConnectors,
+} from './connectors/availabilityService.ts';
+import { VENUE_RECORDS } from './data/venues.ts';
 import { createVenueRepository } from './repositories/venueRepository.ts';
+import { createGeocoder } from './services/geocode.ts';
+import { createStubFetch, createStubGeocoder, isStubMode } from './stubs.ts';
 
 const port = Number(process.env.PORT) || 3000;
 const host = '0.0.0.0';
+const now = (): Date => new Date();
+const stub = isStubMode(process.env);
+if (stub) console.log('SPOTRADAR_STUB_EXTERNAL=1: external services are stubbed');
 
 const server = createApp({
-  venues: createVenueRepository(SEED_VENUES),
-  reservations: createInMemoryReservationRepository(),
-  now: () => new Date(),
+  venues: createVenueRepository(VENUE_RECORDS),
+  availability: createAvailabilityService({
+    connectors: createDefaultConnectors(stub ? { fetch: createStubFetch() } : {}),
+    now,
+  }),
+  geocoder: stub ? createStubGeocoder() : createGeocoder({ now }),
+  now,
   staticDir: fileURLToPath(new URL('../../frontend/dist/', import.meta.url)),
 });
 

@@ -2,202 +2,179 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   escapeHtml,
-  renderReservationDialog,
+  renderDateChips,
+  renderDistanceChips,
+  renderResultCard,
   renderResults,
   renderSearchForm,
+  safeHref,
+  telHref,
 } from './render.ts';
 import { getDefaultFormValues } from './query.ts';
-import {
-  buildReservationTarget,
-  openReservation,
-  reservationFailed,
-  reservationSubmitting,
-  reservationSucceeded,
-} from './state.ts';
-import { ApiRequestError } from './api.ts';
-import { QUERY, RESERVATION, makeResponse, makeResult } from './test-fixtures.test.ts';
+import { QUERY, makeResponse, makeResult } from './test-fixtures.test.ts';
 
-const FORM_VALUES = getDefaultFormValues(new Date('2026-11-24T10:10:00Z'));
+const NOW = new Date('2026-11-25T12:00:00Z');
 
-test('escapeHtml escapes all special characters', () => {
-  assert.equal(escapeHtml(`<a href="x">'&'</a>`), '&lt;a href=&quot;x&quot;&gt;&#39;&amp;&#39;&lt;/a&gt;');
+test('escapeHtml / safeHref / telHref', () => {
+  assert.equal(escapeHtml(`<a href="x">&'`), '&lt;a href=&quot;x&quot;&gt;&amp;&#39;');
+  assert.equal(safeHref('https://a.cz/x'), 'https://a.cz/x');
+  assert.equal(safeHref('javascript:alert(1)'), null);
+  assert.equal(telHref('+420 123 456 789'), 'tel:+420123456789');
 });
 
-test('search form has labelled controls and bounds from the booking window', () => {
-  const html = renderSearchForm({
-    values: FORM_VALUES,
-    location: { status: 'idle' },
-    minDate: '2026-11-24',
-    maxDate: '2026-12-07',
-  });
-  assert.match(html, /<form[^>]*aria-label="Search courts"/);
-  for (const [id, label] of [
-    ['sport', 'Sport'],
-    ['date', 'Date'],
-    ['time', 'Start time'],
-    ['duration', 'Duration'],
-    ['max-distance', 'Max distance'],
-  ] as const) {
-    assert.match(html, new RegExp(`<label for="${id}">${label}</label>`));
-  }
-  assert.match(html, /min="2026-11-24" max="2026-12-07" value="2026-11-24"/);
-  assert.match(html, /<option value="11:30" selected>11:30<\/option>/);
-  assert.match(html, /<option value="60" selected>60 min<\/option>/);
-  assert.match(html, /Use my location/);
-  assert.match(html, />Search<\/button>/);
-  assert.match(html, /<option value=""(?: selected)?>Any distance<\/option>/);
-  assert.match(html, /<option value="20">Within 20 km<\/option>/);
-});
-
-test('max distance select is disabled until a location is set', () => {
-  const base = { values: FORM_VALUES, minDate: '2026-11-24', maxDate: '2026-12-07' };
-  const without = renderSearchForm({ ...base, location: { status: 'idle' } });
-  const withLocation = renderSearchForm({
-    ...base,
-    location: { status: 'set', lat: 49.2, lng: 16.6 },
-  });
-  assert.match(without, /<select id="max-distance"[^>]* disabled>/);
-  assert.doesNotMatch(withLocation, /<select id="max-distance"[^>]* disabled>/);
-  assert.match(withLocation, /Location set/);
-});
-
-test('loading state is an accessible status', () => {
-  const html = renderResults({ status: 'loading' });
-  assert.match(html, /role="status"/);
-  assert.match(html, /Searching for free courts…/);
-});
-
-test('error state is an alert listing field issues', () => {
-  const html = renderResults({
-    status: 'error',
-    message: 'Invalid query <b>',
-    issues: [{ field: 'date', message: 'date is required' }],
-  });
-  assert.match(html, /role="alert"/);
-  assert.match(html, /Invalid query &lt;b&gt;/);
-  assert.match(html, /<strong>date<\/strong>: date is required/);
-});
-
-test('empty state hints at changing the search', () => {
-  const html = renderResults({ status: 'success', response: makeResponse([]) });
-  assert.match(html, /No free courts found/);
-  assert.match(html, /different time, another date or a larger max distance/);
-  assert.doesNotMatch(html, /<article/);
-});
-
-test('results render venue cards with price, distance, hours and reserve buttons', () => {
-  const html = renderResults({ status: 'success', response: makeResponse() });
-  assert.match(html, /<ul class="venue-list">/);
-  assert.match(html, /<article class="venue-card" aria-labelledby="venue-heading-0">/);
-  assert.match(html, /<h3 id="venue-heading-0">Tennis Club Brno<\/h3>/);
-  assert.match(html, /Hlavní 1, Brno/);
-  assert.match(html, /1\.2 km away/);
-  assert.match(html, /350 CZK \/ hour · 525 CZK total/);
-  assert.match(html, /Open 08:00–22:00/);
-  assert.match(html, /aria-label="Reserve Court 1 at Tennis Club Brno"/);
-  assert.match(html, /aria-label="Reserve Court 2 at Tennis Club Brno"/);
-  assert.match(html, /data-venue-id="v1" data-court-id="c1"/);
-  assert.match(html, /Indoor · clay/);
-  assert.match(html, /1 venue with free courts/);
-});
-
-test('distance is omitted when no location was used', () => {
-  const html = renderResults({
-    status: 'success',
-    response: makeResponse([makeResult({ distanceKm: null })]),
-  });
-  assert.doesNotMatch(html, /venue-distance/);
-});
-
-test('API strings are escaped in results', () => {
-  const base = makeResult();
-  const html = renderResults({
-    status: 'success',
-    response: makeResponse([
-      makeResult({
-        venue: { ...base.venue, name: '<script>alert(1)</script>', address: 'A & B "street"' },
-      }),
-    ]),
-  });
-  assert.doesNotMatch(html, /<script>/);
-  assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
-  assert.match(html, /A &amp; B &quot;street&quot;/);
-});
-
-const target = buildReservationTarget(QUERY, makeResult(), makeResult().availableCourts[0]!);
-
-test('closed reservation renders nothing', () => {
-  assert.equal(renderReservationDialog({ status: 'closed' }), '');
-});
-
-test('reservation form shows summary, labelled fields, confirm and cancel', () => {
-  const html = renderReservationDialog(openReservation(target));
-  assert.match(html, /<form id="reservation-form" aria-label="Reservation"/);
-  assert.match(html, /<label for="res-name">Name<\/label>/);
-  assert.match(html, /<label for="res-email">E-mail<\/label>/);
-  assert.match(html, /Tennis Club Brno/);
-  assert.match(html, /Court 1/);
-  assert.match(html, /Wed 25 Nov 2026/);
-  assert.match(html, /18:00–19:30 \(90 min\)/);
-  assert.match(html, /525 CZK/);
-  assert.match(html, />Confirm<\/button>/);
-  assert.match(html, /data-action="cancel"/);
-});
-
-test('field errors are linked to inputs', () => {
-  const state = openReservation(target);
-  assert.ok(state.status === 'editing');
-  const html = renderReservationDialog({
-    ...state,
-    values: { customerName: '"><x', customerEmail: '' },
-    fieldErrors: { customerEmail: 'customerEmail must be a valid e-mail address' },
-  });
-  assert.match(html, /id="res-email"[^>]*aria-invalid="true" aria-describedby="res-email-error"/);
-  assert.match(html, /<p class="field-error" id="res-email-error">/);
-  assert.match(html, /value="&quot;&gt;&lt;x"/);
-});
-
-test('submitting state disables the form and shows a status', () => {
-  const submitting = reservationSubmitting(openReservation(target), {
-    customerName: 'Jana',
-    customerEmail: 'jana@example.com',
-  });
-  const html = renderReservationDialog(submitting);
-  assert.match(html, /aria-busy="true"/);
-  assert.match(html, /role="status"/);
-  assert.match(html, /Reserving your court…/);
-  assert.match(html, /type="submit" class="button-primary" disabled/);
-});
-
-test('409 conflict shows an alert with a refresh action', () => {
-  const submitting = reservationSubmitting(openReservation(target), {
-    customerName: 'Jana',
-    customerEmail: 'jana@example.com',
-  });
-  const html = renderReservationDialog(
-    reservationFailed(
-      submitting,
-      new ApiRequestError(409, 'SLOT_UNAVAILABLE', 'Court is already booked'),
-    ),
+test('live card with slots, booking link attributes and badge', () => {
+  const html = renderResultCard(makeResult(), QUERY, NOW);
+  assert.match(html, /Sportcentrum Kuklenská/);
+  assert.match(html, /Brno-Židenice/);
+  assert.match(html, /Live · checked 3 min ago/);
+  assert.match(html, /08:00–10:00/);
+  assert.match(html, /3 courts/);
+  assert.match(html, /Up to 3 courts free/);
+  assert.match(
+    html,
+    /<a class="btn btn-primary" href="https:\/\/example\.com\/book" target="_blank" rel="noopener noreferrer">Book on venue's website/,
   );
-  assert.match(html, /role="alert"/);
-  assert.match(html, /Court is already booked/);
-  assert.match(html, /data-action="refresh"/);
-  assert.match(html, /value="Jana"/);
+  assert.match(html, /Open 07:00–22:00/);
+  assert.doesNotMatch(html, /approx/);
+  assert.doesNotMatch(html, /away/);
+  assert.doesNotMatch(html, /tel:/);
 });
 
-test('success shows a confirmation with id, venue, court, time and price', () => {
-  const submitting = reservationSubmitting(openReservation(target), {
-    customerName: 'Jana',
-    customerEmail: 'jana@example.com',
+test('free courts at the chosen time are the headline', () => {
+  const html = renderResultCard(
+    makeResult({ freeCourtsAtTime: 3 }),
+    { ...QUERY, time: '18:00' },
+    NOW,
+  );
+  assert.match(html, /3 courts free at 18:00/);
+  const one = renderResultCard(
+    makeResult({ freeCourtsAtTime: 1 }),
+    { ...QUERY, time: '18:00' },
+    NOW,
+  );
+  assert.match(one, /1 court free at 18:00/);
+});
+
+test('fully booked at the chosen time', () => {
+  const html = renderResultCard(
+    makeResult({ freeCourtsAtTime: 0 }),
+    { ...QUERY, time: '12:00' },
+    NOW,
+  );
+  assert.match(html, /Fully booked at 12:00/);
+});
+
+test('live with no slots is fully booked this day', () => {
+  const result = makeResult();
+  result.availability.freeSlots = [];
+  assert.match(renderResultCard(result, QUERY, NOW), /Fully booked this day/);
+});
+
+test('unknown availability', () => {
+  const html = renderResultCard(
+    makeResult({ availability: { status: 'unknown', freeSlots: [] } }),
+    QUERY,
+    NOW,
+  );
+  assert.match(html, /Availability unknown – check on website/);
+  assert.doesNotMatch(html, /class="slots"/);
+  assert.doesNotMatch(html, /headline/);
+  assert.match(html, /Book on venue's website/);
+});
+
+test('unavailable connector', () => {
+  const html = renderResultCard(
+    makeResult({ availability: { status: 'unavailable', freeSlots: [] } }),
+    QUERY,
+    NOW,
+  );
+  assert.match(html, /Couldn't read availability right now – check on website/);
+  assert.match(html, /data-status="unavailable"/);
+});
+
+test('distance, phone link, approximate hours and closed day', () => {
+  const base = makeResult({ distanceKm: 1.2 });
+  base.venue.phone = '+420 123 456 789';
+  base.venue.openingHours.approximate = true;
+  const html = renderResultCard(base, QUERY, NOW);
+  assert.match(html, /1\.2 km away/);
+  assert.match(html, /href="tel:\+420123456789"/);
+  assert.match(html, /Open 07:00–22:00 \(approx\.\)/);
+  // 2026-11-28 is a Saturday – closed in the fixture
+  assert.match(renderResultCard(base, { date: '2026-11-28' }, NOW), /Closed \(approx\.\)/);
+});
+
+test('venue text is escaped and unsafe booking urls are not linked', () => {
+  const result = makeResult();
+  result.venue.name = '<script>x</script>';
+  result.venue.bookingUrl = 'javascript:alert(1)';
+  const html = renderResultCard(result, QUERY, NOW);
+  assert.doesNotMatch(html, /<script>/);
+  assert.doesNotMatch(html, /Book on venue/);
+});
+
+test('states: idle, loading, empty, error, success', () => {
+  assert.match(renderResults({ status: 'idle' }, NOW), /Search courts/);
+  const loading = renderResults({ status: 'loading' }, NOW);
+  assert.match(loading, /skeleton/);
+  assert.match(loading, /Loading results/);
+  const empty = renderResults({ status: 'success', response: makeResponse([]) }, NOW);
+  assert.match(empty, /No courts found/);
+  assert.match(empty, /larger distance/);
+  const error = renderResults(
+    { status: 'error', message: 'Boom', issues: [{ field: 'time', message: 'bad' }] },
+    NOW,
+  );
+  assert.match(error, /role="alert"/);
+  assert.match(error, /Boom/);
+  assert.match(error, /time: bad/);
+  const ok = renderResults(
+    {
+      status: 'success',
+      response: makeResponse([makeResult(), makeResult()], { ...QUERY, time: '18:00' }),
+    },
+    NOW,
+  );
+  assert.match(ok, /2 venues · Wed 25 Nov 2026 at 18:00/);
+  assert.equal(ok.match(/<li class="card"/g)?.length, 2);
+});
+
+test('search form: labels, chips, date window, badminton preselected', () => {
+  const html = renderSearchForm({
+    values: getDefaultFormValues(NOW),
+    location: { status: 'idle' },
+    now: NOW,
   });
-  const html = renderReservationDialog(reservationSucceeded(submitting, RESERVATION));
-  assert.match(html, /role="status"/);
-  assert.match(html, /Reservation confirmed/);
-  assert.match(html, /r-123/);
-  assert.match(html, /Tennis Club Brno/);
-  assert.match(html, /Court 1/);
-  assert.match(html, /18:00–19:30/);
-  assert.match(html, /525 CZK/);
-  assert.match(html, /data-action="close"/);
+  assert.match(html, /<label for="sport">Sport<\/label>/);
+  assert.match(html, /<option value="badminton" selected>Badminton/);
+  assert.match(html, /<label for="time">Time \(optional\)<\/label>/);
+  assert.match(html, /<label for="address">/);
+  assert.match(html, /min="2026-11-25" max="2026-12-09"/);
+  assert.match(html, /data-date="2026-11-25" aria-pressed="true">Today/);
+  assert.match(html, />Tomorrow</);
+  assert.match(html, /Use my location/);
+  assert.match(html, /data-km="5" aria-pressed="false" disabled/);
+});
+
+test('distance chips are enabled with an origin and reflect the selection', () => {
+  const html = renderDistanceChips('5', true);
+  assert.doesNotMatch(html, /disabled/);
+  assert.match(html, /data-km="5" aria-pressed="true"/);
+  assert.match(html, /data-km="" aria-pressed="false"/);
+  assert.match(renderDistanceChips('', true), /data-km="" aria-pressed="true"/);
+});
+
+test('date chips mark only the selected date', () => {
+  const html = renderDateChips('2026-11-26', NOW);
+  assert.equal(html.match(/aria-pressed="true"/g)?.length, 1);
+  assert.match(html, /data-date="2026-11-26" aria-pressed="true">Tomorrow/);
+});
+
+test('location status renders errors with the error style', () => {
+  const html = renderSearchForm({
+    values: getDefaultFormValues(NOW),
+    location: { status: 'error', message: 'Location access was denied.' },
+    now: NOW,
+  });
+  assert.match(html, /location-status is-error" role="status">Location access was denied\./);
 });

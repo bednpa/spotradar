@@ -1,134 +1,94 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  TIME_OPTIONS,
   buildSearchQuery,
-  formValuesToParams,
-  getDefaultDateTime,
+  formFromQueryString,
+  formToParams,
+  getDateChips,
   getDefaultFormValues,
   queryToSearchParams,
 } from './query.ts';
-import type { SearchFormValues } from './query.ts';
+import type { FormValues } from './query.ts';
 
-const VALID: SearchFormValues = {
-  sport: 'tennis',
-  date: '2026-11-25',
-  time: '18:00',
-  durationMinutes: '90',
-  lat: '',
-  lng: '',
-  maxDistanceKm: '',
-};
+const NOW = new Date('2026-11-24T10:00:00Z');
 
-test('time options run from 07:00 to 21:00 in half-hour steps', () => {
-  assert.equal(TIME_OPTIONS[0], '07:00');
-  assert.equal(TIME_OPTIONS[1], '07:30');
-  assert.equal(TIME_OPTIONS.at(-1), '21:00');
-  assert.equal(TIME_OPTIONS.length, 29);
-});
+function values(overrides: Partial<FormValues> = {}): FormValues {
+  return { ...getDefaultFormValues(NOW), ...overrides };
+}
 
-test('default time is the next half-hour slot after now (Prague time)', () => {
-  // 10:10 UTC = 11:10 in Prague (CET)
-  assert.deepEqual(getDefaultDateTime(new Date('2026-11-24T10:10:00Z')), {
+test('default form: badminton, today, any time, no origin', () => {
+  assert.deepEqual(getDefaultFormValues(NOW), {
+    sport: 'badminton',
     date: '2026-11-24',
-    time: '11:30',
-  });
-  // exactly on a slot -> the next one
-  assert.deepEqual(getDefaultDateTime(new Date('2026-11-24T10:00:00Z')), {
-    date: '2026-11-24',
-    time: '11:30',
+    time: '',
+    maxDistanceKm: '',
+    origin: null,
   });
 });
 
-test('default time is clamped to 07:00 early in the morning', () => {
-  // 23:30 UTC = 00:30 next day in Prague
-  assert.deepEqual(getDefaultDateTime(new Date('2026-11-24T23:30:00Z')), {
-    date: '2026-11-25',
-    time: '07:00',
-  });
+test('date chips: Today, Tomorrow, then labelled weekdays', () => {
+  const chips = getDateChips(NOW);
+  assert.equal(chips.length, 7);
+  assert.deepEqual(chips[0], { date: '2026-11-24', label: 'Today' });
+  assert.deepEqual(chips[1], { date: '2026-11-25', label: 'Tomorrow' });
+  assert.deepEqual(chips[2], { date: '2026-11-26', label: 'Thu 26 Nov' });
+  assert.equal(chips[6]?.date, '2026-11-30');
 });
 
-test('default moves to tomorrow 18:00 when no slot is left today', () => {
-  // 22:40 UTC = 23:40 in Prague
-  assert.deepEqual(getDefaultDateTime(new Date('2026-11-24T22:40:00Z')), {
-    date: '2026-11-25',
-    time: '18:00',
-  });
-  // 20:00 UTC = 21:00 Prague -> next slot 21:30 is not offered
-  assert.deepEqual(getDefaultDateTime(new Date('2026-11-24T20:00:00Z')), {
-    date: '2026-11-25',
-    time: '18:00',
-  });
+test('time is optional', () => {
+  const result = buildSearchQuery(values());
+  assert.equal(result.ok, true);
+  if (result.ok) assert.equal(result.value.time, undefined);
+  const withTime = buildSearchQuery(values({ time: '18:00' }));
+  assert.equal(withTime.ok && withTime.value.time, '18:00');
 });
 
-test('last slot of the day is still offered today', () => {
-  // 19:45 UTC = 20:45 Prague
-  assert.deepEqual(getDefaultDateTime(new Date('2026-11-24T19:45:00Z')), {
-    date: '2026-11-24',
-    time: '21:00',
-  });
+test('invalid time is rejected', () => {
+  const result = buildSearchQuery(values({ time: '25:99' }));
+  assert.equal(result.ok, false);
 });
 
-test('default form values have no location and 60 minute duration', () => {
-  const values = getDefaultFormValues(new Date('2026-11-24T10:10:00Z'));
-  assert.equal(values.sport, 'tennis');
-  assert.equal(values.durationMinutes, '60');
-  assert.equal(values.lat, '');
-  assert.equal(values.maxDistanceKm, '');
+test('distance requires an origin', () => {
+  const result = buildSearchQuery(values({ maxDistanceKm: '5' }));
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.equal(result.issues[0]?.field, 'maxDistanceKm');
 });
 
-test('max distance is dropped when no location is set', () => {
-  const params = formValuesToParams({ ...VALID, maxDistanceKm: '5' });
-  assert.equal(params.maxDistanceKm, undefined);
-  assert.equal(params.lat, undefined);
-  assert.equal(params.cityId, 'brno');
+test('origin and distance produce lat/lng/maxDistanceKm', () => {
+  const origin = { lat: 49.19, lng: 16.6, label: 'Brno', source: 'address' } as const;
+  const result = buildSearchQuery(values({ origin, maxDistanceKm: '5', time: '18:00' }));
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.deepEqual(result.value, {
+      sport: 'badminton',
+      date: '2026-11-24',
+      time: '18:00',
+      lat: 49.19,
+      lng: 16.6,
+      maxDistanceKm: 5,
+    });
+    assert.equal(
+      queryToSearchParams(result.value).toString(),
+      'sport=badminton&date=2026-11-24&time=18%3A00&lat=49.19&lng=16.6&maxDistanceKm=5',
+    );
+  }
 });
 
-test('buildSearchQuery accepts a valid form and keeps location + distance', () => {
-  const result = buildSearchQuery({ ...VALID, lat: '49.19500', lng: '16.60800', maxDistanceKm: '5' });
-  assert.ok(result.ok);
-  assert.deepEqual(result.value, {
-    sport: 'tennis',
-    date: '2026-11-25',
-    time: '18:00',
-    durationMinutes: 90,
-    cityId: 'brno',
-    lat: 49.195,
-    lng: 16.608,
-    maxDistanceKm: 5,
-  });
+test('formToParams omits blank values', () => {
+  assert.deepEqual(formToParams(values()), { sport: 'badminton', date: '2026-11-24' });
 });
 
-test('buildSearchQuery reports issues for an invalid form', () => {
-  const result = buildSearchQuery({ ...VALID, date: '', time: '18:15' });
-  assert.ok(!result.ok);
-  assert.deepEqual(result.issues.map((i) => i.field).sort(), ['date', 'time']);
-});
-
-test('queryToSearchParams serialises optional fields only when present', () => {
-  const plain = queryToSearchParams({
-    sport: 'padel',
-    date: '2026-11-25',
-    time: '18:00',
-    durationMinutes: 60,
-    cityId: 'brno',
-  });
-  assert.equal(
-    plain.toString(),
-    'sport=padel&date=2026-11-25&time=18%3A00&durationMinutes=60&cityId=brno',
+test('formFromQueryString restores the form or returns null', () => {
+  assert.equal(formFromQueryString('', NOW), null);
+  const restored = formFromQueryString(
+    '?sport=badminton&date=2026-11-25&time=18:00&lat=49.2&lng=16.6&maxDistanceKm=5',
+    NOW,
   );
-
-  const located = queryToSearchParams({
-    sport: 'padel',
-    date: '2026-11-25',
-    time: '18:00',
-    durationMinutes: 60,
-    cityId: 'brno',
-    lat: 49.2,
-    lng: 16.6,
-    maxDistanceKm: 5,
-  });
-  assert.equal(located.get('lat'), '49.2');
-  assert.equal(located.get('lng'), '16.6');
-  assert.equal(located.get('maxDistanceKm'), '5');
+  assert.equal(restored?.date, '2026-11-25');
+  assert.equal(restored?.time, '18:00');
+  assert.equal(restored?.maxDistanceKm, '5');
+  assert.equal(restored?.origin?.lat, 49.2);
+  const noOrigin = formFromQueryString('?date=2026-11-25&maxDistanceKm=5', NOW);
+  assert.equal(noOrigin?.origin, null);
+  assert.equal(noOrigin?.maxDistanceKm, '');
 });

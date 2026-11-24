@@ -1,20 +1,26 @@
 export * from './catalog.ts';
 export * from './dates.ts';
 export * from './errors.ts';
+export * from './search.ts';
 export * from './validation.ts';
+export { WEEKDAYS } from './types.ts';
 export type {
   ApiError,
-  AvailabilityQuery,
-  AvailabilityQueryParams,
-  AvailabilityResponse,
-  AvailabilityResult,
-  AvailableCourt,
-  Court,
-  CreateReservationRequest,
+  AvailabilitySourceConfig,
+  AvailabilityStatus,
+  DayOpeningHours,
+  FreeSlot,
+  GeocodeQuery,
+  GeocodeQueryParams,
+  GeocodeResponse,
   HealthResponse,
   OpeningHours,
-  Reservation,
+  SearchQuery,
+  SearchQueryParams,
+  SearchResponse,
+  SearchResult,
   ValidationIssue,
   Venue,
-  VenueSummary,
+  VenueAvailability,
+  Weekday,
 } from './types.ts';

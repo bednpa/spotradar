@@ -1,58 +1,72 @@
-import { addDays, toLocalDateTime } from '@spotradar/shared';
-import type { AvailableCourt, SportId, Venue } from '@spotradar/shared';
-import { SEED_VENUES } from './data/seedVenues.ts';
-import { createInMemoryReservationRepository } from './repositories/reservationRepository.ts';
-import type { ReservationRepository } from './repositories/reservationRepository.ts';
-import { createVenueRepository } from './repositories/venueRepository.ts';
-import type { VenueRepository } from './repositories/venueRepository.ts';
-import { searchAvailability } from './services/availability.ts';
+import type { FreeSlot } from '@spotradar/shared';
+import type { AvailabilityConnector, FetchFn } from './connectors/types.ts';
+import type { VenueRecord } from './repositories/venueRepository.ts';
 
 /** 2026-11-24 09:00 in Europe/Prague. */
 export const FIXED_NOW = new Date('2026-11-24T08:00:00Z');
 export const TODAY = '2026-11-24';
+export const TOMORROW = '2026-11-25';
 
-export function freshRepos(): { venues: VenueRepository; reservations: ReservationRepository } {
+export const silentLogger = { warn: (): void => undefined };
+
+export function slot(start: string, end: string, freeCourts: number): FreeSlot {
+  return { start, end, freeCourts };
+}
+
+export type ConnectorImpl = (venue: VenueRecord, date: string) => Promise<FreeSlot[]>;
+
+/** Connector with a replaceable implementation that records its calls. */
+export function fakeConnector(
+  type: AvailabilityConnector['type'],
+  impl: ConnectorImpl,
+): AvailabilityConnector & { calls: { venueId: string; date: string }[] } {
+  const calls: { venueId: string; date: string }[] = [];
   return {
-    venues: createVenueRepository(SEED_VENUES),
-    reservations: createInMemoryReservationRepository(),
+    type,
+    calls,
+    getFreeSlots(venue, date) {
+      calls.push({ venueId: venue.id, date });
+      return impl(venue, date);
+    },
   };
 }
 
-export interface FreeSlot {
-  sport: SportId;
-  date: string;
-  time: string;
-  durationMinutes: 60 | 90 | 120;
-  venue: Venue;
-  court: AvailableCourt;
+/** Mutable clock for cache / rate-limit tests. */
+export function fakeClock(start: Date = FIXED_NOW): {
+  now: () => Date;
+  advance: (ms: number) => void;
+} {
+  let t = start.getTime();
+  return {
+    now: () => new Date(t),
+    advance: (ms) => {
+      t += ms;
+    },
+  };
 }
 
-/** Finds a slot (from tomorrow on) where at least one court is free, using the real search. */
-export function findFreeSlot(
-  sport: SportId,
-  repos: { venues: VenueRepository; reservations: ReservationRepository },
-  skip = 0,
-): FreeSlot {
-  let skipped = 0;
-  const tomorrow = addDays(toLocalDateTime(FIXED_NOW).date, 1);
-  for (let d = 0; d < 7; d++) {
-    const date = addDays(tomorrow, d);
-    for (const time of ['10:00', '10:30', '11:00', '11:30', '12:00', '13:00', '14:00', '15:00']) {
-      const results = searchAvailability(
-        { sport, date, time, durationMinutes: 60, cityId: 'brno' },
-        { ...repos, now: FIXED_NOW },
-      );
-      const first = results[0];
-      const court = first?.availableCourts[0];
-      if (first && court) {
-        if (skipped < skip) {
-          skipped++;
-          continue;
-        }
-        const venue = repos.venues.getById(first.venue.id);
-        if (venue) return { sport, date, time, durationMinutes: 60, venue, court };
-      }
-    }
-  }
-  throw new Error(`No free slot found for ${sport}`);
+export function htmlResponse(html: string, status = 200): Response {
+  return new Response(html, { status, headers: { 'content-type': 'text/html' } });
+}
+
+export function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
+export type RecordedFetch = FetchFn & { calls: { url: URL; init?: RequestInit }[] };
+
+/** Fetch stub that records calls and answers with `respond`. */
+export function recordingFetch(
+  respond: (url: URL, init?: RequestInit) => Promise<Response> | Response,
+): RecordedFetch {
+  const calls: { url: URL; init?: RequestInit }[] = [];
+  const fn: FetchFn = (input, init) => {
+    const url = new URL(input);
+    calls.push({ url, init });
+    return Promise.resolve(respond(url, init));
+  };
+  return Object.assign(fn, { calls });
 }
