@@ -157,8 +157,17 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+          # Short title: first sentence of the task, collapsed to one line, max 72 chars.
+          # The full task goes into the commit body and the PR description.
+          SUMMARY="$(printf '%s' "$TASK" | tr '\r\n\t' '   ' | sed -E 's/ +/ /g; s/^ //; s/([.!?]) .*/\1/; s/[.!?]$//')"
+          if [ "${#SUMMARY}" -gt 72 ]; then
+            SUMMARY="${SUMMARY:0:69}"
+            SUMMARY="${SUMMARY% *}..."
+          fi
+          [ -z "$SUMMARY" ] && SUMMARY="agent task"
+
           git add -A
-          git commit -m "feat(agent): $TASK"
+          git commit -m "feat(agent): $SUMMARY" -m "$TASK"
           git push -u origin "$BRANCH"
 
           PR_BODY_FILE="$(mktemp)"
@@ -185,7 +194,7 @@ jobs:
           PR_URL="$(gh pr create \
             --base "$BASE" \
             --head "$BRANCH" \
-            --title "Agent: $TASK" \
+            --title "Agent: $SUMMARY" \
             --body-file "$PR_BODY_FILE")"
 
           rm -f "$PR_BODY_FILE"
