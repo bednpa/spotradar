@@ -7,7 +7,7 @@
     "frontend"
   ],
   "scripts": {
-    "dev": "npm --workspaces --if-present run dev",
+    "dev": "npm run dev -w @spotradar/frontend & npm run dev -w @spotradar/backend",
     "build": "npm --workspaces --if-present run build",
     "typecheck": "npm --workspaces --if-present run typecheck",
     "lint": "npm --workspaces --if-present run lint",
