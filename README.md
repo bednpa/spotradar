@@ -98,7 +98,7 @@ npm start           # run the production build
 
 ## One-time setup
 
-- **GitHub secret** `ANTHROPIC_API_KEY` (Settings → Secrets and variables → Actions) – used by the agent.
+- **GitHub secret** `CLAUDE_CODE_OAUTH_TOKEN` (Settings → Secrets and variables → Actions) – used by the agent; generate it locally with `claude setup-token` (works with a Claude Pro/Max subscription).
 - **Settings → Actions → General → Allow GitHub Actions to create and approve pull requests.**
 - **Render:** sign in at render.com with GitHub → **New → Blueprint** → select this repository.
 
