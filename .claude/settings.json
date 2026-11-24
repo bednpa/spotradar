@@ -2,9 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(npm run *)",
+      "Bash(npm test)",
+      "Bash(npm test *)",
+      "Bash(npm install)",
+      "Bash(npm install *)",
+      "Bash(npm ci)",
       "Bash(npx vitest *)",
       "Bash(npx playwright *)",
       "Bash(npx tsc *)",
+      "Bash(npx eslint *)",
+      "Bash(npx prettier *)",
       "Bash(git status)",
       "Bash(git diff *)",
       "Bash(git log *)",
@@ -29,7 +36,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npm run typecheck && npm test"
+            "command": "if ! out=$(npm run typecheck 2>&1 && npm run lint 2>&1 && npm test 2>&1); then { echo 'Checks failed - fix them before completing the task:'; echo \"$out\" | tail -n 60; } >&2; exit 2; fi"
           }
         ]
       }

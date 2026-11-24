@@ -3,9 +3,9 @@ paths:
   - "frontend/**"
 ---
 
-# Pravidla pro frontend
+# Frontend rules
 
-- Importuj datové typy pro komunikaci s API výhradně ze `shared/` – nevytvářej duplicitní lokální rozhraní.
-- Každé načítání dat a odeslání formuláře musí viditelně ošetřovat stavy načítání (`loading`), chyby (`error`) a prázdného seznamu (`empty state`).
-- Používej sémantické HTML prvky a přístupné popisky (`label`, `button`, `aria-label`), aby bylo UI přehledné a spolehlivě ovladatelné přes Playwright.
-- **Povinné testy:** Ke každé nové komponentě, filtru nebo interakci přidej komponentový test (`npm test`) a při zapnutém `run_e2e` i E2E scénář (`npm run test:e2e`).
+- Import API data types only from `shared/` – do not create duplicate local interfaces.
+- Every data fetch and form submission must visibly handle the `loading`, `error` and `empty state` cases.
+- Use semantic HTML elements and accessible labels (`label`, `button`, `aria-label`) so the UI is clear and can be driven reliably by Playwright.
+- **Required tests:** For every new component, filter or interaction add a component test (`npm test`), and when `run_e2e` is enabled also an E2E scenario (`npm run test:e2e`).

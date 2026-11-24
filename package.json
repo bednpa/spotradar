@@ -1,5 +1,5 @@
 {
-  "name": "muj-web-projekt",
+  "name": "spotradar",
   "private": true,
   "workspaces": [
     "shared",
