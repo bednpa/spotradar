@@ -52,6 +52,17 @@ jobs:
       - name: Install Claude Code CLI
         run: npm install -g @anthropic-ai/claude-code
 
+      # Headless runs never show the trust dialog, so without this Claude Code
+      # ignores permissions.allow (and hooks) from .claude/settings.json.
+      - name: Trust the workspace for Claude Code
+        shell: bash
+        run: |
+          CONFIG="$HOME/.claude.json"
+          [ -f "$CONFIG" ] || echo '{}' > "$CONFIG"
+          jq --arg dir "$GITHUB_WORKSPACE" \
+            '.projects[$dir].hasTrustDialogAccepted = true' \
+            "$CONFIG" > "$CONFIG.tmp" && mv "$CONFIG.tmp" "$CONFIG"
+
       - name: Create feature branch
         id: branch
         run: |
