@@ -18,7 +18,7 @@ spotradar/
 ├── backend/             # REST API server (serves /api and the built frontend), integration tests
 ├── frontend/            # Web UI, component tests and Playwright E2E tests
 ├── .claude/
-│   ├── agents/          # AI agent definitions (team-lead, qa-reviewer)
+│   ├── agents/          # AI agent definitions (team-lead, backend-dev, frontend-dev, qa-reviewer)
 │   ├── rules/           # Coding rules applied when agents work in backend/ or frontend/
 │   └── settings.json    # Agent permissions and hooks (auto-format, checks before finishing)
 ├── .github/workflows/
@@ -51,12 +51,12 @@ Started manually: **Actions → Agent Feature PR → Run workflow**, with:
 - `task` – what to implement, in plain language,
 - `run_e2e` – whether to also write and run browser (Playwright) E2E tests.
 
-The workflow creates a new branch and runs Claude Code as the **team-lead** agent, which:
+The workflow creates a new branch and runs Claude Code (Opus) as the **team-lead** agent, which:
 
-1. designs the types and validation schemas in `shared/`,
-2. implements the backend and frontend parts with tests,
-3. runs typecheck, lint and tests and fixes failures,
-4. asks the **qa-reviewer** agent for a final review.
+1. designs the types and validation schemas in `shared/` and freezes them as the contract,
+2. hands the backend and frontend parts to the **backend-dev** and **frontend-dev** agents, which work in parallel (small single-folder changes it does itself),
+3. integrates the result, runs typecheck, lint and tests and fixes failures,
+4. asks the **qa-reviewer** agent for a final review (at most 2 rounds).
 
 The workflow then commits the changes and opens a pull request with a summary of test results. The agent itself is not allowed to commit or push – only the workflow does.
 
@@ -72,12 +72,14 @@ After a merge, the checks run on `main`; when they pass, Render builds and deplo
 
 ### AI agents
 
-| Agent         | Role                                                                                                             |
-| ------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `team-lead`   | Architect and implementer – designs the contract in `shared/`, builds backend and frontend, coordinates QA.      |
-| `qa-reviewer` | Read-only reviewer – checks the diff, runs the checks and tests the running app in a browser via Playwright MCP. |
+| Agent          | Model  | Role                                                                                                             |
+| -------------- | ------ | ---------------------------------------------------------------------------------------------------------------- |
+| `team-lead`    | Opus   | Architect and coordinator – owns the contract in `shared/`, delegates, integrates and coordinates QA.            |
+| `backend-dev`  | Sonnet | Implements `backend/` with tests against the frozen contract; never edits `shared/`.                             |
+| `frontend-dev` | Sonnet | Implements `frontend/` with tests against the frozen contract; never edits `shared/`.                            |
+| `qa-reviewer`  | Sonnet | Read-only reviewer – checks the diff, runs the checks and tests the running app in a browser via Playwright MCP. |
 
-Both can also be used locally in Claude Code in this repository.
+All of them can also be used locally in Claude Code in this repository.
 
 ## Local development
 

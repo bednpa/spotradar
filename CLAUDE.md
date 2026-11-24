@@ -49,8 +49,10 @@ Render runs `npm ci && npm run build`, then `npm start`. To keep that working:
 
 ## Agents and CI
 
-- `.claude/agents/team-lead.md` – designs the contract, implements the change, coordinates QA.
-- `.claude/agents/qa-reviewer.md` – read-only code review and browser testing via Playwright MCP.
+- `.claude/agents/team-lead.md` (Opus) – owns the contract in `shared/`, delegates backend/frontend work, integrates and coordinates QA.
+- `.claude/agents/backend-dev.md` (Sonnet) – implements `backend/` against the frozen contract; never edits `shared/`.
+- `.claude/agents/frontend-dev.md` (Sonnet) – implements `frontend/` against the frozen contract; never edits `shared/`.
+- `.claude/agents/qa-reviewer.md` (Sonnet) – read-only code review and browser testing via Playwright MCP.
 - `.github/workflows/agent-pr.yml` – manually triggered: runs the agent on a task and opens a PR.
 - `.github/workflows/pr-checks.yml` – runs typecheck, lint, tests, build and E2E on every PR.
 
