@@ -2,11 +2,13 @@
 
 Webová aplikace bez databáze (stav je držen v paměti nebo v lokálním JSON souboru na backendu).
 Projekt je rozdělen do tří oddělených částí:
+
 - `shared/` – Sdílené TypeScript typy, DTO rozhraní a validační schémata (zdroj pravdy pro API kontrakt).
 - `backend/` – HTTP REST API server a jeho integrační testy.
 - `frontend/` – Klientská webová aplikace (UI) a její komponentové testy.
 
 ## Příkazy (spouštějí se z kořene repozitáře)
+
 - Spuštění vývojového prostředí (frontend + backend): `npm run dev`
 - Kontrola typů napříč celým projektem: `npm run typecheck`
 - Statická analýza kódu: `npm run lint`
@@ -14,6 +16,7 @@ Projekt je rozdělen do tří oddělených částí:
 - Produkční build: `npm run build`
 
 ## Pravidla pro vývoj a testy (Contract-First)
+
 1. **Striktní oddělení složek:**
    - Backend změny patří pouze do `backend/`.
    - Frontend změny patří pouze do `frontend/`.
