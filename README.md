@@ -6,7 +6,9 @@ It deliberately has no database – state lives in memory or in a local JSON fil
 The app is developed mainly by AI agents (Claude Code) running in GitHub Actions: you describe a feature, an agent implements it and opens a pull request, automated checks verify it, and after merge it is deployed automatically.
 
 **Live app:** https://spotradar.onrender.com
-_(the exact address is shown in the Render dashboard; on the free plan the first request after 15 minutes of inactivity takes about a minute while the app wakes up)_
+_(on the free plan the first request after 15 minutes of inactivity takes about a minute while the app wakes up)_
+
+> **Status:** the repository is currently a template – deployment and CI are set up, but the app itself has not been implemented yet, so the live address will start working after the first feature is built and merged.
 
 ## Repository structure
 
