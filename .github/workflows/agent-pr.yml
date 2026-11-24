@@ -1,0 +1,76 @@
+jobs:
+  build-feature-pr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      pr_number: ${{ steps.pr.outputs.number }}
+      pr_url: ${{ steps.pr.outputs.url }}
+    steps:
+      # ... tvé existující kroky checkout, setup-node, npm ci, create branch, claude -p, testy, summary, artifact ...
+
+      - name: Commit changes and open Pull Request
+        if: success()
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TC_EXIT: ${{ steps.unit_tests.outputs.typecheck_exit || '0' }}
+          LINT_EXIT: ${{ steps.unit_tests.outputs.lint_exit || '0' }}
+          TEST_EXIT: ${{ steps.unit_tests.outputs.test_exit || '0' }}
+          E2E_EXIT: ${{ steps.e2e_tests.outputs.e2e_exit || 'skipped' }}
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Agent neprovedl žádné změny, Pull Request se nezakládá."
+            exit 0
+          fi
+
+          ADDED_TESTS="$(git status --porcelain | grep -E '\.(test|spec)\.(ts|tsx|js|jsx)$' || true)"
+          [ -z "$ADDED_TESTS" ] && ADDED_TESTS="(žádný nový/upravený soubor *.test.* / *.spec.* nebyl detekován)"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -A
+          git commit -m "feat(agent): ${{ inputs.task }}"
+          git push -u origin "${{ steps.branch.outputs.name }}"
+
+          PR_BODY_FILE="$(mktemp)"
+          cat > "$PR_BODY_FILE" <<EOF
+## Automaticky vytvořené PR z GitHub Actions
+
+**Zadání:** ${{ inputs.task }}
+**Větev:** \`${{ steps.branch.outputs.name }}\`
+
+### Přehled výsledků testů a kontrol z běhu agenta
+- \`npm run typecheck\`: exit \`$TC_EXIT\`
+- \`npm run lint\`: exit \`$LINT_EXIT\`
+- \`npm test\` (unit / integrační testy): exit \`$TEST_EXIT\`
+- E2E testy (\`run_e2e=${{ inputs.run_e2e }}\`): exit \`$E2E_EXIT\`
+
+### Dotčené testovací soubory
+\`\`\`text
+$ADDED_TESTS
+\`\`\`
+
+Navazující nezávislé ověření běží v \`pr-checks.yml\` (viz **Checks** a **Actions**).
+EOF
+
+          PR_URL="$(gh pr create \
+            --base "${{ github.ref_name }}" \
+            --head "${{ steps.branch.outputs.name }}" \
+            --title "Agent: ${{ inputs.task }}" \
+            --body-file "$PR_BODY_FILE")"
+
+          rm -f "$PR_BODY_FILE"
+
+          PR_NUMBER="$(echo "$PR_URL" | grep -oE '[0-9]+$' || true)"
+          echo "url=$PR_URL" >> "$GITHUB_OUTPUT"
+          echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "Vytvořeno PR: $PR_URL"
+
+  independent-pr-verification:
+    needs: build-feature-pr
+    if: ${{ needs.build-feature-pr.result == 'success' && needs.build-feature-pr.outputs.pr_number != '' }}
+    uses: ./.github/workflows/pr-checks.yml
+    with:
+      run_e2e: ${{ inputs.run_e2e }}
+      pr_number: ${{ needs.build-feature-pr.outputs.pr_number }}

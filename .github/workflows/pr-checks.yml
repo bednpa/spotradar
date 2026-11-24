@@ -1,0 +1,120 @@
+name: PR Verification Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_call:
+    inputs:
+      run_e2e:
+        description: "Spustit i E2E testy v prohlížeči (Playwright)?"
+        required: false
+        default: true
+        type: boolean
+      pr_number:
+        description: "Číslo PR (volitelné při volání z agent-pr.yml)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number || inputs.pr_number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install project dependencies
+        run: npm ci
+
+      - name: Typecheck
+        id: typecheck
+        run: |
+          mkdir -p .test-reports
+          npm run typecheck > .test-reports/typecheck.log 2>&1
+          cat .test-reports/typecheck.log
+
+      - name: Lint
+        id: lint
+        run: |
+          mkdir -p .test-reports
+          npm run lint > .test-reports/lint.log 2>&1
+          cat .test-reports/lint.log
+
+      - name: Unit & integration tests
+        id: unit_tests
+        run: |
+          mkdir -p .test-reports
+          npm test > .test-reports/unit-tests.log 2>&1
+          cat .test-reports/unit-tests.log
+
+      - name: Build
+        id: build
+        run: |
+          mkdir -p .test-reports
+          npm run build > .test-reports/build.log 2>&1
+          cat .test-reports/build.log
+
+      - name: Install Playwright Chromium & system deps
+        if: ${{ inputs.run_e2e != false }}
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E tests (Playwright)
+        id: e2e_tests
+        if: ${{ inputs.run_e2e != false }}
+        run: |
+          mkdir -p .test-reports
+          if npm run | grep -q "test:e2e"; then
+            npm run test:e2e > .test-reports/e2e.log 2>&1
+          else
+            echo "Skript 'test:e2e' není v package.json definován – přeskočeno." > .test-reports/e2e.log
+          fi
+          cat .test-reports/e2e.log
+
+      - name: Write verification summary to GitHub Step Summary
+        if: always()
+        run: |
+          {
+            echo "## Nezavislé ověření PR (\`pr-checks.yml\`)"
+            echo ""
+            echo "- **Typecheck:** \`${{ steps.typecheck.outcome || 'skipped' }}\`"
+            echo "- **Lint:** \`${{ steps.lint.outcome || 'skipped' }}\`"
+            echo "- **Unit & integrační testy:** \`${{ steps.unit_tests.outcome || 'skipped' }}\`"
+            echo "- **Build:** \`${{ steps.build.outcome || 'skipped' }}\`"
+            echo "- **E2E testy:** \`${{ steps.e2e_tests.outcome || 'skipped' }}\`"
+            echo ""
+            for log_file in .test-reports/*.log; do
+              [ -f "$log_file" ] || continue
+              echo "### Výstup: \`$(basename "$log_file")\`"
+              echo '```text'
+              tail -n 60 "$log_file"
+              echo '```'
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload verification reports as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-verification-reports-${{ github.run_id }}
+          path: |
+            .test-reports/
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
