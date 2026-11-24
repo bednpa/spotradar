@@ -1,0 +1,16 @@
+# Render Blueprint – free hosting for SpotRadar (https://render.com/docs/blueprint-spec)
+# One web service: the backend serves the API under /api and the built frontend.
+services:
+  - type: web
+    name: spotradar
+    runtime: node
+    plan: free
+    branch: main
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    # Deploy a commit on main only after its GitHub checks (CI Checks) pass.
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_ENV
+        value: production
