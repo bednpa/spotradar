@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import type { GeocodeResponse } from '@spotradar/shared';
 import { addDays, isValidDate, toLocalDateTime } from '@spotradar/shared';
+import { bizzyPageStartingAt } from './connectors/bizzy/stubPages.ts';
 import { HttpError } from './errors.ts';
 import type { Suggester } from './services/suggest.ts';
 import type { FetchFn } from './connectors/types.ts';
@@ -100,9 +101,67 @@ function serveMemberzone(url: URL, init: RequestInit | undefined): Response {
   throw new Error(`Stub mode: ${url.href} is unreachable`);
 }
 
+const BIZZY_FIXTURE_PREFIX: Record<string, string> = {
+  'badminton-jehnice.e-rezervace.cz': 'jehnice',
+  'badmintonlisen.e-rezervace.cz': 'lisen',
+  'xarena.e-rezervace.cz': 'xarena',
+};
+const BIZZY_SCHEDULE_PATH = '/Branch/pages/Schedule.faces';
+const BIZZY_NAV_REGION = 'scheduleNavigForm:schedule-navig-region';
+
+/** "25.11.2026" (the date picker's input) -> "2026-11-25", undefined when it is not a date. */
+function pickerToIso(value: string | null): string | undefined {
+  const m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(value ?? '');
+  if (!m) return undefined;
+  const iso = `${m[3]}-${String(m[2]).padStart(2, '0')}-${String(m[1]).padStart(2, '0')}`;
+  return isValidDate(iso) ? iso : undefined;
+}
+
+function headerValue(init: RequestInit | undefined, name: string): string | undefined {
+  return new Headers(init?.headers).get(name) ?? undefined;
+}
+
+/**
+ * The three Bizzy venues (Jehnice, Líšeň, X-Arena). A GET returns the venue's recorded start page
+ * (Jehnice: 8 days, the others: 1 day) and sets `JSESSIONID=stub`; every A4J POST returns the
+ * recorded "today + 7 days" response. Both are rewritten by `bizzyPageStartingAt`: the window
+ * starts at the date picker value of the POST (the connector's requested date, or the session's
+ * date for the view switch), else today, and every day is the same recorded weekday.
+ */
+function serveBizzy(url: URL, init: RequestInit | undefined): Response {
+  const prefix = BIZZY_FIXTURE_PREFIX[url.host];
+  // The form action carries a `;jsessionid=...` path parameter.
+  if (!prefix || url.pathname.split(';')[0] !== BIZZY_SCHEDULE_PATH) {
+    throw new Error(`Stub mode: ${url.href} is unreachable`);
+  }
+  const week = fixture(`bizzy/fixtures/${prefix}-2026-11-25-week-ajax.html`);
+  const today = toLocalDateTime(new Date()).date;
+  if (init?.method !== 'POST') {
+    const html = bizzyPageStartingAt(
+      fixture(`bizzy/fixtures/${prefix}-2026-11-25-today.html`),
+      week,
+      today,
+    );
+    const res = htmlResponse(html);
+    res.headers.append('set-cookie', 'JSESSIONID=stub; Path=/');
+    return res;
+  }
+  const body = new URLSearchParams(typeof init.body === 'string' ? init.body : '');
+  if (body.get('AJAXREQUEST') !== BIZZY_NAV_REGION) {
+    throw new Error('Stub mode: Bizzy postback without AJAXREQUEST of the navigation region');
+  }
+  if (!headerValue(init, 'cookie')?.includes('JSESSIONID=stub')) {
+    throw new Error('Stub mode: Bizzy postback without the session cookie');
+  }
+  const start = pickerToIso(body.get('scheduleNavigForm:schedule_calendarInputDate')) ?? today;
+  return htmlResponse(bizzyPageStartingAt(week, week, start));
+}
+
 /**
  * Kuklenská (ClubSpire) returns the sanitized fixture for any date. Hala Sprint and Ivanovice
  * (memberzone.cz) serve their recorded pages with the dates rewritten to the requested date.
+ * Badminton Jehnice, Badminton Líšeň and X-Arena (Bizzy) replay their recorded pages with every
+ * day set to the same recorded weekday, so any date shows the same free hours (see `serveBizzy`).
  * Every other host (e.g. Centrum Viktoria) fails.
  */
 export function createStubFetch(): FetchFn {
@@ -115,6 +174,8 @@ export function createStubFetch(): FetchFn {
         );
       }
       if (url.host === MEMBERZONE_HOST) return Promise.resolve(serveMemberzone(url, init));
+      if (Object.hasOwn(BIZZY_FIXTURE_PREFIX, url.host))
+        return Promise.resolve(serveBizzy(url, init));
     } catch (err) {
       return Promise.reject(err instanceof Error ? err : new Error(String(err)));
     }

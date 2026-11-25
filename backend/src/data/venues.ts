@@ -180,6 +180,8 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     source: {
       type: 'bizzy',
       scheduleUrl: 'http://xarena.e-rezervace.cz/Branch/pages/Schedule.faces',
+      // X-Arena only accepts bookings at least 2 h ahead.
+      minLeadMinutes: 120,
     },
   },
   {

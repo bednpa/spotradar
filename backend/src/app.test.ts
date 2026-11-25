@@ -47,6 +47,7 @@ let suggestBehavior: () => Response | Promise<Response> = () => jsonResponse(PHO
 let baseUrl = '';
 let staticDir = '';
 let close: () => Promise<void> = () => Promise.resolve();
+const appLogs: string[] = [];
 
 const connector = fakeConnector('clubspire', (venue) => {
   if (venue.id === 'kuklenska') {
@@ -83,6 +84,7 @@ before(async () => {
     }),
     now: () => FIXED_NOW,
     staticDir,
+    logger: { info: (m) => appLogs.push(m), warn: () => undefined },
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -245,6 +247,22 @@ describe('GET /api/search', () => {
 });
 
 describe('GET /api/calendar', () => {
+  it('logs one timing line per request through the injected logger', async () => {
+    const before = appLogs.length;
+    const { status } = await get<CalendarResponse>(
+      `/api/calendar?sport=badminton&from=${TODAY}&to=2026-11-26`,
+    );
+    assert.equal(status, 200);
+    const lines = appLogs.slice(before).filter((l) => l.startsWith('[calendar]'));
+    assert.equal(lines.length, 1);
+    assert.match(
+      lines[0] ?? '',
+      new RegExp(
+        `^\\[calendar\\] ${TODAY}\\.\\.2026-11-26 ${VENUE_RECORDS.length} venues in \\d+ ms$`,
+      ),
+    );
+  });
+
   it('returns venues and one day per date with consistent venue order', async () => {
     const { status, body } = await get<CalendarResponse>(
       `/api/calendar?sport=badminton&from=${TODAY}&to=2026-11-26`,

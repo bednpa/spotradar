@@ -1,17 +1,65 @@
 /** UI state types and pure state transitions / messages. */
-import type { CalendarResponse, ValidationIssue } from '@spotradar/shared';
+import type { CalendarResponse, CalendarView, ValidationIssue } from '@spotradar/shared';
 import { ApiRequestError } from './api.ts';
 import type { Origin } from './query.ts';
 
 /**
  * - outside: the shown period lies completely outside the searchable window (nothing to fetch),
- * - success: data loaded (it may still contain zero venues → empty state).
+ * - success: data loaded (it may still contain zero venues → empty state),
+ * - partial: the focused day is loaded, the rest of pendingFrom..pendingTo is still loading
+ *   (or failed: `error` holds the message and the loaded day stays visible).
  */
 export type CalendarState =
   | { status: 'loading' }
   | { status: 'outside' }
   | { status: 'success'; data: CalendarResponse }
+  | {
+      status: 'partial';
+      data: CalendarResponse;
+      pendingFrom: string;
+      pendingTo: string;
+      error: string | null;
+    }
   | { status: 'error'; message: string; issues: ValidationIssue[] };
+
+/** Data usable for the panel and legend (also while only part of the range is loaded). */
+export function calendarData(calendar: CalendarState): CalendarResponse | null {
+  return calendar.status === 'success' || calendar.status === 'partial' ? calendar.data : null;
+}
+
+/** True while something is still being fetched (drives aria-busy). */
+export function isCalendarBusy(calendar: CalendarState): boolean {
+  return (
+    calendar.status === 'loading' || (calendar.status === 'partial' && calendar.error === null)
+  );
+}
+
+/** Text of the single persistent live region next to the calendar ("" = nothing loading). */
+export function calendarStatusText(calendar: CalendarState, view: CalendarView): string {
+  if (calendar.status === 'loading') return 'Loading availability…';
+  if (calendar.status === 'partial' && calendar.error === null) {
+    return `Loading the rest of the ${view}…`;
+  }
+  return '';
+}
+
+/**
+ * State to show while retrying a range. When the same range is shown partially, the visible
+ * day stays on screen (error cleared); everything else starts from the skeleton.
+ */
+export function loadingStateFor(
+  previous: CalendarState,
+  range: { from: string; to: string },
+): CalendarState {
+  if (
+    previous.status === 'partial' &&
+    previous.pendingFrom === range.from &&
+    previous.pendingTo === range.to
+  ) {
+    return { ...previous, error: null };
+  }
+  return { status: 'loading' };
+}
 
 export type LocationState =
   | { status: 'idle' }

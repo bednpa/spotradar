@@ -35,10 +35,10 @@ test.describe('venues page', () => {
       kuklenska.getByRole('link', { name: /Rating & reviews on Google Maps/ }),
     ).toHaveAttribute('href', /google\.com\/maps\/search/);
 
-    // Venues without a connector show the same status component, but not as live.
+    // Bizzy venues (Jehnice, Líšeň, X-Arena) have a connector now and show live data too.
     await expect(
       page.locator('.vcard[data-venue-id="badminton-jehnice"]').getByTestId('live-status'),
-    ).toHaveAttribute('data-status', 'unknown');
+    ).toHaveAttribute('data-status', 'live');
     // Other activities are listed as extra tags.
     await expect(page.locator('.vcard[data-venue-id="centrum-viktoria"] .tags')).toContainText(
       'Squash',

@@ -7,7 +7,7 @@ export const FIXED_NOW = new Date('2026-11-24T08:00:00Z');
 export const TODAY = '2026-11-24';
 export const TOMORROW = '2026-11-25';
 
-export const silentLogger = { warn: (): void => undefined };
+export const silentLogger = { info: (): void => undefined, warn: (): void => undefined };
 
 export function slot(start: string, end: string, freeCourts: number): FreeSlot {
   return { start, end, freeCourts };

@@ -14,7 +14,7 @@ import {
   silentLogger,
   slot,
 } from '../testHelpers.ts';
-import { searchVenues } from './search.ts';
+import { getDayAvailability, searchVenues, withoutTooSoonSlots } from './search.ts';
 
 const venues = createVenueRepository(VENUE_RECORDS);
 
@@ -195,5 +195,53 @@ describe('searchVenues', () => {
     );
     assert.equal(results[0]?.venue.id, 'centrum-viktoria');
     assert.deepEqual(results.find((r) => r.venue.id === 'kuklenska')?.availability.freeSlots, []);
+  });
+});
+
+describe('withoutTooSoonSlots (minimum booking lead time)', () => {
+  // FIXED_NOW = 09:00 Prague on TODAY.
+  const slots = [slot('07:00', '10:00', 2), slot('10:00', '13:00', 1), slot('20:00', '22:00', 3)];
+
+  it('keeps everything without a lead time', () => {
+    assert.deepEqual(withoutTooSoonSlots(slots, TODAY, FIXED_NOW, undefined), slots);
+  });
+
+  it('drops and shortens slots starting before now + lead, rounded up to the hour', () => {
+    // 09:00 + 120 min = 11:00
+    assert.deepEqual(withoutTooSoonSlots(slots, TODAY, FIXED_NOW, 120), [
+      slot('11:00', '13:00', 1),
+      slot('20:00', '22:00', 3),
+    ]);
+    // 09:10 + 120 min = 11:10 -> the 11:00 cell is too soon, 12:00 is the first bookable start
+    const later = new Date(FIXED_NOW.getTime() + 10 * 60_000);
+    assert.deepEqual(withoutTooSoonSlots(slots, TODAY, later, 120)[0], slot('12:00', '13:00', 1));
+  });
+
+  it('crosses midnight into tomorrow and leaves later days alone', () => {
+    const lateEvening = new Date('2026-11-24T22:30:00Z'); // 23:30 Prague
+    // cutoff = 01:30 tomorrow -> 02:00
+    assert.deepEqual(withoutTooSoonSlots([slot('00:00', '03:00', 1)], TOMORROW, lateEvening, 120), [
+      slot('02:00', '03:00', 1),
+    ]);
+    assert.deepEqual(withoutTooSoonSlots(slots, '2026-11-27', lateEvening, 120), slots);
+    assert.deepEqual(withoutTooSoonSlots(slots, TODAY, lateEvening, 120), []);
+  });
+
+  it('is applied when answering, so a cached X-Arena entry does not keep an old cutoff', async () => {
+    const xarena = VENUE_RECORDS.find((v) => v.id === 'x-arena-slatina');
+    assert.ok(xarena);
+    const clock = fakeClock();
+    const connector = fakeConnector('bizzy', () => Promise.resolve([slot('10:00', '22:00', 2)]));
+    const service = createAvailabilityService({
+      connectors: [connector],
+      now: clock.now,
+      logger: silentLogger,
+    });
+    const first = await getDayAvailability(service, xarena, TODAY, clock.now());
+    assert.equal(first.freeSlots[0]?.start, '11:00');
+    clock.advance(10 * 60_000); // 09:10 – still a fresh cache hit, but 11:00 is now too soon
+    const later = await getDayAvailability(service, xarena, TODAY, clock.now());
+    assert.equal(connector.calls.length, 1);
+    assert.equal(later.freeSlots[0]?.start, '12:00');
   });
 });

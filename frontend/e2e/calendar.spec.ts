@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import type { CalendarResponse } from '@spotradar/shared';
 import {
   addDays,
   addressBox,
@@ -229,6 +230,34 @@ test.describe('hour slot details', () => {
     ).toHaveAttribute('href', /google\.com\/maps\/search/);
   });
 
+  test('Badminton Jehnice (Bizzy) shows live free courts from the recorded schedule', async ({
+    page,
+  }) => {
+    // Stub mode replays the recorded Bizzy pages: Jehnice has 1 court free 17–18 and 19–21.
+    await openDay(page);
+    const cell = page.locator('button.cell-free[data-hour="19"]:not([disabled])');
+    await expect(cell).toBeVisible();
+    await cell.click();
+    const dialog = page.getByRole('dialog');
+    const jehnice = dialog.locator('li[data-venue-id="badminton-jehnice"]');
+    await expect(jehnice).toHaveAttribute('data-state', 'free');
+    await expect(jehnice).toContainText('Badminton Jehnice');
+    await expect(jehnice).toContainText('1 court free');
+    await expect(jehnice.getByTestId('live-status')).toHaveText(
+      /Live · (just now|\d+ min ago|\d+ h ago)/,
+    );
+    await expect(jehnice.getByRole('link', { name: /Book on venue's website/ })).toHaveAttribute(
+      'href',
+      /e-rezervace\.cz/,
+    );
+    // Líšeň and X-Arena (also Bizzy) are live too, never "check on website".
+    await expect(
+      dialog.locator(
+        'li[data-venue-id="badminton-lisen"][data-state="check"], li[data-venue-id="x-arena-slatina"][data-state="check"]',
+      ),
+    ).toHaveCount(0);
+  });
+
   test('Kuklenská shows price, MultiSport and website in the panel', async ({ page }) => {
     await openDay(page);
     const dialog = await openSlotWithFreeVenue(page, 'kuklenska');
@@ -286,8 +315,21 @@ test.describe('hour slot details', () => {
   });
 
   test('an hour where nothing is free shows the empty state', async ({ page }) => {
+    // The stub data has a free court somewhere in every hour, so drop all slots touching 12–13.
+    await page.route('**/api/calendar**', async (route) => {
+      const response = await route.fetch();
+      const body = (await response.json()) as CalendarResponse;
+      for (const day of body.days) {
+        for (const entry of day.venues) {
+          entry.availability.freeSlots = entry.availability.freeSlots.filter(
+            (slot) => slot.end <= '12:00' || slot.start >= '13:00',
+          );
+        }
+      }
+      await route.fulfill({ response, json: body });
+    });
     await openDay(page);
-    const emptyCell = page.locator('button.cell-none:not([disabled])').first();
+    const emptyCell = page.locator('button.cell-none[data-hour="12"]:not([disabled])');
     await expect(emptyCell).toBeVisible();
     await emptyCell.click();
     const dialog = page.getByRole('dialog');
@@ -310,16 +352,23 @@ test.describe('legend', () => {
     const legend = page.locator('#legend');
     await expect(legend.getByRole('heading', { name: 'Venues and data quality' })).toBeVisible();
     const live = legend.locator('li[data-coverage="live"]');
-    await expect(live).toHaveCount(3);
+    await expect(live).toHaveCount(6);
     // the legend is sorted by name, not by live status, so check the names without relying on order
-    for (const name of ['Sportcentrum Kuklenská', 'Hala Sprint', 'Sportcentrum Ivanovice']) {
+    for (const name of [
+      'Sportcentrum Kuklenská',
+      'Hala Sprint',
+      'Sportcentrum Ivanovice',
+      'Badminton Jehnice',
+      'Badminton Líšeň',
+      'X-Arena Slatina',
+    ]) {
       await expect(live.filter({ hasText: name })).toHaveCount(1);
     }
     await expect(legend.locator('li[data-coverage="unavailable"]')).toHaveCount(1);
     await expect(legend.locator('li[data-coverage="unavailable"]')).toContainText(
       'Centrum Viktoria',
     );
-    await expect(legend.locator('li[data-coverage="unknown"]')).toHaveCount(3);
+    await expect(legend.locator('li[data-coverage="unknown"]')).toHaveCount(0);
   });
 });
 

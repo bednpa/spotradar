@@ -1,8 +1,16 @@
 /** Pure render-to-string functions for the calendar page. All dynamic text is escaped. */
-import { CALENDAR_VIEWS, DISTANCE_OPTIONS_KM, SPORTS, getSearchWindow } from '@spotradar/shared';
+import {
+  CALENDAR_VIEWS,
+  DISTANCE_OPTIONS_KM,
+  SPORTS,
+  dateRange,
+  getSearchWindow,
+} from '@spotradar/shared';
 import type { CalendarResponse, CalendarView, SportId } from '@spotradar/shared';
 import { LISTBOX_ID } from './address-suggest.ts';
 import {
+  DEFAULT_FROM_HOUR,
+  DEFAULT_TO_HOUR,
   anchorFor,
   isInRange,
   monthGrid,
@@ -140,11 +148,31 @@ export function renderToolbar(state: AppState): string {
 
 // ---------- states ----------
 
-export function renderSkeleton(): string {
-  const rows = Array.from({ length: 8 }, () => '<div class="skeleton skeleton-row"></div>').join(
-    '',
-  );
-  return `<div class="skeleton-grid" aria-busy="true"><p class="visually-hidden">Loading availability…</p>${rows}</div>`;
+const SKELETON_CELLS: Record<CalendarView, number> = {
+  day: 8,
+  week: 56,
+  month: 35,
+  year: 12,
+};
+
+/**
+ * Purely decorative placeholder grid shaped like the view. The "Loading…" announcement comes
+ * from the persistent live region (#calendar-status), and #calendar carries aria-busy.
+ */
+export function renderSkeleton(view: CalendarView = 'week'): string {
+  const cell = view === 'year' ? 'skeleton-card' : 'skeleton-row';
+  const cells = Array.from(
+    { length: SKELETON_CELLS[view] },
+    () => `<div class="skeleton ${cell}"></div>`,
+  ).join('');
+  return `<div class="skeleton-grid skeleton-${view}" aria-hidden="true">${cells}</div>`;
+}
+
+/** Non-clickable placeholder for a day whose data has not arrived yet (keeps the row's cell count). */
+function skeletonCell(size: 'week' | 'month', failed: boolean, num?: number): string {
+  const cls = size === 'week' ? 'cell cell-week cell-skeleton' : 'mday mday-skeleton';
+  const body = num === undefined ? '' : `<span class="mday-num">${num}</span>`;
+  return `<div role="gridcell" class="gc" aria-hidden="true"><div class="${cls}${failed ? '' : ' skeleton'}" data-skeleton>${body}</div></div>`;
 }
 
 export function renderError(message: string): string {
@@ -208,6 +236,10 @@ export interface GridContext {
   data: CalendarResponse;
   days: DayIndex;
   now: Date;
+  /** Days still being loaded (shown as skeleton cells). Empty when everything is loaded. */
+  pending?: ReadonlySet<string>;
+  /** The pending days failed to load: skeleton cells stop shimmering. */
+  failed?: boolean;
 }
 
 function cellOptions(ctx: GridContext): CellOptions {
@@ -222,7 +254,10 @@ export function renderNoSlots(view: 'day' | 'week'): string {
 /** Hour rows for the dates shown (shared by all days of a week); null = nothing to show. */
 function gridHours(ctx: GridContext, dates: readonly string[]): number[] | null {
   const range = slotHourRange(ctx.days, ctx.data.venues, dates);
-  return range ? visibleHours(range.fromHour, range.toHour) : null;
+  if (range) return visibleHours(range.fromHour, range.toHour);
+  // Part of the period is still loading: do not claim "no slots" yet, show the default rows.
+  if (ctx.pending && ctx.pending.size > 0) return visibleHours(DEFAULT_FROM_HOUR, DEFAULT_TO_HOUR);
+  return null;
 }
 
 export function renderWeek(ctx: GridContext): string {
@@ -241,12 +276,14 @@ export function renderWeek(ctx: GridContext): string {
     .map((hour, r) => {
       const cells = dates
         .map((date, c) =>
-          renderCell(
-            computeCell(ctx.days, ctx.data.venues, date, hour, cellOptions(ctx)),
-            'week',
-            c,
-            r,
-          ),
+          ctx.pending?.has(date)
+            ? skeletonCell('week', ctx.failed === true)
+            : renderCell(
+                computeCell(ctx.days, ctx.data.venues, date, hour, cellOptions(ctx)),
+                'week',
+                c,
+                r,
+              ),
         )
         .join('');
       return `<div role="row" class="gr gr-week"><div role="rowheader" class="rh">${hourLabel(hour)}</div>${cells}</div>`;
@@ -287,6 +324,7 @@ export function renderMonth(ctx: GridContext): string {
             const reason = date < window.from ? 'in the past' : 'not available yet';
             return `<div role="gridcell" class="gc"><button type="button" class="mday is-disabled${other}" disabled><span class="mday-num" aria-hidden="true">${num}</span>${hiddenLabel(`${formatLongDate(date)}: ${reason}`)}</button></div>`;
           }
+          if (ctx.pending?.has(date)) return skeletonCell('month', ctx.failed === true, num);
           const s = summarizeDay(ctx.days, ctx.data.venues, date, options);
           let label = `${formatLongDate(date)}: nothing free`;
           let body = '<span class="mday-line muted" aria-hidden="true">Nothing free</span>';
@@ -303,7 +341,12 @@ export function renderMonth(ctx: GridContext): string {
   return `<div class="grid-scroll"><div role="grid" class="grid grid-month" aria-label="${escapeHtml(periodTitle('month', ctx.state.date))}"><div role="row" class="gr gr-month gr-head">${head}</div>${weeks}</div></div>`;
 }
 
-export function renderYear(state: AppState, now: Date): string {
+export function renderYear(
+  state: AppState,
+  now: Date,
+  pending: ReadonlySet<string> = new Set(),
+  failed = false,
+): string {
   const window = getSearchWindow(now);
   const minis = yearMonths(state.date)
     .map((first) => {
@@ -313,7 +356,8 @@ export function renderYear(state: AppState, now: Date): string {
         .map((date) => {
           const p = parseYmd(date);
           if (p.month !== month) return '<i class="d d-blank"></i>';
-          const cls = isInRange(date, window) ? ' d-window' : '';
+          let cls = isInRange(date, window) ? ' d-window' : '';
+          if (pending.has(date)) cls += failed ? ' d-pending-failed' : ' d-pending skeleton';
           return `<i class="d${cls}">${p.day}</i>`;
         })
         .join('');
@@ -333,26 +377,44 @@ function monthGridHasWindow(first: string, window: { from: string; to: string })
 export function renderCalendar(state: AppState, calendar: CalendarState, now: Date): string {
   switch (calendar.status) {
     case 'loading':
-      return renderSkeleton();
+      return renderSkeleton(state.view);
     case 'error':
       return renderError(calendar.message);
     case 'outside':
       return renderOutside();
-    case 'success': {
-      if (calendar.data.venues.length === 0)
-        return renderEmptyVenues(state.maxDistanceKm, state.sport);
-      const ctx: GridContext = { state, data: calendar.data, days: indexDays(calendar.data), now };
-      switch (state.view) {
-        case 'day':
-          return renderDay(ctx);
-        case 'week':
-          return renderWeek(ctx);
-        case 'month':
-          return renderMonth(ctx) + renderWindowHint();
-        case 'year':
-          return renderYear(state, now) + renderWindowHint();
-      }
+    case 'success':
+      return renderView(state, calendar.data, now, new Set(), false);
+    case 'partial': {
+      const loaded = new Set(calendar.data.days.map((day) => day.date));
+      const pending = new Set(
+        dateRange(calendar.pendingFrom, calendar.pendingTo).filter((date) => !loaded.has(date)),
+      );
+      const failed = calendar.error !== null;
+      // While loading, the persistent live region (#calendar-status) carries the text.
+      const notice = failed ? renderError(calendar.error ?? '') : '';
+      return renderView(state, calendar.data, now, pending, failed) + notice;
     }
+  }
+}
+
+function renderView(
+  state: AppState,
+  data: CalendarResponse,
+  now: Date,
+  pending: ReadonlySet<string>,
+  failed: boolean,
+): string {
+  if (data.venues.length === 0) return renderEmptyVenues(state.maxDistanceKm, state.sport);
+  const ctx: GridContext = { state, data, days: indexDays(data), now, pending, failed };
+  switch (state.view) {
+    case 'day':
+      return renderDay(ctx);
+    case 'week':
+      return renderWeek(ctx);
+    case 'month':
+      return renderMonth(ctx) + renderWindowHint();
+    case 'year':
+      return renderYear(state, now, pending, failed) + renderWindowHint();
   }
 }
 

@@ -102,6 +102,46 @@ export function requestRange(
   return clampRange(visibleRange(view, date), window);
 }
 
+/**
+ * Single day to request first (progressive loading): the focused date, clamped to the range
+ * and the search window. Null when the range is a single day anyway (nothing to split).
+ */
+export function firstDayRange(
+  range: DateRange,
+  focus: string,
+  window: SearchWindow,
+): DateRange | null {
+  if (range.from === range.to) return null;
+  const lo = range.from > window.from ? range.from : window.from;
+  const hi = range.to < window.to ? range.to : window.to;
+  if (lo > hi) return null;
+  const day = focus < lo ? lo : focus > hi ? hi : focus;
+  return { from: day, to: day };
+}
+
+/**
+ * Period worth prefetching after the view is shown: the next week for the week view, the
+ * next 7 days for the day view. Clamped to the search window; null for month/year views
+ * (they already load the whole window) or when nothing of it lies inside the window.
+ */
+export function nextPeriodRange(
+  view: CalendarView,
+  date: string,
+  window: SearchWindow,
+): DateRange | null {
+  switch (view) {
+    case 'week': {
+      const start = addDays(weekStart(date), 7);
+      return clampRange({ from: start, to: addDays(start, 6) }, window);
+    }
+    case 'day':
+      return clampRange({ from: addDays(date, 1), to: addDays(date, 7) }, window);
+    case 'month':
+    case 'year':
+      return null;
+  }
+}
+
 /** Anchor date when jumping to a month/year: today if it lies inside, else the first day. */
 export function anchorFor(first: string, unit: 'month' | 'year', today: string): string {
   const range = visibleRange(unit, first);

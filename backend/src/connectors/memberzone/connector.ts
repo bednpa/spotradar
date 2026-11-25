@@ -14,14 +14,16 @@ import {
 export const USER_AGENT = 'SpotRadar/1.0';
 export const DEFAULT_TIMEOUT_MS = 8000;
 /** A page shows 7 days; the other 6 are kept this long so a calendar request needs few round trips. */
-export const WEEK_CACHE_TTL_MS = 5 * 60 * 1000;
+// Short on purpose: the availability service stamps `checkedAt` when the connector answers, so a
+// longer connector cache would make old data look freshly checked.
+export const WEEK_CACHE_TTL_MS = 2 * 60 * 1000;
 
 export interface MemberzoneConnectorOptions {
   fetch?: FetchFn;
   timeoutMs?: number;
   /** Shared limiter: MemberZone and MemberPro both run on memberzone.cz and must be serialized. */
   limiter?: HostLimiter;
-  /** Lifetime of the per-day cache (default 5 minutes). */
+  /** Lifetime of the per-day cache (default 2 minutes). */
   cacheTtlMs?: number;
   /** Clock in epoch ms (tests). */
   now?: () => number;

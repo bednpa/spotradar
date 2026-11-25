@@ -16,6 +16,8 @@ import {
 } from './render.ts';
 import { getDefaultState } from './query.ts';
 import type { AppState } from './query.ts';
+import { calendarStatusText } from './state.ts';
+import type { CalendarState } from './state.ts';
 import { NOW, hours, makeCalendar, makeVenue } from './test-fixtures.test.ts';
 
 const data = makeCalendar('2026-11-25', '2026-12-09');
@@ -155,7 +157,6 @@ test('month and year views explain the searchable window; year grid is a labelle
 
 test('loading, error, empty and outside states', () => {
   assert.match(renderCalendar(state(), { status: 'loading' }, NOW), /class="skeleton/);
-  assert.match(renderSkeleton(), /aria-busy="true"/);
   const err = renderCalendar(state(), { status: 'error', message: 'Boom <b>', issues: [] }, NOW);
   assert.match(err, /role="alert"/);
   assert.match(err, /Boom &lt;b&gt;/);
@@ -174,6 +175,110 @@ test('loading, error, empty and outside states', () => {
   const outside = renderCalendar(state(), { status: 'outside' }, NOW);
   assert.match(outside, /Not available yet/);
   assert.match(outside, /data-action="today"/);
+});
+
+const FOCUS_DAY = {
+  ...data,
+  query: { ...data.query, from: '2026-11-26', to: '2026-11-26' },
+  days: data.days.filter((day) => day.date === '2026-11-26'),
+};
+
+function partial(error: string | null = null): CalendarState {
+  return {
+    status: 'partial',
+    data: FOCUS_DAY,
+    pendingFrom: '2026-11-25',
+    pendingTo: '2026-11-29',
+    error,
+  };
+}
+
+test('initial loading state is a decorative skeleton grid; the announcement lives in the live region', () => {
+  for (const view of ['day', 'week', 'month', 'year'] as const) {
+    const html = renderCalendar(state({ view }), { status: 'loading' }, NOW);
+    assert.match(html, new RegExp(`class="skeleton-grid skeleton-${view}" aria-hidden="true"`));
+    // no text, no live region and no aria-busy inside the grid (aria-busy lives on #calendar)
+    assert.doesNotMatch(html, /Loading|role="status"|aria-busy|<button/);
+    assert.equal(calendarStatusText({ status: 'loading' }, view), 'Loading availability…');
+  }
+  assert.equal((renderSkeleton('week').match(/class="skeleton skeleton-row"/g) ?? []).length, 56);
+});
+
+test('partial week: the loaded day has real cells, the other days are aria-hidden skeletons', () => {
+  const html = renderCalendar(state({ view: 'week' }), partial(), NOW);
+  // 25–29 Nov are requested: 4 days pending (26 is loaded); 23/24 are in the past
+  const skeletons =
+    html.match(
+      /<div role="gridcell" class="gc" aria-hidden="true"><div class="cell cell-week cell-skeleton skeleton" data-skeleton><\/div><\/div>/g,
+    ) ?? [];
+  const rows = (html.match(/role="rowheader"/g) ?? []).length;
+  assert.equal(skeletons.length, 4 * rows);
+  assert.ok(rows > 0);
+  // the focused day is interactive and labelled
+  assert.match(html, /data-action="open-slot" data-date="2026-11-26" data-hour="8"/);
+  assert.match(html, />Thursday 26 November, 08:00–09:00: 1 venue free<\/span><\/button>/);
+  // skeleton cells are neither buttons nor labelled
+  assert.doesNotMatch(html, /data-date="2026-11-27"/);
+  assert.doesNotMatch(html, /Friday 27 November/);
+  // the status text is not rendered here (one persistent live region announces it)
+  assert.doesNotMatch(html, /role="status"|Loading the rest/);
+  assert.equal(calendarStatusText(partial(), 'week'), 'Loading the rest of the week…');
+  assert.doesNotMatch(html, /role="alert"/);
+});
+
+test('partial week with an empty loaded day still shows rows, not the "no slots" state', () => {
+  const closed = {
+    ...FOCUS_DAY,
+    venues: [{ venue: makeVenue('closed', 'Closed Hall', { openingHours: hours(null) }) }],
+  };
+  const html = renderCalendar(
+    state({ view: 'week' }),
+    {
+      status: 'partial',
+      data: closed,
+      pendingFrom: '2026-11-25',
+      pendingTo: '2026-11-29',
+      error: null,
+    },
+    NOW,
+  );
+  assert.doesNotMatch(html, /no-slots/);
+  assert.match(html, /role="rowheader" class="rh">06:00</);
+});
+
+test('partial month: unloaded days are skeleton cells, the loaded day is a real button', () => {
+  const html = renderCalendar(state({ view: 'month' }), partial(), NOW);
+  assert.match(html, /data-action="open-day" data-date="2026-11-26"/);
+  assert.doesNotMatch(html, /data-action="open-day" data-date="2026-11-27"/);
+  const skeletons = html.match(/class="mday mday-skeleton skeleton" data-skeleton/g) ?? [];
+  assert.equal(skeletons.length, 4);
+  assert.equal(calendarStatusText(partial(), 'month'), 'Loading the rest of the month…');
+  assert.match(
+    html,
+    /role="gridcell" class="gc" aria-hidden="true"><div class="mday mday-skeleton/,
+  );
+});
+
+test('partial year: pending days are marked, the status text is shown', () => {
+  const html = renderCalendar(state({ view: 'year' }), partial(), NOW);
+  assert.equal((html.match(/class="d d-window d-pending skeleton"/g) ?? []).length, 4);
+  assert.equal(calendarStatusText(partial(), 'year'), 'Loading the rest of the year…');
+});
+
+test('partial with an error keeps the loaded day, stops shimmering and offers "Try again"', () => {
+  const html = renderCalendar(state({ view: 'week' }), partial('Boom'), NOW);
+  assert.match(html, /role="alert"/);
+  assert.match(html, /Boom/);
+  assert.match(html, /data-action="retry">Try again</);
+  assert.equal(calendarStatusText(partial('Boom'), 'week'), '');
+  assert.match(html, /data-date="2026-11-26" data-hour="8"/);
+  assert.doesNotMatch(html, /cell-skeleton skeleton/);
+  assert.match(html, /cell-skeleton" data-skeleton/);
+});
+
+test('a fully loaded state has no skeleton cells or status text', () => {
+  const html = renderCalendar(state({ view: 'week' }), success, NOW);
+  assert.doesNotMatch(html, /data-skeleton|load-status/);
 });
 
 test('filters: sport, address combobox with an in-field location button, max distance', () => {
