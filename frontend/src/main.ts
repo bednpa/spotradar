@@ -30,7 +30,7 @@ import {
   renderMainNav,
   renderToolbar,
 } from './render.ts';
-import { ROUTE_TITLES, isPlainLeftClick, isRoute, routeFromPath, routeUrl } from './router.ts';
+import { isPlainLeftClick, pageTitle, isRoute, routeFromPath, routeUrl } from './router.ts';
 import type { Route } from './router.ts';
 import { parseCards, parseSort } from './sorting.ts';
 import {
@@ -161,6 +161,7 @@ function syncFilterControls(): void {
   )) {
     chip.setAttribute('aria-pressed', String(chip.dataset.sport === state.sport));
   }
+  if (route === 'calendar') document.title = pageTitle(route, state.sport);
   byId<HTMLElement>('distance-chips').innerHTML = renderDistanceChips(
     state.maxDistanceKm,
     isDistanceFilterEnabled(locationState),
@@ -606,7 +607,7 @@ function applyRoute(moveFocus: boolean): void {
   mainNav.innerHTML = renderMainNav(route);
   pageCalendar.hidden = route !== 'calendar';
   pageVenues.hidden = route !== 'venues';
-  document.title = ROUTE_TITLES[route];
+  document.title = pageTitle(route, state.sport);
   if (route === 'calendar') {
     void refresh();
   } else {

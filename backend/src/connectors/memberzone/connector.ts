@@ -3,6 +3,7 @@ import { CookieJar } from '../aspnet.ts';
 import { createHostLimiter } from '../hostLimiter.ts';
 import type { HostLimiter } from '../hostLimiter.ts';
 import { withTimeout } from '../timeout.ts';
+import { targetKey } from '../types.ts';
 import type { AvailabilityConnector, FetchFn } from '../types.ts';
 import {
   MemberzoneDateNotShownError,
@@ -119,12 +120,13 @@ export function createMemberzoneConnector(
 
   return {
     type: 'memberzone',
-    async getFreeSlots(venue, date): Promise<FreeSlot[]> {
-      const source = venue.source;
+    async getFreeSlots(target, date): Promise<FreeSlot[]> {
+      const source = target.source;
+      const id = targetKey(target);
       if (source.type !== 'memberzone') {
-        throw new Error(`Venue ${venue.id} is not a MemberZone venue`);
+        throw new Error(`${id} is not a MemberZone source`);
       }
-      const key = `${venue.id}|${date}`;
+      const key = `${id}|${date}`;
       const hit = cached(key);
       if (hit) return hit;
 
@@ -133,7 +135,7 @@ export function createMemberzoneConnector(
         const afterWait = cached(key);
         if (afterWait) return afterWait;
         const week = await readWeek(source, date);
-        store(venue.id, week);
+        store(id, week);
         return (week.get(date) ?? []).map((s) => ({ ...s }));
       });
     },

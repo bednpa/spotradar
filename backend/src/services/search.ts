@@ -3,7 +3,9 @@ import {
   daysBetween,
   distanceKm,
   freeCourtsAt,
+  isInSeason,
   minutesToTime,
+  offeringFor,
   roundKm,
   timeToMinutes,
   toLocalDateTime,
@@ -13,10 +15,11 @@ import type {
   SearchQuery,
   SearchResult,
   SportId,
+  SportOfferingConfig,
   VenueAvailability,
 } from '@spotradar/shared';
 import type { AvailabilityService } from '../connectors/availabilityService.ts';
-import { toPublicVenue } from '../repositories/venueRepository.ts';
+import { toPublicOffering, toPublicVenue } from '../repositories/venueRepository.ts';
 import type { VenueRecord, VenueRepository } from '../repositories/venueRepository.ts';
 
 export interface SearchDeps {
@@ -59,6 +62,8 @@ export function withoutTooSoonSlots(
 
 export interface VenueCandidate {
   venue: VenueRecord;
+  /** The venue's offering for the queried sport. */
+  offering: SportOfferingConfig;
   /** Rounded distance from the origin; undefined without an origin. */
   distance: number | undefined;
 }
@@ -75,9 +80,13 @@ export function selectVenues(
 
   return venues
     .getAll()
-    .filter((venue) => venue.sports.includes(query.sport))
-    .map((venue) => ({
+    .flatMap((venue) => {
+      const offering = offeringFor(venue, query.sport);
+      return offering ? [{ venue, offering }] : [];
+    })
+    .map(({ venue, offering }) => ({
       venue,
+      offering,
       distance: origin ? roundKm(distanceKm(origin, venue.location)) : undefined,
     }))
     .filter(
@@ -88,21 +97,31 @@ export function selectVenues(
     );
 }
 
-/** Availability of one venue on one date; never rejects, past slots of today removed. */
+/**
+ * Availability of one sport of one venue on one date; never rejects, past slots of today
+ * removed. Out of the offering's season the booking system is not read at all (some list
+ * summer courts as bookable all year) and the status is "unknown".
+ */
 export async function getDayAvailability(
   availabilityService: AvailabilityService,
   venue: VenueRecord,
+  offering: SportOfferingConfig,
   date: string,
   now: Date,
 ): Promise<VenueAvailability> {
+  if (!isInSeason(offering.openingHours?.season, date)) return { status: 'unknown', freeSlots: [] };
+  const source = offering.source;
   let availability: VenueAvailability;
   try {
-    availability = await availabilityService.getAvailability(venue, date);
+    availability = await availabilityService.getAvailability(
+      { venueId: venue.id, sport: offering.sport, source },
+      date,
+    );
   } catch {
     // The service should never reject; a failing connector must not fail the request.
     availability = { status: 'unavailable', freeSlots: [] };
   }
-  const leadMinutes = venue.source.type === 'bizzy' ? venue.source.minLeadMinutes : undefined;
+  const leadMinutes = source.type === 'bizzy' ? source.minLeadMinutes : undefined;
   const freeSlots =
     availability.status === 'live'
       ? withoutTooSoonSlots(
@@ -120,11 +139,18 @@ export async function searchVenues(query: SearchQuery, deps: SearchDeps): Promis
   const candidates = selectVenues(deps.venues, query);
 
   const results = await Promise.all(
-    candidates.map(async ({ venue, distance }): Promise<SearchResult> => {
-      const availability = await getDayAvailability(deps.availability, venue, query.date, now);
+    candidates.map(async ({ venue, offering, distance }): Promise<SearchResult> => {
+      const availability = await getDayAvailability(
+        deps.availability,
+        venue,
+        offering,
+        query.date,
+        now,
+      );
       const freeSlots = availability.freeSlots;
       const result: SearchResult = {
         venue: toPublicVenue(venue),
+        offering: toPublicOffering(offering),
         availability,
       };
       if (distance !== undefined) result.distanceKm = distance;

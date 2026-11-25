@@ -5,7 +5,7 @@ import type {
   CalendarResponse,
   CalendarVenue,
 } from '@spotradar/shared';
-import { toPublicVenue } from '../repositories/venueRepository.ts';
+import { toPublicOffering, toPublicVenue } from '../repositories/venueRepository.ts';
 import { getDayAvailability, selectVenues } from './search.ts';
 import type { SearchDeps } from './search.ts';
 
@@ -22,8 +22,11 @@ export async function getCalendar(
       : a.venue.name.localeCompare(b.venue.name, 'cs'),
   );
 
-  const venues: CalendarVenue[] = candidates.map(({ venue, distance }) => {
-    const entry: CalendarVenue = { venue: toPublicVenue(venue) };
+  const venues: CalendarVenue[] = candidates.map(({ venue, offering, distance }) => {
+    const entry: CalendarVenue = {
+      venue: toPublicVenue(venue),
+      offering: toPublicOffering(offering),
+    };
     if (distance !== undefined) entry.distanceKm = distance;
     return entry;
   });
@@ -32,9 +35,9 @@ export async function getCalendar(
   const days = await Promise.all(
     dateRange(query.from, query.to).map(async (date): Promise<CalendarDay> => {
       const dayVenues = await Promise.all(
-        candidates.map(async ({ venue }) => ({
+        candidates.map(async ({ venue, offering }) => ({
           venueId: venue.id,
-          availability: await getDayAvailability(deps.availability, venue, date, now),
+          availability: await getDayAvailability(deps.availability, venue, offering, date, now),
         })),
       );
       return { date, venues: dayVenues };

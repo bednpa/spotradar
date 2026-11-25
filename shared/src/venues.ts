@@ -2,7 +2,31 @@
  * Pure venue-directory helpers shared by backend (GET /api/venues filtering)
  * and frontend (display).
  */
-import type { Venue } from './types.ts';
+import type { SportId } from './catalog.ts';
+import type { SportOffering, Venue } from './types.ts';
+
+/** The venue's offering for `sport`; undefined when the venue does not offer it. */
+export function offeringFor<T extends Pick<SportOffering, 'sport'>>(
+  venue: { offerings: readonly T[] },
+  sport: SportId,
+): T | undefined {
+  return venue.offerings.find((offering) => offering.sport === sport);
+}
+
+/**
+ * Problems of a venue's offerings (empty = valid): at least one offering, no sport twice,
+ * `sports` lists the offering sports in the same order.
+ */
+export function offeringIssues(venue: Pick<Venue, 'sports' | 'offerings'>): string[] {
+  const issues: string[] = [];
+  if (venue.offerings.length === 0) issues.push('venue has no offering');
+  const sports = venue.offerings.map((offering) => offering.sport);
+  if (new Set(sports).size !== sports.length) issues.push('a sport is offered twice');
+  if (sports.join(',') !== venue.sports.join(',')) {
+    issues.push('sports must list the offering sports in order');
+  }
+  return issues;
+}
 
 /** Lower-case and strip diacritics so "lisen" matches "Líšeň". */
 export function foldText(text: string): string {
@@ -13,7 +37,10 @@ export function foldText(text: string): string {
  * True when every whitespace-separated word of `q` occurs in the venue's name,
  * district or address (case- and diacritics-insensitive). A blank `q` matches all.
  */
-export function matchesVenueQuery(venue: Venue, q: string): boolean {
+export function matchesVenueQuery(
+  venue: Pick<Venue, 'name' | 'district' | 'address'>,
+  q: string,
+): boolean {
   const haystack = foldText(`${venue.name} ${venue.district} ${venue.address}`);
   return foldText(q)
     .split(/\s+/)

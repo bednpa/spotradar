@@ -9,6 +9,8 @@ import type {
   CalendarVenue,
   FreeSlot,
   OpeningHours,
+  SportId,
+  SportOffering,
   Venue,
   VenueAvailability,
   Weekday,
@@ -29,21 +31,73 @@ export function hours(open: string | null, close = '22:00'): OpeningHours {
   return { approximate: false, days };
 }
 
-export function makeVenue(id: string, name: string, overrides: Partial<Venue> = {}): Venue {
+/** Venue fields plus the fields of its (single) offering. */
+export type VenueOverrides = Partial<Omit<Venue, 'offerings' | 'sports'>> &
+  Partial<SportOffering> & { offerings?: SportOffering[] };
+
+const OFFERING_KEYS = [
+  'sport',
+  'courts',
+  'openingHours',
+  'bookingUrl',
+  'bookingSystem',
+  'availabilitySource',
+  'pricing',
+  'multisport',
+  'note',
+] as const;
+
+export function makeOffering(id: string, overrides: Partial<SportOffering> = {}): SportOffering {
+  return {
+    sport: 'badminton',
+    courts: 4,
+    openingHours: hours('07:00'),
+    bookingUrl: `https://example.com/${id}`,
+    bookingSystem: 'clubspire',
+    availabilitySource: 'clubspire',
+    multisport: { category: 'unknown' },
+    ...overrides,
+  };
+}
+
+/**
+ * A venue with one badminton offering. Offering fields in `overrides` (pricing, courts, …)
+ * go into that offering; `offerings` replaces it (several sports).
+ */
+export function makeVenue(id: string, name: string, overrides: VenueOverrides = {}): Venue {
+  const venueFields: Record<string, unknown> = {};
+  const offeringFields: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(overrides)) {
+    if (key === 'offerings') continue;
+    if ((OFFERING_KEYS as readonly string[]).includes(key)) offeringFields[key] = value;
+    else venueFields[key] = value;
+  }
+  const offerings = overrides.offerings ?? [
+    makeOffering(id, offeringFields as Partial<SportOffering>),
+  ];
   return {
     id,
     name,
     district: 'Brno-Židenice',
     address: `${name} street 1, Brno`,
     location: { lat: 49.2, lng: 16.6 },
-    sports: ['badminton'],
-    courts: 4,
-    openingHours: hours('07:00'),
-    bookingUrl: `https://example.com/${id}`,
-    availabilitySource: 'clubspire',
-    multisport: { category: 'unknown' },
-    ...overrides,
+    ...(venueFields as Partial<Venue>),
+    sports: offerings.map((o) => o.sport),
+    offerings,
   };
+}
+
+/** A calendar entry: the venue plus its offering of `sport` (default: the first). */
+export function calendarVenue(
+  venue: Venue,
+  distanceKm?: number,
+  sport: SportId = venue.offerings[0]?.sport ?? 'badminton',
+): CalendarVenue {
+  const offering = venue.offerings.find((o) => o.sport === sport);
+  if (!offering) throw new Error(`${venue.id} has no ${sport}`);
+  const entry: CalendarVenue = { venue, offering };
+  if (distanceKm !== undefined) entry.distanceKm = distanceKm;
+  return entry;
 }
 
 export const LIVE_SLOTS: FreeSlot[] = [
@@ -61,8 +115,8 @@ export const UNAVAILABLE: VenueAvailability = { status: 'unavailable', freeSlots
 /** live (kuklenska, with distance 1.5), unavailable, unknown, a full live venue and a closed one. */
 export function makeVenues(): CalendarVenue[] {
   return [
-    {
-      venue: makeVenue('kuklenska', 'Sportcentrum Kuklenská', {
+    calendarVenue(
+      makeVenue('kuklenska', 'Sportcentrum Kuklenská', {
         website: 'https://www.example.com/kuklenska',
         pricing: {
           currency: 'CZK',
@@ -75,12 +129,12 @@ export function makeVenues(): CalendarVenue[] {
         },
         multisport: { category: 'half-per-card' },
       }),
-      distanceKm: 1.5,
-    },
-    { venue: makeVenue('viktoria', 'Centrum Viktoria'), distanceKm: 2.5 },
-    { venue: makeVenue('unknown', 'Unknown Hall', { availabilitySource: 'none' }) },
-    { venue: makeVenue('full', 'Full Hall') },
-    { venue: makeVenue('closed', 'Closed Hall', { openingHours: hours(null) }) },
+      1.5,
+    ),
+    calendarVenue(makeVenue('viktoria', 'Centrum Viktoria'), 2.5),
+    calendarVenue(makeVenue('unknown', 'Unknown Hall', { availabilitySource: 'none' })),
+    calendarVenue(makeVenue('full', 'Full Hall')),
+    calendarVenue(makeVenue('closed', 'Closed Hall', { openingHours: hours(null) })),
   ];
 }
 
@@ -97,14 +151,19 @@ export function makeDay(date: string): CalendarDay {
   };
 }
 
+/** A calendar entry, the offering may be left out (then the venue's first offering is used). */
+export type CalendarVenueInput = { venue: Venue; distanceKm?: number; offering?: SportOffering };
+
 export function makeCalendar(
   from = TODAY,
   to = '2026-11-27',
-  venues: CalendarVenue[] = makeVenues(),
+  venues: readonly CalendarVenueInput[] = makeVenues(),
 ): CalendarResponse {
   return {
     query: { sport: 'badminton', from, to },
-    venues,
+    venues: venues.map((v) =>
+      v.offering ? { ...v, offering: v.offering } : calendarVenue(v.venue, v.distanceKm),
+    ),
     days: dateRange(from, to).map(makeDay),
   };
 }

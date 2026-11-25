@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { VENUE_RECORDS } from '../../data/venues.ts';
-import type { VenueRecord } from '../../repositories/venueRepository.ts';
-import { fakeClock, htmlResponse, recordingFetch, slot } from '../../testHelpers.ts';
+import type { SportId } from '@spotradar/shared';
+import { fakeClock, htmlResponse, recordingFetch, slot, targetOf } from '../../testHelpers.ts';
+import type { AvailabilityTarget } from '../types.ts';
 import { createHostLimiter } from '../hostLimiter.ts';
 import { createMemberzoneConnector, WEEK_CACHE_TTL_MS } from './connector.ts';
 import { MemberzoneParseError } from './parser.ts';
@@ -15,10 +16,11 @@ function fixture(name: string): string {
 const TODAY_GET = fixture('sprint-2026-11-25.html');
 const SWITCHED_24_12 = fixture('sprint-2026-12-24-post.html');
 
-function venue(id: string): VenueRecord {
+/** A real venue's offering (badminton by default) as a connector target. */
+function venue(id: string, sport: SportId = 'badminton'): AvailabilityTarget {
   const found = VENUE_RECORDS.find((v) => v.id === id);
   if (!found) throw new Error(`unknown venue ${id}`);
-  return found;
+  return targetOf(found, sport);
 }
 
 const SPRINT = venue('hala-sprint');

@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { VENUE_RECORDS } from '../../data/venues.ts';
-import { htmlResponse, recordingFetch, slot } from '../../testHelpers.ts';
-import type { VenueRecord } from '../../repositories/venueRepository.ts';
+import type { SportId } from '@spotradar/shared';
+import { htmlResponse, recordingFetch, slot, targetOf } from '../../testHelpers.ts';
+import type { AvailabilityTarget } from '../types.ts';
 import { buildClubspireUrl, createClubspireConnector } from './connector.ts';
 
 const KUKLENSKA_HTML = readFileSync(
@@ -11,10 +12,11 @@ const KUKLENSKA_HTML = readFileSync(
   'utf8',
 );
 
-function venue(id: string): VenueRecord {
+/** A real venue's offering (badminton by default) as a connector target. */
+function venue(id: string, sport: SportId = 'badminton'): AvailabilityTarget {
   const found = VENUE_RECORDS.find((v) => v.id === id);
   if (!found) throw new Error(`unknown venue ${id}`);
-  return found;
+  return targetOf(found, sport);
 }
 
 describe('buildClubspireUrl', () => {

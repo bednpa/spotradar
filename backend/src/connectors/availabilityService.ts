@@ -1,11 +1,12 @@
 import type { AvailabilitySourceConfig, FreeSlot, VenueAvailability } from '@spotradar/shared';
 import type { Logger } from '../logger.ts';
-import type { VenueRecord } from '../repositories/venueRepository.ts';
+import type { AvailabilityTarget } from './types.ts';
 import { createBizzyConnector } from './bizzy/connector.ts';
 import { createClubspireConnector } from './clubspire/connector.ts';
 import { createHostLimiter } from './hostLimiter.ts';
 import { createMemberproConnector } from './memberpro/connector.ts';
 import { createMemberzoneConnector } from './memberzone/connector.ts';
+import { createStarezConnector } from './starez/connector.ts';
 import { UpstreamTimeoutError } from './timeout.ts';
 import type { AvailabilityConnector, FetchFn } from './types.ts';
 
@@ -19,11 +20,21 @@ export const BACKOFF_MAX_MS = 60 * 60 * 1000;
 
 export type WarmResult = 'skipped' | 'ok' | 'failed';
 
+/** Cache / in-flight key: one entry per venue, sport and date. */
+function cacheKey(target: AvailabilityTarget, date: string): string {
+  return `${target.venueId}|${target.sport}|${date}`;
+}
+
+/** "centrum-viktoria/squash" for logs. */
+function label(target: AvailabilityTarget): string {
+  return `${target.venueId}/${target.sport}`;
+}
+
 /** Never rejects: failures are mapped to a status. */
 export interface AvailabilityService {
-  getAvailability(venue: VenueRecord, date: string): Promise<VenueAvailability>;
-  /** True when a connector is registered for the venue's booking system (live data possible). */
-  supports(venue: VenueRecord): boolean;
+  getAvailability(target: AvailabilityTarget, date: string): Promise<VenueAvailability>;
+  /** True when a connector is registered for the offering's booking system (live data possible). */
+  supports(offering: { source: AvailabilitySourceConfig }): boolean;
   /** True while connection failures keep the host in backoff (reads are not attempted). */
   isHostBackedOff(host: string): boolean;
   /**
@@ -31,7 +42,7 @@ export interface AvailabilityService {
    * than `refreshIfOlderThanMs` (default 0 = always read); skips backed-off hosts. Never rejects.
    */
   warm(
-    venue: VenueRecord,
+    target: AvailabilityTarget,
     date: string,
     options?: { refreshIfOlderThanMs?: number },
   ): Promise<WarmResult>;
@@ -60,6 +71,7 @@ export function sourceHost(source: AvailabilitySourceConfig): string | undefined
       break;
     case 'memberzone':
     case 'memberpro':
+    case 'starez':
       raw = source.url;
       break;
     default:
@@ -122,11 +134,12 @@ export function createDefaultConnectors(
     createMemberzoneConnector({ fetch: options.fetch, limiter }),
     createMemberproConnector({ fetch: options.fetch, limiter }),
     createBizzyConnector({ fetch: options.fetch, limiter }),
+    createStarezConnector({ fetch: options.fetch, limiter }),
   ];
 }
 
 /**
- * Maps `venue.source.type` to a connector and turns its outcome into a
+ * Maps `target.source.type` to a connector and turns its outcome into a
  * VenueAvailability. Successful reads are cached per venue + date (default
  * 15 min; a cached value keeps its original `checkedAt`) and concurrent
  * requests for the same key share one in-flight read. Failures are not cached.
@@ -161,7 +174,7 @@ export function createAvailabilityService(
   }
 
   /** At most one warning per host per interval; later ones are counted and reported once. */
-  function warnFailure(venue: VenueRecord, date: string, host: string, err: unknown): void {
+  function warnFailure(target: AvailabilityTarget, date: string, host: string, err: unknown): void {
     const nowMs = options.now().getTime();
     const connection = connectionReason(err);
     // Connection failures and other failures (changed markup, HTTP errors) are limited
@@ -180,7 +193,7 @@ export function createAvailabilityService(
     const message =
       connection !== undefined
         ? `${host} unreachable (${connection}): its venues show "check on website"; next warning in ${minutes} min${note}`
-        : `${host} read failed for ${venue.id} on ${date}: ${reason}; next warning in ${minutes} min${note}`;
+        : `${host} read failed for ${label(target)} on ${date}: ${reason}; next warning in ${minutes} min${note}`;
     warnings.set(key, { lastAt: nowMs, suppressed: 0 });
     logger.warn(message);
   }
@@ -194,20 +207,20 @@ export function createAvailabilityService(
   /** Reads from the connector (sharing one in-flight read per key) and updates cache + host health. */
   function read(
     connector: AvailabilityConnector,
-    venue: VenueRecord,
+    target: AvailabilityTarget,
     date: string,
   ): Promise<CacheEntry> {
-    const key = `${venue.id}|${date}`;
+    const key = `${cacheKey(target, date)}`;
     const pending = inFlight.get(key);
     if (pending) return pending;
 
-    const host = sourceHost(venue.source);
+    const host = sourceHost(target.source);
     const began = performance.now();
     const took = (): number => Math.round(performance.now() - began);
     // Promise.resolve().then: a connector that throws synchronously still yields a rejection,
     // so callers (incl. the fire-and-forget stale refresh) never see a thrown exception.
     const request = Promise.resolve()
-      .then(() => connector.getFreeSlots(venue, date))
+      .then(() => connector.getFreeSlots(target, date))
       .then(
         (freeSlots) => {
           const at = options.now();
@@ -219,17 +232,17 @@ export function createAvailabilityService(
           cache.set(key, entry);
           evictOld(entry.storedAt);
           if (host !== undefined) backoff.delete(host);
-          logger.info(`[availability] ${venue.id} ${date} read in ${took()} ms (ok)`);
+          logger.info(`[availability] ${label(target)} ${date} read in ${took()} ms (ok)`);
           return entry;
         },
         (err: unknown) => {
           const reason = err instanceof Error ? err.message : String(err);
           logger.info(
-            `[availability] ${venue.id} ${date} read in ${took()} ms (failed: ${reason})`,
+            `[availability] ${label(target)} ${date} read in ${took()} ms (failed: ${reason})`,
           );
-          const hostKey = host ?? venue.id;
+          const hostKey = host ?? label(target);
           if (host !== undefined && isConnectionError(err)) markConnectionFailure(host);
-          warnFailure(venue, date, hostKey, err);
+          warnFailure(target, date, hostKey, err);
           throw err;
         },
       )
@@ -254,41 +267,41 @@ export function createAvailabilityService(
   }
 
   return {
-    supports(venue) {
-      return byType.has(venue.source.type);
+    supports(target) {
+      return byType.has(target.source.type);
     },
     isHostBackedOff(host) {
       return isBackedOff(host);
     },
-    async getAvailability(venue, date) {
-      const connector = byType.get(venue.source.type);
+    async getAvailability(target, date) {
+      const connector = byType.get(target.source.type);
       if (!connector) return { status: 'unknown', freeSlots: [] };
-      const key = `${venue.id}|${date}`;
+      const key = `${cacheKey(target, date)}`;
       const cached = cache.get(key);
       if (cached && ageOf(cached) >= staleMaxAge) cache.delete(key);
       else if (cached) {
-        if (ageOf(cached) >= ttl && !isBackedOff(sourceHost(venue.source))) {
+        if (ageOf(cached) >= ttl && !isBackedOff(sourceHost(target.source))) {
           // Stale-while-revalidate: answer now, refresh in the background (failures are logged
           // by `read` and the stale entry stays).
-          read(connector, venue, date).catch(() => undefined);
+          read(connector, target, date).catch(() => undefined);
         }
         return toLive(cached);
       }
-      if (isBackedOff(sourceHost(venue.source))) return { status: 'unavailable', freeSlots: [] };
+      if (isBackedOff(sourceHost(target.source))) return { status: 'unavailable', freeSlots: [] };
       try {
-        return toLive(await read(connector, venue, date));
+        return toLive(await read(connector, target, date));
       } catch {
         // `read` already logged the failure.
         return { status: 'unavailable', freeSlots: [] };
       }
     },
-    async warm(venue, date, warmOptions = {}) {
-      const connector = byType.get(venue.source.type);
-      if (!connector || isBackedOff(sourceHost(venue.source))) return 'skipped';
-      const cached = cache.get(`${venue.id}|${date}`);
+    async warm(target, date, warmOptions = {}) {
+      const connector = byType.get(target.source.type);
+      if (!connector || isBackedOff(sourceHost(target.source))) return 'skipped';
+      const cached = cache.get(`${cacheKey(target, date)}`);
       if (cached && ageOf(cached) < (warmOptions.refreshIfOlderThanMs ?? 0)) return 'skipped';
       try {
-        await read(connector, venue, date);
+        await read(connector, target, date);
         return 'ok';
       } catch {
         return 'failed';

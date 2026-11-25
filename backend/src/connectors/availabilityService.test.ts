@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { VENUE_RECORDS } from '../data/venues.ts';
-import type { VenueRecord } from '../repositories/venueRepository.ts';
-import { fakeClock, fakeConnector, silentLogger, slot } from '../testHelpers.ts';
+import { fakeClock, fakeConnector, silentLogger, slot, targetOf } from '../testHelpers.ts';
 import {
   AVAILABILITY_CACHE_TTL_MS,
   AVAILABILITY_STALE_MAX_AGE_MS,
@@ -13,12 +12,13 @@ import {
   sourceHost,
 } from './availabilityService.ts';
 import { UpstreamTimeoutError } from './timeout.ts';
-import type { AvailabilityConnector } from './types.ts';
+import type { AvailabilityConnector, AvailabilityTarget } from './types.ts';
 
-function venue(id: string): VenueRecord {
+/** The badminton offering of a real venue as an availability target. */
+function venue(id: string): AvailabilityTarget {
   const found = VENUE_RECORDS.find((v) => v.id === id);
   if (!found) throw new Error(`unknown venue ${id}`);
-  return found;
+  return targetOf(found, 'badminton');
 }
 
 const KUKLENSKA = venue('kuklenska');
@@ -308,10 +308,13 @@ describe('stale-while-revalidate', () => {
     await service.getAvailability(KUKLENSKA, DATE);
     fail = true;
     await service.getAvailability(KUKLENSKA, '2026-11-26');
-    assert.match(infos[0] ?? '', /^\[availability\] kuklenska 2026-11-25 read in \d+ ms \(ok\)$/);
+    assert.match(
+      infos[0] ?? '',
+      /^\[availability\] kuklenska\/badminton 2026-11-25 read in \d+ ms \(ok\)$/,
+    );
     assert.match(
       infos[1] ?? '',
-      /^\[availability\] kuklenska 2026-11-26 read in \d+ ms \(failed: boom\)$/,
+      /^\[availability\] kuklenska\/badminton 2026-11-26 read in \d+ ms \(failed: boom\)$/,
     );
   });
 });
@@ -356,7 +359,7 @@ describe('warning rate limit', () => {
     assert.match(warnings[0] ?? '', /unreachable \(ECONNREFUSED\)/);
     assert.match(
       warnings[1] ?? '',
-      /read failed for kuklenska on 2026-11-26: schedule table missing/,
+      /read failed for kuklenska\/badminton on 2026-11-26: schedule table missing/,
     );
   });
 
@@ -546,7 +549,18 @@ describe('sourceHost', () => {
       sourceHost({ type: 'memberzone', url: 'https://c.example:8443/p' }),
       'c.example:8443',
     );
-    assert.equal(sourceHost({ type: 'memberpro', url: 'https://d.example/p' }), 'd.example');
+    assert.equal(
+      sourceHost({
+        type: 'memberpro',
+        url: 'https://d.example/p',
+        sportButton: { name: 'BTN5', value: 'Badminton' },
+      }),
+      'd.example',
+    );
+    assert.equal(
+      sourceHost({ type: 'starez', url: 'https://beach.example/rez', facility: 'Beach' }),
+      'beach.example',
+    );
     assert.equal(sourceHost({ type: 'none' }), undefined);
     assert.equal(sourceHost({ type: 'memberzone', url: 'not a url' }), undefined);
   });

@@ -3,6 +3,7 @@ import { CookieJar, readHiddenFields } from '../aspnet.ts';
 import { createHostLimiter } from '../hostLimiter.ts';
 import type { HostLimiter } from '../hostLimiter.ts';
 import { withTimeout } from '../timeout.ts';
+import { targetKey } from '../types.ts';
 import type { AvailabilityConnector, FetchFn } from '../types.ts';
 import { parseMemberproGrid, toMemberproDate } from './parser.ts';
 
@@ -10,8 +11,6 @@ export const USER_AGENT = 'SpotRadar/1.0';
 export const DEFAULT_TIMEOUT_MS = 8000;
 /** How long the session + form state of the last answer is reused for the next date. */
 export const SESSION_REUSE_MS = 5 * 60 * 1000;
-/** The submit button of the badminton sport. */
-export const SPORT_BUTTON = { name: 'BTN5', value: 'Badminton' };
 
 export interface MemberproConnectorOptions {
   fetch?: FetchFn;
@@ -24,16 +23,24 @@ export interface MemberproConnectorOptions {
 
 type MemberproSource = Extract<AvailabilitySourceConfig, { type: 'memberpro' }>;
 
+type SportButton = MemberproSource['sportButton'];
+
 /** Session cookie and hidden fields (ViewState, EventValidation, ...) of the last good answer. */
 interface Session {
-  href: string;
   jar: CookieJar;
   fields: URLSearchParams;
   at: number;
 }
 
-/** Form body that asks for the badminton grid of `date`, on top of the page's hidden fields. */
-export function buildMemberproBody(hidden: URLSearchParams, date: string): URLSearchParams {
+/**
+ * Form body that asks for the grid of the sport `button` on `date`, on top of the page's
+ * hidden fields.
+ */
+export function buildMemberproBody(
+  hidden: URLSearchParams,
+  date: string,
+  button: SportButton,
+): URLSearchParams {
   const [y, m, d] = date.split('-').map(Number);
   const raw = String(Date.UTC(y ?? 0, (m ?? 1) - 1, d ?? 1));
   const czDate = toMemberproDate(date);
@@ -45,7 +52,7 @@ export function buildMemberproBody(hidden: URLSearchParams, date: string): URLSe
   );
   body.set('ASPxFormLayout2_Datepicker2_Raw', raw);
   body.set('DATUM_HF', czDate);
-  body.set(SPORT_BUTTON.name, SPORT_BUTTON.value);
+  body.set(button.name, button.value);
   return body;
 }
 
@@ -65,7 +72,9 @@ export function createMemberproConnector(
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const limiter = options.limiter ?? createHostLimiter();
   const now = options.now ?? Date.now;
-  let session: Session | undefined;
+  // One session per page + sport: an answer's form state belongs to the sport it shows, so a
+  // reused session never mixes sports.
+  const sessions = new Map<string, Session>();
 
   function request(url: URL, jar: CookieJar, post?: URLSearchParams): Promise<string> {
     return withTimeout(timeoutMs, async (signal) => {
@@ -87,39 +96,44 @@ export function createMemberproConnector(
 
   /** POSTs the date form; remembers the session only when the answer parsed. */
   async function postDate(
-    url: URL,
+    source: MemberproSource,
     jar: CookieJar,
     hidden: URLSearchParams,
     date: string,
   ): Promise<FreeSlot[]> {
-    const html = await request(url, jar, buildMemberproBody(hidden, date));
+    const url = new URL(source.url);
+    const html = await request(url, jar, buildMemberproBody(hidden, date, source.sportButton));
     const slots = parseMemberproGrid(html, date);
-    session = { href: url.href, jar, fields: readHiddenFields(html), at: now() };
+    sessions.set(sessionKey(source), { jar, fields: readHiddenFields(html), at: now() });
     return slots;
   }
 
+  function sessionKey(source: MemberproSource): string {
+    return `${new URL(source.url).href}|${source.sportButton.name}=${source.sportButton.value}`;
+  }
+
   async function read(source: MemberproSource, date: string): Promise<FreeSlot[]> {
-    const url = new URL(source.url);
-    const previous = session;
-    session = undefined;
-    if (previous && previous.href === url.href && now() - previous.at < SESSION_REUSE_MS) {
+    const key = sessionKey(source);
+    const previous = sessions.get(key);
+    sessions.delete(key);
+    if (previous && now() - previous.at < SESSION_REUSE_MS) {
       try {
-        return await postDate(url, previous.jar, previous.fields, date);
+        return await postDate(source, previous.jar, previous.fields, date);
       } catch {
-        session = undefined; // stale session or changed form: start over with a clean GET
+        sessions.delete(key); // stale session or changed form: start over with a clean GET
       }
     }
     const jar = new CookieJar();
-    const hidden = readHiddenFields(await request(url, jar));
-    return postDate(url, jar, hidden, date);
+    const hidden = readHiddenFields(await request(new URL(source.url), jar));
+    return postDate(source, jar, hidden, date);
   }
 
   return {
     type: 'memberpro',
-    async getFreeSlots(venue, date): Promise<FreeSlot[]> {
-      const source = venue.source;
+    async getFreeSlots(target, date): Promise<FreeSlot[]> {
+      const source = target.source;
       if (source.type !== 'memberpro') {
-        throw new Error(`Venue ${venue.id} is not a MemberPro venue`);
+        throw new Error(`${targetKey(target)} is not a MemberPro source`);
       }
       return limiter.run(new URL(source.url).host, () => read(source, date));
     },

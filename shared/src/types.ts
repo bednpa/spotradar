@@ -2,7 +2,7 @@
  * API DTOs – the single source of truth for request/response shapes.
  * Dates are "YYYY-MM-DD", times are "HH:MM" (local time in Europe/Prague).
  */
-import type { AvailabilitySource, GeoPoint, SportId } from './catalog.ts';
+import type { AvailabilitySource, BookingSystem, GeoPoint, SportId } from './catalog.ts';
 import type { ErrorCode } from './errors.ts';
 import type { MultisportInfo } from './multisport.ts';
 import type { Pricing } from './pricing.ts';
@@ -22,11 +22,49 @@ export interface DayOpeningHours {
   close: string;
 }
 
+/**
+ * Yearly season of a seasonal (usually outdoor) offering, inclusive, as "MM-DD".
+ * `from` > `to` wraps the year end (e.g. an indoor winter season "10-01".."04-30").
+ */
+export interface Season {
+  from: string;
+  to: string;
+}
+
 export interface OpeningHours {
   /** True when the hours are an estimate (not confirmed by the venue). */
   approximate: boolean;
   /** null = closed that day. */
   days: Record<Weekday, DayOpeningHours | null>;
+  /** Only open within this season (closed on every other date); absent = all year. */
+  season?: Season;
+}
+
+/**
+ * One sport at one venue: its own courts, hours, booking page, booking system,
+ * prices and MultiSport terms (a venue can offer several sports).
+ */
+export interface SportOffering {
+  sport: SportId;
+  /** Number of courts/tables for this sport; absent when not known. */
+  courts?: number;
+  /**
+   * Opening hours for this sport; absent when not known (the calendar then treats the hours
+   * of UNKNOWN_HOURS_WINDOW as possibly open → "check on website" unless live data shows free).
+   */
+  openingHours?: OpeningHours;
+  /** The venue's own booking page for this sport – SpotRadar never books anything itself. */
+  bookingUrl: string;
+  /** Booking system the venue uses for this sport (display + research status). */
+  bookingSystem: BookingSystem;
+  /** Connector that reads live data for this sport ("none" = no connector → "check on website"). */
+  availabilitySource: AvailabilitySource;
+  /** Structured court price list (see `priceFor`); absent when unknown. */
+  pricing?: Pricing;
+  /** MultiSport terms; `{ category: 'unknown' }` when not known. */
+  multisport: MultisportInfo;
+  /** Short factual remark, e.g. "Outdoor sand courts" or "Indoor courts in winter only". */
+  note?: string;
 }
 
 /** Public venue information (what the API returns). */
@@ -37,23 +75,16 @@ export interface Venue {
   district: string;
   address: string;
   location: GeoPoint;
+  /** Sports of `offerings`, in the same order (convenience for filtering and tags). */
   sports: SportId[];
-  /** Number of courts for the sport; absent when not known. */
-  courts?: number;
-  openingHours: OpeningHours;
-  /** The venue's own booking page – SpotRadar never books anything itself. */
-  bookingUrl: string;
+  /** Non-empty; at most one offering per sport. */
+  offerings: SportOffering[];
   phone?: string;
-  availabilitySource: AvailabilitySource;
   /** The venue's own website (not the booking page); absent when unknown. */
   website?: string;
-  /** Structured court price list (see `priceFor`); absent when unknown. */
-  pricing?: Pricing;
-  /** MultiSport terms; `{ category: 'unknown' }` when not known. */
-  multisport: MultisportInfo;
   /**
-   * Other sports/activities offered at the venue that SpotRadar does not search
-   * (display only, e.g. ["Squash", "Table tennis"]); absent or empty when none.
+   * Other activities offered at the venue that SpotRadar does not search
+   * (display only, e.g. ["Bowling", "Fitness"]); absent or empty when none.
    */
   otherActivities?: string[];
 }
@@ -63,7 +94,18 @@ export interface Venue {
  * (stored in the venue data file, never sent to clients).
  */
 export type AvailabilitySourceConfig =
-  | { type: 'clubspire'; baseUrl: string; tabIdx: number }
+  | {
+      type: 'clubspire';
+      baseUrl: string;
+      /** Timeline tab of the sport (e.g. Centrum Viktoria: 0 squash, 1 badminton, 2 beach, 3 padel). */
+      tabIdx: number;
+      /**
+       * Only court rows whose name starts with one of these prefixes (case-insensitive) count,
+       * for tabs that mix sports (Viktoria tab 3: "Padel 1-3" + an outdoor tennis court).
+       * Absent = every row of the tab.
+       */
+      courtNamePrefixes?: string[];
+    }
   | {
       type: 'bizzy';
       scheduleUrl: string;
@@ -74,8 +116,32 @@ export type AvailabilitySourceConfig =
       minLeadMinutes?: number;
     }
   | { type: 'memberzone'; url: string }
-  | { type: 'memberpro'; url: string }
+  | {
+      type: 'memberpro';
+      url: string;
+      /**
+       * The sport button posted to load the grid, e.g. `{ name: 'BTN5', value: 'Badminton' }`
+       * (Ivanovice: BTN4=Squash, BTN3=Ping-pong).
+       */
+      sportButton: { name: string; value: string };
+    }
+  | {
+      type: 'starez';
+      /** The public reservation page, e.g. "https://beach.starez.cz/vstupenky-rezervace". */
+      url: string;
+      /** Title of the facility group to read, e.g. "Beachvolejbal" (one page lists several). */
+      facility: string;
+    }
   | { type: 'none' };
+
+/**
+ * Backend-only: a sport offering plus the connector configuration of its booking
+ * system (stored in the venue data file, never sent to clients).
+ * Invariant: `availabilitySource === source.type`.
+ */
+export interface SportOfferingConfig extends SportOffering {
+  source: AvailabilitySourceConfig;
+}
 
 /** Parsed query of GET /api/search. */
 export interface SearchQuery {
@@ -120,6 +186,8 @@ export interface VenueAvailability {
 
 export interface SearchResult {
   venue: Venue;
+  /** The venue's offering for `query.sport` (hours, prices, booking page of that sport). */
+  offering: SportOffering;
   /** Distance from the origin in km (1 decimal); present only when lat/lng were given. */
   distanceKm?: number;
   availability: VenueAvailability;
@@ -161,6 +229,8 @@ export type CalendarQueryParams = Partial<Record<keyof CalendarQuery, string>>;
 /** A venue matching the calendar filters. */
 export interface CalendarVenue {
   venue: Venue;
+  /** The venue's offering for `query.sport` (hours, prices, booking page of that sport). */
+  offering: SportOffering;
   /** Distance from the origin in km (1 decimal); present only when lat/lng were given. */
   distanceKm?: number;
 }
@@ -201,8 +271,13 @@ export type VenueQueryParams = Partial<Record<keyof VenueQuery, string>>;
 
 export interface VenueListItem {
   venue: Venue;
-  /** True when SpotRadar can read live court availability for this venue (a connector exists). */
+  /**
+   * True when SpotRadar can read live court availability (a connector exists) for
+   * `query.sport`, or for at least one sport when no sport filter is given.
+   */
   liveAvailability: boolean;
+  /** Sports of the venue with live availability (a connector exists), in offering order. */
+  liveSports: SportId[];
 }
 
 /** GET /api/venues → 200 */

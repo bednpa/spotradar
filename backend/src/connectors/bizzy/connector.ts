@@ -4,6 +4,7 @@ import { CookieJar } from '../aspnet.ts';
 import { createHostLimiter } from '../hostLimiter.ts';
 import type { HostLimiter } from '../hostLimiter.ts';
 import { withTimeout } from '../timeout.ts';
+import { targetKey } from '../types.ts';
 import type { AvailabilityConnector, FetchFn } from '../types.ts';
 import {
   BizzyParseError,
@@ -188,18 +189,19 @@ export function createBizzyConnector(options: BizzyConnectorOptions = {}): Avail
 
   return {
     type: 'bizzy',
-    async getFreeSlots(venue, date): Promise<FreeSlot[]> {
-      const source = venue.source;
-      if (source.type !== 'bizzy') throw new Error(`Venue ${venue.id} is not a Bizzy venue`);
-      const hit = cachedSlots(source, venue.id, date);
+    async getFreeSlots(target, date): Promise<FreeSlot[]> {
+      const source = target.source;
+      const id = targetKey(target);
+      if (source.type !== 'bizzy') throw new Error(`${id} is not a Bizzy source`);
+      const hit = cachedSlots(source, id, date);
       if (hit) return hit;
 
       return limiter.run(new URL(source.scheduleUrl).host, async () => {
         // An earlier task in the queue may have loaded this window meanwhile.
-        const afterWait = cachedSlots(source, venue.id, date);
+        const afterWait = cachedSlots(source, id, date);
         if (afterWait) return afterWait;
-        await loadWindow(venue.id, source, date);
-        const slots = cachedSlots(source, venue.id, date);
+        await loadWindow(id, source, date);
+        const slots = cachedSlots(source, id, date);
         if (!slots) throw new BizzyParseError(`Bizzy page does not show ${date}`);
         return slots;
       });

@@ -9,7 +9,7 @@ import type {
   CourtPrice,
   MultisportCards,
   SlotVenueStatus,
-  Venue,
+  SportOffering,
   VenueAvailability,
 } from '@spotradar/shared';
 import { hourStatuses, indexDays } from './cells.ts';
@@ -72,11 +72,11 @@ function liveNote(availability: VenueAvailability | undefined, now: Date): strin
   })}</p>`;
 }
 
-/** The price of one venue for the clicked slot with the selected cards (null = unknown). */
-function slotPrice(venue: Venue, ctx: SlotContext): CourtPrice | null {
+/** The price of the venue's offering (selected sport) for the clicked slot (null = unknown). */
+function slotPrice(offering: SportOffering, ctx: SlotContext): CourtPrice | null {
   return courtPrice({
-    pricing: venue.pricing,
-    multisport: venue.multisport,
+    pricing: offering.pricing,
+    multisport: offering.multisport,
     date: ctx.date,
     hour: ctx.hour,
     cards: ctx.cards,
@@ -84,15 +84,18 @@ function slotPrice(venue: Venue, ctx: SlotContext): CourtPrice | null {
 }
 
 /** MultiSport badge (+ limits) and the price of exactly this slot: the same row for every venue. */
-function renderMultisportAndPrice(venue: Venue, ctx: SlotContext): string {
-  const price = slotPrice(venue, ctx);
+function renderMultisportAndPrice(offering: SportOffering, ctx: SlotContext): string {
+  const price = slotPrice(offering, ctx);
   const cardsText = price ? formatCardsUsed(price.cardsUsed) : '';
-  return `<div class="venue-ms">${renderMultisportBadge(venue.multisport)}</div>
+  const note = offering.note
+    ? `<p class="muted offering-note">${escapeHtml(offering.note)}</p>`
+    : '';
+  return `<div class="venue-ms">${renderMultisportBadge(offering.multisport)}</div>
   <p class="fact"><span class="fact-label">Price</span> <span data-testid="slot-price">${escapeHtml(formatCourtPrice(price))}</span>${
     cardsText
       ? ` <span class="slot-price-cards" data-testid="slot-price-cards">${escapeHtml(cardsText)}</span>`
       : ''
-  }</p>`;
+  }</p>${note}`;
 }
 
 interface SlotContext {
@@ -108,8 +111,8 @@ function renderFreeItem(
   now: Date,
   ctx: SlotContext,
 ): string {
-  const { venue } = entry;
-  const facts = renderMultisportAndPrice(venue, ctx);
+  const { venue, offering } = entry;
+  const facts = renderMultisportAndPrice(offering, ctx);
   const links = [externalLink(venue.website, 'Website'), googleMapsLink(venue)]
     .filter((link) => link !== '')
     .join('');
@@ -119,7 +122,7 @@ function renderFreeItem(
   ${liveNote(availability, now)}
   ${facts}
   ${links ? `<p class="link-row">${links}</p>` : ''}
-  ${bookLink(venue.bookingUrl)}
+  ${bookLink(offering.bookingUrl)}
 </li>`;
 }
 
@@ -129,7 +132,7 @@ function renderCheckItem(
   now: Date,
   ctx: SlotContext,
 ): string {
-  const { venue } = entry;
+  const { venue, offering } = entry;
   const note = liveNote(
     availability?.status === 'unavailable' ? availability : { status: 'unknown', freeSlots: [] },
     now,
@@ -138,8 +141,8 @@ function renderCheckItem(
   <div class="venue-item-head"><h3>${escapeHtml(venue.name)}</h3><span class="pill pill-check">Check on website</span></div>
   <p class="muted">${addressLine(entry)}</p>
   ${note}
-  ${renderMultisportAndPrice(venue, ctx)}
-  ${bookLink(venue.bookingUrl)}
+  ${renderMultisportAndPrice(offering, ctx)}
+  ${bookLink(offering.bookingUrl)}
 </li>`;
 }
 
@@ -169,7 +172,7 @@ export function renderPanel({
     return sortEntries(rows, sort, ({ entry }) => ({
       name: entry.venue.name,
       distanceKm: entry.distanceKm,
-      price: slotPrice(entry.venue, ctx),
+      price: slotPrice(entry.offering, ctx),
     }));
   };
   const free = sorted('free');

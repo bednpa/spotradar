@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { renderPanel } from './panel.ts';
-import type { Venue } from '@spotradar/shared';
+import type { SportOffering } from '@spotradar/shared';
 import { NOW, live, makeCalendar, makeVenue } from './test-fixtures.test.ts';
 
 const data = makeCalendar('2026-11-25', '2026-11-27');
@@ -92,7 +92,7 @@ test('unknown price and MultiSport are labelled, not hidden', () => {
 });
 
 test('"No MultiSport" venues keep the price with cards; limits are a tooltip and visible text', () => {
-  const priced = (price: number): Venue['pricing'] => ({
+  const priced = (price: number): SportOffering['pricing'] => ({
     currency: 'CZK',
     unit: 'hour',
     rules: [
@@ -135,7 +135,7 @@ test('"No MultiSport" venues keep the price with cards; limits are a tooltip and
 });
 
 test('free and check lists are sorted separately by distance (default) and by slot price', () => {
-  const priced = (price: number): Venue['pricing'] => ({
+  const priced = (price: number): SportOffering['pricing'] => ({
     currency: 'CZK',
     unit: 'hour',
     rules: [

@@ -13,12 +13,13 @@ import {
   venuesFilterToSearch,
 } from './venues-page.ts';
 import type { VenuesFilter } from './venues-page.ts';
-import { hours, makeVenue } from './test-fixtures.test.ts';
+import { hours, makeOffering, makeVenue } from './test-fixtures.test.ts';
 
 const NO_FILTER: VenuesFilter = { q: '', sport: null, sort: 'distance', cards: 0 };
 
 const detailed: VenueListItem = {
   liveAvailability: true,
+  liveSports: ['badminton'],
   venue: makeVenue('lisen', 'Badminton Líšeň', {
     district: 'Brno-Líšeň',
     website: 'https://www.example.com/lisen',
@@ -43,6 +44,7 @@ const detailed: VenueListItem = {
 
 const bare: VenueListItem = {
   liveAvailability: false,
+  liveSports: [],
   venue: makeVenue('bare', 'Bare Hall', { courts: undefined }),
 };
 
@@ -50,7 +52,7 @@ test('card shows name, district, address, sports, other activities, courts and p
   const html = renderVenueCard(detailed);
   assert.match(html, /<h3>Badminton Líšeň<\/h3>/);
   assert.match(html, /Brno-Líšeň · Badminton Líšeň street 1, Brno/);
-  assert.match(html, /tag tag-sport">Badminton</);
+  assert.match(html, /tag tag-sport tag-live" data-sport="badminton">.*🏸.*>Badminton</);
   assert.match(html, /class="tag">Squash</);
   assert.match(html, /Table &lt;tennis&gt;/);
   assert.match(html, /<dt>Courts<\/dt><dd>4 courts<\/dd>/);
@@ -82,7 +84,7 @@ test('card shows the MultiSport label with note, and unknown when absent', () =>
   );
   const not = renderVenueCard({
     ...bare,
-    venue: { ...bare.venue, multisport: { category: 'not-accepted' } },
+    venue: makeVenue('bare', 'Bare Hall', { multisport: { category: 'not-accepted' } }),
   });
   assert.match(not, />No MultiSport</);
 });
@@ -93,7 +95,10 @@ test('card links: website, booking, Google Maps rating link and phone; live badg
     html,
     /href="https:\/\/www\.example\.com\/lisen"[^>]*rel="noopener noreferrer">Website/,
   );
-  assert.match(html, /href="https:\/\/example\.com\/lisen"[^>]*>Book on venue's website/);
+  assert.match(
+    html,
+    /href="https:\/\/example\.com\/lisen"[^>]*>Book badminton<span class="visually-hidden"> at Badminton Líšeň<\/span> on venue's website/,
+  );
   assert.match(html, /google\.com\/maps\/search[^"]*"[^>]*>Rating &amp; reviews on Google Maps/);
   assert.match(html, /href="tel:\+420123456789">\+420 123 456 789</);
   assert.match(html, /class="live-status live-status-live"[^>]*data-status="live"/);
@@ -111,6 +116,7 @@ test('card links: website, booking, Google Maps rating link and phone; live badg
 test('card drops unsafe links', () => {
   const html = renderVenueCard({
     liveAvailability: false,
+    liveSports: [],
     venue: makeVenue('x', 'X', {
       website: 'javascript:alert(1)',
       bookingUrl: 'javascript:alert(2)',
@@ -155,7 +161,22 @@ test('controls: labelled search box and sport chips', () => {
   assert.match(html, /<label for="venue-search">Search venues<\/label>/);
   assert.match(html, /type="search"[^>]*value="li&quot;sen"/);
   assert.match(html, /data-venue-sport="" aria-pressed="false">All sports</);
-  assert.match(html, /data-venue-sport="badminton" aria-pressed="true">Badminton</);
+  assert.match(html, /data-venue-sport="badminton" aria-pressed="true"[^>]*>.*>Badminton</);
+  // every sport has a chip with its icon (decorative) and the Czech name as tooltip
+  for (const id of [
+    'tennis',
+    'squash',
+    'padel',
+    'table-tennis',
+    'volleyball',
+    'beach-volleyball',
+  ]) {
+    assert.match(html, new RegExp(`data-venue-sport="${id}" aria-pressed="false"`));
+  }
+  assert.match(
+    html,
+    /class="sport-icon" aria-hidden="true">🏓<\/span> <span title="Stolní tenis">Table tennis</,
+  );
 });
 
 test('URL state and API query', () => {
@@ -164,7 +185,12 @@ test('URL state and API query', () => {
     q: 'lisen',
     sport: 'badminton',
   });
-  assert.deepEqual(venuesFilterFromSearch('?sport=tennis'), NO_FILTER);
+  assert.deepEqual(venuesFilterFromSearch('?sport=golf'), NO_FILTER);
+  assert.equal(venuesFilterFromSearch('?sport=table-tennis').sport, 'table-tennis');
+  assert.equal(
+    venuesFilterToSearch({ ...NO_FILTER, sport: 'beach-volleyball' }),
+    'sport=beach-volleyball',
+  );
   assert.equal(venuesFilterFromSearch(`?q=${'x'.repeat(300)}`).q.length, 100);
   assert.equal(
     venuesFilterToSearch({ ...NO_FILTER, q: 'a b', sport: 'badminton' }),
@@ -203,6 +229,7 @@ function cardOrder(html: string): string[] {
 function item(id: string, name: string, lat: number, price?: number): VenueListItem {
   return {
     liveAvailability: false,
+    liveSports: [],
     venue: makeVenue(id, name, {
       location: { lat, lng: 16.6 },
       multisport: { category: 'half-per-card' },
@@ -259,6 +286,74 @@ test('venues page sorts by distance from the origin, by price with the cards, un
   const oneCard = renderVenuesBody(state, { ...byPrice, cards: 1 }, origin);
   assert.deepEqual(cardOrder(oneCard), ['gama', 'alfa', 'beta', 'delta']);
   assert.match(oneCard, />from 200 Kč → 100 Kč \/ h</);
+});
+
+const multi: VenueListItem = {
+  liveAvailability: true,
+  liveSports: ['squash'],
+  venue: makeVenue('viktoria', 'Centrum Viktoria', {
+    offerings: [
+      makeOffering('viktoria', { sport: 'squash', courts: 6, note: 'Indoor <courts>' }),
+      makeOffering('viktoria', {
+        sport: 'beach-volleyball',
+        courts: 5,
+        bookingSystem: 'clubspire',
+        openingHours: { ...hours('07:00', '22:00'), season: { from: '05-01', to: '09-30' } },
+      }),
+      makeOffering('viktoria', {
+        sport: 'tennis',
+        courts: 1,
+        openingHours: undefined,
+        bookingSystem: 'phone',
+        availabilitySource: 'none',
+        bookingUrl: 'https://example.com/viktoria-tennis',
+      }),
+    ],
+  }),
+};
+
+test('card without a sport filter: one section per sport with its own details', () => {
+  const html = renderVenueCard(multi, 0, undefined, null, '2026-11-25');
+  assert.equal((html.match(/<div class="offering" role="group"/g) ?? []).length, 3);
+  assert.doesNotMatch(html, /<section/); // no extra landmarks per sport
+  assert.match(html, /data-sport="squash" aria-label="Squash"/);
+  // tags with icons; only squash is live
+  assert.match(html, /tag tag-sport tag-live" data-sport="squash"/);
+  assert.match(html, /tag tag-sport" data-sport="tennis"/);
+  assert.match(html, /<dt>Courts<\/dt><dd>6 courts<\/dd>/);
+  assert.match(html, /Indoor &lt;courts&gt;/);
+  // season, out of season today
+  assert.match(
+    html,
+    /Season 1 May – 30 Sep · <span class="badge badge-neutral">Closed out of season/,
+  );
+  // unknown hours and the booking system
+  assert.match(html, /Opening hours unknown/);
+  assert.match(html, /<dt>Booking<\/dt><dd>Phone \/ e-mail<\/dd>/);
+  assert.match(
+    html,
+    /href="https:\/\/example\.com\/viktoria-tennis"[^>]*>Book tennis<span class="visually-hidden"> at Centrum Viktoria<\/span> on venue's website/,
+  );
+  // in season: no "closed" badge
+  const summer = renderVenueCard(multi, 0, undefined, null, '2026-06-10');
+  assert.doesNotMatch(summer, /Closed out of season/);
+});
+
+test('card with a sport filter shows only that sport', () => {
+  const html = renderVenueCard(multi, 0, undefined, 'tennis', '2026-11-25');
+  assert.equal((html.match(/<div class="offering" role="group"/g) ?? []).length, 1);
+  assert.match(html, /data-sport="tennis" aria-label="Tennis"/);
+  // all sports of the venue are still listed as tags
+  assert.match(html, /data-sport="beach-volleyball">/);
+});
+
+test('empty state for a sport without venues', () => {
+  const html = renderVenuesBody(
+    { status: 'success', data: { query: { sport: 'volleyball' }, venues: [] } },
+    { ...NO_FILTER, sport: 'volleyball' },
+  );
+  assert.match(html, /No volleyball venues in SpotRadar yet/);
+  assert.match(html, /data-action="clear-venue-filters">Show all sports</);
 });
 
 test('error messages', () => {

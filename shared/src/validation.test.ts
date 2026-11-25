@@ -61,7 +61,7 @@ test('parseSearchQuery: missing required fields', () => {
 });
 
 test('parseSearchQuery: unknown sport, bad date and time', () => {
-  const result = parseSearchQuery({ sport: 'tennis', date: '2026-02-30', time: '25:00' });
+  const result = parseSearchQuery({ sport: 'golf', date: '2026-02-30', time: '25:00' });
   assert.equal(result.ok, false);
   if (!result.ok) assert.deepEqual(fields(result.issues), ['date', 'sport', 'time']);
 });
@@ -136,9 +136,25 @@ test('parseCalendarQuery: missing and invalid fields', () => {
   assert.equal(missing.ok, false);
   if (!missing.ok) assert.deepEqual(fields(missing.issues), ['from', 'sport', 'to']);
 
-  const bad = parseCalendarQuery({ sport: 'squash', from: '2026-13-01', to: 'x', lat: '49' });
+  const bad = parseCalendarQuery({ sport: 'golf', from: '2026-13-01', to: 'x', lat: '49' });
   assert.equal(bad.ok, false);
   if (!bad.ok) assert.deepEqual(fields(bad.issues), ['from', 'lng', 'sport', 'to']);
+});
+
+test('parseCalendarQuery and parseVenueQuery accept every new sport id', () => {
+  for (const sport of [
+    'tennis',
+    'squash',
+    'padel',
+    'table-tennis',
+    'volleyball',
+    'beach-volleyball',
+  ]) {
+    const calendar = parseCalendarQuery({ sport, from: '2026-11-25', to: '2026-11-25' });
+    assert.equal(calendar.ok, true, sport);
+    const venues = parseVenueQuery({ sport });
+    assert.equal(venues.ok, true, sport);
+  }
 });
 
 test('parseCalendarQuery: to before from and too long ranges', () => {

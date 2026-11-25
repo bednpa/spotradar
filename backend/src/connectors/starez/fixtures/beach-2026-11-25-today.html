@@ -1,0 +1,2736 @@
+<!doctype html>
+<html>
+  <!-- @layout.latte (stránka pro prohlížeč) -->
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <!-- výběr title dle sekce a page -->
+    <title>Rezervace kurtu | Beach Riviéra | STAREZ</title>
+    <link href="/img/favicons/ber.png" rel="icon" type="image/png" />
+    <link href="/plugins/magnific-popup/magnific-popup.css" rel="stylesheet" />
+    <link href="/css/web/main.css" rel="stylesheet" />
+    <link href="/css/web/global.css" rel="stylesheet" />
+    <link href="/css/web/colors/yellow.css" rel="stylesheet" />
+    <link href="/css/web/swiper-bundle.min.css" rel="stylesheet" />
+    <link href="/css/web/_patch.css" rel="stylesheet" />
+    <link href="/css/web/custom-bootstrap.css" rel="stylesheet" />
+    <!-- výběr doplňkových css stylů dle patterns -->
+    <link href="/css/web/new-reservation.css?v=20261004-23" rel="stylesheet" />
+    <link href="/css/web/print.css?v=1" rel="stylesheet" media="print" />
+    <link href="/css/web/modals.css?v=1" rel="stylesheet" />
+    <meta
+      name="description"
+      content="Sledujte rozpis kurtů a rezervujte si kurt online nebo přímo na koupališti. Postup při rezervaci kurtu naleznete na této stránce."
+    />
+    <meta name="facebook-domain-verification" content="gzkw11bhc2kvwtuhgdd95idxtmj4pw" />
+
+    <!-- CookieFirst script -->
+    <script src="https://consent.cookiefirst.com/sites/beach.starez.cz-e6db0eae-b451-4780-815e-7e45cbdccc16/consent.js"></script>
+
+    <!-- Google Tag Manager script -->
+    <script>
+      (function (w, d, s, l, i) {
+        w[l] = w[l] || [];
+        w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+        var f = d.getElementsByTagName(s)[0],
+          j = d.createElement(s),
+          dl = l != 'dataLayer' ? '&l=' + l : '';
+        j.async = true;
+        j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+        f.parentNode.insertBefore(j, f);
+      })(window, document, 'script', 'dataLayer', 'GTM-NRNZ7ZQ');
+    </script>
+
+    <!-- Seznam.cz scripts -->
+    <script type="text/javascript" src="https://c.seznam.cz/js/rc.js"></script>
+    <script>
+      var retargetingConf = { rtgId: 59907 };
+      if (window.rc && window.rc.retargetingHit) {
+        window.rc.retargetingHit(retargetingConf);
+      }
+    </script>
+
+    <!-- jQuery 1.7.2+ or Zepto.js 1.0+ -->
+    <script src="/plugins/jquery/jquery.min.js?v=1"></script>
+
+    <!-- Magnific Popup core JS file -->
+    <script src="/plugins/magnific-popup/magnific-popup.min.js"></script>
+
+    <script>
+      (function () {
+        if (!window.chatbase || window.chatbase('getState') !== 'initialized') {
+          window.chatbase = (...arguments) => {
+            if (!window.chatbase.q) {
+              window.chatbase.q = [];
+            }
+            window.chatbase.q.push(arguments);
+          };
+          window.chatbase = new Proxy(window.chatbase, {
+            get(target, prop) {
+              if (prop === 'q') {
+                return target.q;
+              }
+              return (...args) => target(prop, ...args);
+            },
+          });
+        }
+        const onLoad = function () {
+          const script = document.createElement('script');
+          script.src = 'https://www.chatbase.co/embed.min.js';
+          script.id = 'xZwbG2E9_gZJoWTBlWsS_';
+          script.domain = 'www.chatbase.co';
+          document.body.appendChild(script);
+        };
+        if (document.readyState === 'complete') {
+          onLoad();
+        } else {
+          window.addEventListener('load', onLoad);
+        }
+      })();
+    </script>
+  </head>
+
+  <!-- výběr <body> dle sekce -->
+  <body class="sc-14">
+    <!-- Google Tag Manager (noscript) -->
+    <noscript
+      ><iframe
+        src="https://www.googletagmanager.com/ns.html?id=GTM-NRNZ7ZQ"
+        height="0"
+        width="0"
+        style="display: none; visibility: hidden"
+      ></iframe
+    ></noscript>
+
+    <!-- výběr <header> z components dle sekce -->
+    <header id="_header">
+      <div class="social-panel">
+        <a href="https://www.facebook.com/starezsport" target="_blank"
+          ><img src="/img/socials/fb-white.png" alt="Facebook"
+        /></a>
+        <a href="https://www.instagram.com/starez_sport/" target="_blank"
+          ><img src="/img/socials/inst-white.png" alt="Instagram"
+        /></a>
+        <a href="https://www.youtube.com/c/StarezSport1" target="_blank"
+          ><img src="/img/socials/yt-white.png" alt="Youtube"
+        /></a>
+        <a
+          href="https://www.linkedin.com/company/starez/mycompany/?viewAsMember=true"
+          target="_blank"
+          ><img src="/img/socials/lin-white.png" alt="LinkedIn"
+        /></a>
+      </div>
+      <div class="weblink">
+        <img src="/_files/logos_int/starez-head.svg" alt="starez.cz" />
+        <a href="https://www.starez.cz/"><p>www.starez.cz ↗</p></a>
+      </div>
+
+      <div class="fix-header">
+        <div class="header-wrap-top">
+          <div class="top-bar">
+            <div id="info-toggleButton" class="info-toggle"></div>
+
+            <div class="info1">
+              <div class="box">
+                <img src="/img/icons/clock.svg" class="icon" alt="clock" />
+                <div class="text">
+                  <p>BEACH</p>
+                  <h5>DNES OTEVŘENO 15:00 - 21:00</h5>
+                </div>
+              </div>
+            </div>
+
+            <div class="booking">
+              <a class="button-light" href="../vstupenky-rezervace"
+                >REZERVACE KURTU <img class="icon" src="/img/arrow-right-btn.svg" alt="dále"
+              /></a>
+            </div>
+          </div>
+
+          <div id="info-toggleList" class="info2">
+            <div class="box">
+              <img src="/img/icons/clock.svg" class="icon" alt="clock" />
+              <div class="text">
+                <p>BEACH</p>
+                <h5>DNES OTEVŘENO 15:00 - 21:00</h5>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="header-wrap-bottom">
+          <div class="bottom-bar">
+            <div class="logo">
+              <a href="/"><img src="/_files/logos_int/beach.svg" alt="Beachvolejbal Riviéra" /></a>
+            </div>
+            <div class="menu1">
+              <a href="/aktuality">Aktuality</a>
+              <a href="/letni-sezona">Letní sezóna</a>
+              <a href="/zimni-sezona">Zimní sezóna</a>
+              <a href="/oteviraci-doba-cenik">Ceník a otevírací doba</a>
+              <a href="/info-pro-navstevniky">Pro návštěvníky</a>
+              <a href="/kontakty">Kontakt</a>
+            </div>
+
+            <div class="search1">
+              <div id="search1-button" class="search1-box">
+                <img src="/img/icon-search.svg" class="icon" alt="hledat" />
+              </div>
+            </div>
+
+            <div id="menu-toggleButton" class="menu-toggle"></div>
+          </div>
+
+          <div id="menu-toggleList" class="menu2">
+            <a href="/aktuality">Aktuality</a>
+            <hr />
+            <a href="/letni-sezona">Letní sezóna</a>
+            <hr />
+            <a href="/zimni-sezona">Zimní sezóna</a>
+            <hr />
+            <a href="/oteviraci-doba-cenik">Ceník a otevírací doba</a>
+            <hr />
+            <a href="/info-pro-navstevniky">Pro návštěvníky</a>
+            <hr />
+            <a href="/kontakty">Kontakt</a>
+            <hr />
+          </div>
+
+          <div id="search2" class="search2">
+            <div id="search2-button" class="search2-box">
+              <img src="/img/icon-search.svg" class="icon" alt="hledat" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div id="search1-block" class="search1-block">
+      <div class="window">
+        <div id="search1-close-button" class="icon-x">&#10006;</div>
+
+        <form action="/vysledky-hledani" autocomplete="off">
+          <input id="search1-input" name="text" placeholder="Hledejte ..." type="text" />
+        </form>
+
+        <div class="icon-box">
+          <img class="icon" src="/img/icon-search.svg" alt="hledat" />
+        </div>
+      </div>
+      <img src="/img/icons/rotate.svg" class="rotate" width="20" alt="rotate" />
+      <div id="search1-result"></div>
+    </div>
+
+    <!-- výběr <main> z patterns dle sekce -->
+    <main>
+      <!-- START - pattern #13 TENTO SE RENDERUJE -->
+
+      <!-- START - page TOP -->
+      <!-- START - main-banner.latte #7 -->
+      <div id="_main-banner" class="main-banner1">
+        <img class="background" src="/_files/main_banner/ber.jpg" alt="Rezervace kurtů" />
+
+        <div class="content">
+          <h1 class="page-title">Rezervace kurtů</h1>
+          <h4>Beach Riviéra</h4>
+
+          <div class="buttons"></div>
+
+          <div class="nav">
+            <a class="home" href="https://www.starez.cz">Domovský web Starez ↗</a>
+            <a class="section" href="/">Beach Riviéra</a>
+            <p class="active">Rezervace kurtů</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- END - main-banner.latte -->
+      <!-- END - page TOP -->
+
+      <!-- START - page CONTENT -->
+      <!-- START - text-pic.latte #28 -->
+      <section id="text-pic" role="region" class="text-pic container-new">
+        <h2 id="282">Rezervace kurtů</h2>
+        <div class="text">
+          <h3> </h3>
+          <h3>Návštěvník koupaliště</h3>
+          <p>
+            Návštěvník, který uhradil
+            <a href="https://www.brnoid.cz/cs/sport-koupit-vstupenku" target="_blank" rel="noopener"
+              >vstupné na koupaliště</a
+            >, se informuje u obsluhy beachvolejbalového infostánku o možnosti jednorázového využití
+            dle momentální obsazenosti kurtů. Platba proběhne na pokladně beachvolejbalového
+            infostánku.
+          </p>
+          <p><strong> </strong></p>
+          <h3>Jednorázová rezervace</h3>
+          <p>
+            Pokud nejste přímo na Koupališti Riviéra a chtěli byste si jít zahrát beachvolejbal,
+            rezervace kurtu je možná výhradně elektronicky pomocí rezervačního systému na této
+            stránce s následným uhrazením zálohy přes portál Brno iD. Přečtěte si pravidla pro
+            využití beachvolejbalových kurtů
+            <a href="letni-sezona#706" target="_blank" rel="noopener">pro letní sezonu</a> a
+            <a href="zimni-sezona#709">pro zimní sezonu</a>.
+          </p>
+          <h3>Dlouhodobá rezervace</h3>
+          <p>
+            Pronajímáme kurty také pro sportovní kluby i pravidelnou volnočasovou zábavu s přáteli
+            po celý rok. Beachvolejbal Riviéra zahrnuje šest kurtů s celoročním provozem díky
+            nafukovací hale. Zarezervujte si kurt pro dlouhodobý pronájem a získejte zvýhodněnou
+            cenu a další výhody. Objednávky přijímáme pouze e-mailem
+            <a href="mailto:beachvolejbal@starezsport.cz">beachvolejbal@starezsport.cz </a> .
+          </p>
+          <p>
+            Pročtěte si pravidla pro využití beachvolejbalových kurtů
+            <a href="letni-sezona#707" target="_blank" rel="noopener">pro letní sezonu</a> a
+            <a href="zimni-sezona#710" target="_blank" rel="noopener">pro zimní sezonu</a>.
+          </p>
+          <p>
+            V případě dotazů se na nás prosím obraťte na e-mailové adrese
+            <a href="mailto:beachvolejbal@starezsport.cz"> beachvolejbal@starezsport.cz </a> nebo na
+            telefonním čísle 730 106 916.
+          </p>
+        </div>
+      </section>
+      <!-- END - text-pic.latte -->
+
+      <div id="snippet--reservation">
+        <div
+          class="reservation container-new"
+          data-page-url="vstupenky-rezervace"
+          data-active-date="2026-11-25"
+          data-active-date-raw="2026-11-25"
+          data-today="2026-11-25"
+        >
+          <div class="btn-container">
+            <div class="term-picker-wrap">
+              <button
+                type="button"
+                class="button-res"
+                id="term-picker-button"
+                role="button"
+                aria-expanded="false"
+                aria-controls="term-picker-popup"
+              >
+                <img src="/img/icons/calendar.svg" alt="icon" class="icon" />
+                VYBRAT JINÝ TERMÍN
+              </button>
+
+              <div id="term-picker-popup" class="term-picker-popup" hidden>
+                <div
+                  class="term-picker-calendar"
+                  role="dialog"
+                  aria-modal="false"
+                  aria-label="Kalendář termínu"
+                >
+                  <div class="term-picker-calendar__header">
+                    <button
+                      id="term-picker-prev"
+                      class="term-picker-calendar__nav"
+                      type="button"
+                      aria-label="Předchozí měsíc"
+                    >
+                      &#8249;
+                    </button>
+                    <div
+                      id="term-picker-month"
+                      class="term-picker-calendar__month"
+                      aria-live="polite"
+                    ></div>
+                    <button
+                      id="term-picker-next"
+                      class="term-picker-calendar__nav"
+                      type="button"
+                      aria-label="Další měsíc"
+                    >
+                      &#8250;
+                    </button>
+                  </div>
+
+                  <div class="term-picker-calendar__weekdays" aria-hidden="true">
+                    <span>po</span>
+                    <span>út</span>
+                    <span>st</span>
+                    <span>čt</span>
+                    <span>pá</span>
+                    <span>so</span>
+                    <span>ne</span>
+                  </div>
+
+                  <div id="term-picker-grid" class="term-picker-calendar__grid"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="print">
+              <button class="button-res" id="print-button" type="button">
+                <img src="/img/icons/print.svg" alt="icon" class="icon" />
+                VYTISKNOUT
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div class="days" role="tablist" aria-label="Výběr dne"></div>
+
+            <div class="content">
+              <div class="legend">
+                <p>
+                  <span style="background-color: #7cac38"></span>
+                  volno k rezervaci se zálohou
+                </p>
+                <p>
+                  <span style="background-color: #555555"></span>
+                  rezervováno
+                </p>
+                <p>
+                  <span style="background-color: #cccccc"></span>
+                  není k dispozici
+                </p>
+              </div>
+
+              <div class="reservation-facilities">
+                <div class="facility facility--grouped">
+                  <h4 class="facility-group__title">Beachvolejbal</h4>
+
+                  <div class="schedule-scroll">
+                    <div class="facility-group__rows">
+                      <div class="facility-group__timeline-row">
+                        <div class="facility-group__label-spacer" aria-hidden="true"></div>
+                        <div
+                          class="schedule schedule--timeline-only"
+                          data-time-from="9"
+                          data-time-to="22"
+                          data-slot-minutes="60"
+                          data-columns="13"
+                        >
+                          <div class="timeline">
+                            <div class="time">9-10</div>
+                            <div class="time">10-11</div>
+                            <div class="time">11-12</div>
+                            <div class="time">12-13</div>
+                            <div class="time">13-14</div>
+                            <div class="time">14-15</div>
+                            <div class="time">15-16</div>
+                            <div class="time">16-17</div>
+                            <div class="time">17-18</div>
+                            <div class="time">18-19</div>
+                            <div class="time">19-20</div>
+                            <div class="time">20-21</div>
+                            <div class="time">21-22</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="facility-group__unit-row">
+                        <div class="facility-group__unit-label">kurt 1</div>
+                        <div
+                          class="schedule schedule--grouped-row"
+                          data-time-from="9"
+                          data-time-to="22"
+                          data-slot-minutes="60"
+                          data-columns="13"
+                        >
+                          <div class="timeslots">
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 1;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="0"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">09:00-10:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 2;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="1"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">10:00-11:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 3;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="2"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">11:00-12:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 4;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="3"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">12:00-13:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 5;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="4"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">13:00-14:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 6;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="5"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">14:00-15:00</span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 7;
+                                grid-row: 1;
+                                background-color: #7cac38;
+                                color: #d4021d;
+                                --strip-color: #7cac38;
+                              "
+                              data-reservation-start-minutes="900"
+                              data-reservation-end-minutes="960"
+                              data-reservation-name="volno k rezervaci"
+                              data-hour-index="6"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">15:00-16:00</span>
+                              <span class="block-title">
+                                volno k rezervaci
+                                <br />
+                                0/1
+                              </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 8;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="960"
+                              data-reservation-end-minutes="1020"
+                              data-reservation-name="Rezervováno"
+                              data-hour-index="7"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">16:00-17:00</span>
+                              <span class="block-title"> Rezervováno </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 9;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1020"
+                              data-reservation-end-minutes="1080"
+                              data-reservation-name="Rezervováno"
+                              data-hour-index="8"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">17:00-18:00</span>
+                              <span class="block-title"> Rezervováno </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 10;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1080"
+                              data-reservation-end-minutes="1140"
+                              data-reservation-name="BVAB"
+                              data-hour-index="9"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">18:00-19:00</span>
+                              <span class="block-title"> BVAB </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 11;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1140"
+                              data-reservation-end-minutes="1200"
+                              data-reservation-name="Rezervováno"
+                              data-hour-index="10"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">19:00-20:00</span>
+                              <span class="block-title"> Rezervováno </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 12;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1200"
+                              data-reservation-end-minutes="1260"
+                              data-reservation-name="Rezervováno"
+                              data-hour-index="11"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">20:00-21:00</span>
+                              <span class="block-title"> Rezervováno </span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 13;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="12"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">21:00-22:00</span>
+                            </div>
+
+                            <div class="booking-layer"></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="facility-group__unit-row">
+                        <div class="facility-group__unit-label">kurt 2</div>
+                        <div
+                          class="schedule schedule--grouped-row"
+                          data-time-from="9"
+                          data-time-to="22"
+                          data-slot-minutes="60"
+                          data-columns="13"
+                        >
+                          <div class="timeslots">
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 1;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="0"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">09:00-10:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 2;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="1"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">10:00-11:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 3;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="2"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">11:00-12:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 4;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="3"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">12:00-13:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 5;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="4"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">13:00-14:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 6;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="5"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">14:00-15:00</span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 7;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="900"
+                              data-reservation-end-minutes="960"
+                              data-reservation-name="Beach Punk"
+                              data-hour-index="6"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">15:00-16:00</span>
+                              <span class="block-title"> Beach Punk </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 8;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="960"
+                              data-reservation-end-minutes="1020"
+                              data-reservation-name="Beach Punk"
+                              data-hour-index="7"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">16:00-17:00</span>
+                              <span class="block-title"> Beach Punk </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 9;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1020"
+                              data-reservation-end-minutes="1080"
+                              data-reservation-name="Beach Punk"
+                              data-hour-index="8"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">17:00-18:00</span>
+                              <span class="block-title"> Beach Punk </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 10;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1080"
+                              data-reservation-end-minutes="1140"
+                              data-reservation-name="Beach Punk"
+                              data-hour-index="9"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">18:00-19:00</span>
+                              <span class="block-title"> Beach Punk </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 11;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1140"
+                              data-reservation-end-minutes="1200"
+                              data-reservation-name="Beach Punk"
+                              data-hour-index="10"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">19:00-20:00</span>
+                              <span class="block-title"> Beach Punk </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 12;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1200"
+                              data-reservation-end-minutes="1260"
+                              data-reservation-name="Beach Punk"
+                              data-hour-index="11"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">20:00-21:00</span>
+                              <span class="block-title"> Beach Punk </span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 13;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="12"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">21:00-22:00</span>
+                            </div>
+
+                            <div class="booking-layer"></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="facility-group__unit-row">
+                        <div class="facility-group__unit-label">kurt 3</div>
+                        <div
+                          class="schedule schedule--grouped-row"
+                          data-time-from="9"
+                          data-time-to="22"
+                          data-slot-minutes="60"
+                          data-columns="13"
+                        >
+                          <div class="timeslots">
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 1;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="0"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">09:00-10:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 2;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="1"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">10:00-11:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 3;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="2"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">11:00-12:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 4;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="3"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">12:00-13:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 5;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="4"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">13:00-14:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 6;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="5"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">14:00-15:00</span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 7;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="900"
+                              data-reservation-end-minutes="960"
+                              data-reservation-name="Beach Punk"
+                              data-hour-index="6"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">15:00-16:00</span>
+                              <span class="block-title"> Beach Punk </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 8;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="960"
+                              data-reservation-end-minutes="1020"
+                              data-reservation-name="Beach Punk"
+                              data-hour-index="7"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">16:00-17:00</span>
+                              <span class="block-title"> Beach Punk </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 9;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1020"
+                              data-reservation-end-minutes="1080"
+                              data-reservation-name="Beach Punk"
+                              data-hour-index="8"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">17:00-18:00</span>
+                              <span class="block-title"> Beach Punk </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 10;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1080"
+                              data-reservation-end-minutes="1140"
+                              data-reservation-name="Rezervováno"
+                              data-hour-index="9"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">18:00-19:00</span>
+                              <span class="block-title"> Rezervováno </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 11;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1140"
+                              data-reservation-end-minutes="1200"
+                              data-reservation-name="Rezervováno"
+                              data-hour-index="10"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">19:00-20:00</span>
+                              <span class="block-title"> Rezervováno </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 12;
+                                grid-row: 1;
+                                background-color: #7cac38;
+                                color: #d4021d;
+                                --strip-color: #7cac38;
+                              "
+                              data-reservation-start-minutes="1200"
+                              data-reservation-end-minutes="1260"
+                              data-reservation-name="volno k rezervaci"
+                              data-hour-index="11"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">20:00-21:00</span>
+                              <span class="block-title">
+                                volno k rezervaci
+                                <br />
+                                0/1
+                              </span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 13;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="12"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">21:00-22:00</span>
+                            </div>
+
+                            <div class="booking-layer"></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="facility-group__unit-row">
+                        <div class="facility-group__unit-label">kurt 4</div>
+                        <div
+                          class="schedule schedule--grouped-row"
+                          data-time-from="9"
+                          data-time-to="22"
+                          data-slot-minutes="60"
+                          data-columns="13"
+                        >
+                          <div class="timeslots">
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 1;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="0"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">09:00-10:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 2;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="1"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">10:00-11:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 3;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="2"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">11:00-12:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 4;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="3"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">12:00-13:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 5;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="4"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">13:00-14:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 6;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="5"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">14:00-15:00</span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 7;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="900"
+                              data-reservation-end-minutes="960"
+                              data-reservation-name="BVAB"
+                              data-hour-index="6"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">15:00-16:00</span>
+                              <span class="block-title"> BVAB </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 8;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="960"
+                              data-reservation-end-minutes="1020"
+                              data-reservation-name="BVAB"
+                              data-hour-index="7"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">16:00-17:00</span>
+                              <span class="block-title"> BVAB </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 9;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1020"
+                              data-reservation-end-minutes="1080"
+                              data-reservation-name="BVAB"
+                              data-hour-index="8"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">17:00-18:00</span>
+                              <span class="block-title"> BVAB </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 10;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1080"
+                              data-reservation-end-minutes="1140"
+                              data-reservation-name="BVAB"
+                              data-hour-index="9"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">18:00-19:00</span>
+                              <span class="block-title"> BVAB </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 11;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1140"
+                              data-reservation-end-minutes="1200"
+                              data-reservation-name="BVAB"
+                              data-hour-index="10"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">19:00-20:00</span>
+                              <span class="block-title"> BVAB </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 12;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1200"
+                              data-reservation-end-minutes="1260"
+                              data-reservation-name="BVAB"
+                              data-hour-index="11"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">20:00-21:00</span>
+                              <span class="block-title"> BVAB </span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 13;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="12"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">21:00-22:00</span>
+                            </div>
+
+                            <div class="booking-layer"></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="facility-group__unit-row">
+                        <div class="facility-group__unit-label">kurt 5</div>
+                        <div
+                          class="schedule schedule--grouped-row"
+                          data-time-from="9"
+                          data-time-to="22"
+                          data-slot-minutes="60"
+                          data-columns="13"
+                        >
+                          <div class="timeslots">
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 1;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="0"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">09:00-10:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 2;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="1"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">10:00-11:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 3;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="2"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">11:00-12:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 4;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="3"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">12:00-13:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 5;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="4"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">13:00-14:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 6;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="5"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">14:00-15:00</span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 7;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="900"
+                              data-reservation-end-minutes="960"
+                              data-reservation-name="BVAB"
+                              data-hour-index="6"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">15:00-16:00</span>
+                              <span class="block-title"> BVAB </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 8;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="960"
+                              data-reservation-end-minutes="1020"
+                              data-reservation-name="BVAB"
+                              data-hour-index="7"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">16:00-17:00</span>
+                              <span class="block-title"> BVAB </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 9;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1020"
+                              data-reservation-end-minutes="1080"
+                              data-reservation-name="BVAB"
+                              data-hour-index="8"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">17:00-18:00</span>
+                              <span class="block-title"> BVAB </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 10;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1080"
+                              data-reservation-end-minutes="1140"
+                              data-reservation-name="BVAB"
+                              data-hour-index="9"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">18:00-19:00</span>
+                              <span class="block-title"> BVAB </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 11;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1140"
+                              data-reservation-end-minutes="1200"
+                              data-reservation-name="BVAB"
+                              data-hour-index="10"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">19:00-20:00</span>
+                              <span class="block-title"> BVAB </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 12;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1200"
+                              data-reservation-end-minutes="1260"
+                              data-reservation-name="BVAB"
+                              data-hour-index="11"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">20:00-21:00</span>
+                              <span class="block-title"> BVAB </span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 13;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="12"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">21:00-22:00</span>
+                            </div>
+
+                            <div class="booking-layer"></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="facility-group__unit-row">
+                        <div class="facility-group__unit-label">kurt 6</div>
+                        <div
+                          class="schedule schedule--grouped-row"
+                          data-time-from="9"
+                          data-time-to="22"
+                          data-slot-minutes="60"
+                          data-columns="13"
+                        >
+                          <div class="timeslots">
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 1;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="0"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">09:00-10:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 2;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="1"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">10:00-11:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 3;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="2"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">11:00-12:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 4;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="3"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">12:00-13:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 5;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="4"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">13:00-14:00</span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 6;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="5"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">14:00-15:00</span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 7;
+                                grid-row: 1;
+                                background-color: #7cac38;
+                                color: #d4021d;
+                                --strip-color: #7cac38;
+                              "
+                              data-reservation-start-minutes="900"
+                              data-reservation-end-minutes="960"
+                              data-reservation-name="volno k rezervaci"
+                              data-hour-index="6"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">15:00-16:00</span>
+                              <span class="block-title">
+                                volno k rezervaci
+                                <br />
+                                0/1
+                              </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 8;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="960"
+                              data-reservation-end-minutes="1020"
+                              data-reservation-name="Rezervováno"
+                              data-hour-index="7"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">16:00-17:00</span>
+                              <span class="block-title"> Rezervováno </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 9;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1020"
+                              data-reservation-end-minutes="1080"
+                              data-reservation-name="Rezervováno"
+                              data-hour-index="8"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">17:00-18:00</span>
+                              <span class="block-title"> Rezervováno </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 10;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1080"
+                              data-reservation-end-minutes="1140"
+                              data-reservation-name="BVAB"
+                              data-hour-index="9"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">18:00-19:00</span>
+                              <span class="block-title"> BVAB </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 11;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1140"
+                              data-reservation-end-minutes="1200"
+                              data-reservation-name="BVAB"
+                              data-hour-index="10"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">19:00-20:00</span>
+                              <span class="block-title"> BVAB </span>
+                            </div>
+
+                            <div
+                              class="block block--occupied block--with-strip"
+                              style="
+                                grid-column: 12;
+                                grid-row: 1;
+                                background-color: #555555;
+                                color: #ffffff;
+                                --strip-color: #555555;
+                              "
+                              data-reservation-start-minutes="1200"
+                              data-reservation-end-minutes="1260"
+                              data-reservation-name="BVAB"
+                              data-hour-index="11"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">20:00-21:00</span>
+                              <span class="block-title"> BVAB </span>
+                            </div>
+
+                            <div
+                              class="block block--with-strip"
+                              style="
+                                grid-column: 13;
+                                grid-row: 1;
+                                background-color: #cccccc;
+                                color: #000000;
+                              "
+                              data-hour-index="12"
+                              data-row-index="0"
+                            >
+                              <span class="block-time">21:00-22:00</span>
+                            </div>
+
+                            <div class="booking-layer"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="ajax-spinner">
+        <svg class="spinner" viewBox="0 0 50 50">
+          <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+        </svg>
+      </div>
+
+      <!-- END - page CONTENT -->
+
+      <!-- START - page BOTTOM -->
+      <!-- START - alert-banner.latte #14 -->
+      <!-- END - alert-banner.latte -->
+
+      <!-- START - links-logos.latte #6 -->
+      <div id="_links-logos" class="links-logos container-new">
+        <h2>Další sportoviště</h2>
+        <div class="logos">
+          <div class="item">
+            <a href="https://aquapark.starez.cz"
+              ><img
+                src="/_files/logos_int/aqpark.svg"
+                loading="lazy"
+                title="Aquapark Kohoutovice"
+                alt="Aquapark Kohoutovice"
+            /></a>
+          </div>
+          <div class="item">
+            <a href="https://bazenyluzanky.starez.cz"
+              ><img
+                src="/_files/logos_int/mpsl.svg"
+                loading="lazy"
+                title="Bazény Lužánky"
+                alt="Bazény Lužánky"
+            /></a>
+          </div>
+          <div class="item">
+            <a href="https://rasinova.starez.cz"
+              ><img
+                src="/_files/logos_int/rasinova.svg"
+                loading="lazy"
+                title="Lázně Rašínova"
+                alt="Lázně Rašínova"
+            /></a>
+          </div>
+          <div class="item">
+            <a href="https://ponavka.starez.cz"
+              ><img
+                src="/_files/logos_int/ponavka.svg"
+                loading="lazy"
+                title="Bazén Ponávka"
+                alt="Bazén Ponávka"
+            /></a>
+          </div>
+          <div class="item">
+            <a href="https://riviera.starez.cz"
+              ><img
+                src="/_files/logos_int/rivec.svg"
+                loading="lazy"
+                title="Koupaliště Riviéra"
+                alt="Koupaliště Riviéra"
+            /></a>
+          </div>
+          <div class="item">
+            <a href="https://zabrdovice.starez.cz"
+              ><img
+                src="/_files/logos_int/zabrdky.svg"
+                loading="lazy"
+                title="Koupaliště Zábrdovice"
+                alt="Koupaliště Zábrdovice"
+            /></a>
+          </div>
+          <div class="item">
+            <a href="https://kluzistevodova.starez.cz"
+              ><img
+                src="/_files/logos_int/kluziste.svg"
+                loading="lazy"
+                title="Kluziště Vodova"
+                alt="Kluziště Vodova"
+            /></a>
+          </div>
+          <div class="item">
+            <a href="https://brusleni.starez.cz"
+              ><img
+                src="/_files/logos_int/brusleni.svg"
+                loading="lazy"
+                title="Bruslení za Lužánkami"
+                alt="Bruslení za Lužánkami"
+            /></a>
+          </div>
+          <div class="item">
+            <a href="https://arenavodova.starez.cz"
+              ><img
+                src="/_files/logos_int/vodova.svg"
+                loading="lazy"
+                title="STAREZ ARÉNA VODOVA"
+                alt="STAREZ ARÉNA VODOVA"
+            /></a>
+          </div>
+          <div class="item">
+            <a href="https://fotbal.starez.cz"
+              ><img
+                src="/_files/logos_int/fotbal.svg"
+                loading="lazy"
+                title="Fotbalové centrum "
+                alt="Fotbalové centrum "
+            /></a>
+          </div>
+          <div class="item">
+            <a href="https://anthropos.starez.cz"
+              ><img
+                src="/_files/logos_int/anthropos.svg"
+                loading="lazy"
+                title="Sportareál Anthropos"
+                alt="Sportareál Anthropos"
+            /></a>
+          </div>
+          <div class="item">
+            <a href="https://dopravnihriste.starez.cz"
+              ><img
+                src="/_files/logos_int/adv.svg"
+                loading="lazy"
+                title="Areál dopravní výchovy"
+                alt="Areál dopravní výchovy"
+            /></a>
+          </div>
+          <div class="item">
+            <a href="https://morenda.starez.cz"
+              ><img
+                src="/_files/logos_int/morenda.svg"
+                loading="lazy"
+                title="Morenda"
+                alt="Morenda"
+            /></a>
+          </div>
+          <div class="item">
+            <a href="https://zubri.starez.cz"
+              ><img
+                src="/_files/logos_int/zubri.svg"
+                loading="lazy"
+                title="XXX Jasenka"
+                alt="XXX Jasenka"
+            /></a>
+          </div>
+        </div>
+      </div>
+      <!-- END - links-logos.latte -->
+      <!-- END - page BOTTOM -->
+
+      <div
+        class="modal fade login-modal"
+        id="loginModal"
+        tabindex="-1"
+        role="dialog"
+        aria-labelledby="loginModalLabel"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog" role="document" id="snippet--login">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="exampleModalLabel">Přihlásit</h5>
+              <div
+                class="button-modal-x close"
+                type="button"
+                data-dismiss="modal"
+                aria-label="Close"
+              >
+                <span aria-hidden="true">&times;</span>
+              </div>
+            </div>
+            <form class="ajax" action="/vstupenky-rezervace" method="post" id="frm-loginForm">
+              <div class="modal-body">
+                <input
+                  type="password"
+                  name="password"
+                  id="frm-loginForm-password"
+                  required
+                  data-nette-rules='[{"op":":filled","msg":"Vyplňte heslo"}]'
+                  class="form-control"
+                  placeholder="heslo"
+                />
+              </div>
+              <div class="modal-footer">
+                <div class="u-ta-c">
+                  <button class="button-modal-blue" type="submit" name="send">přihlásit se</button>
+                </div>
+              </div>
+              <input type="hidden" name="date" value="2026-11-25" /><input
+                type="hidden"
+                name="sid"
+                value="14"
+              /><input type="hidden" name="_do" value="loginForm-submit" />
+            </form>
+          </div>
+        </div>
+      </div>
+      <div
+        class="modal fade voucher-modal"
+        id="voucherModal"
+        tabindex="-1"
+        role="dialog"
+        aria-labelledby="voucherModalLabel"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog" role="document" id="snippet--voucher">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="exampleModalLabel">Změna termínu původní rezervace</h5>
+              <div class="button-modal-x" type="button" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <form class="ajax" action="/vstupenky-rezervace" method="post" id="frm-voucherForm">
+                <button class="button-modal-blue" type="submit" name="send">ZMĚNIT TERMÍN</button>
+                <input type="hidden" name="id" value="" /><input
+                  type="hidden"
+                  name="date"
+                  value="2026-11-25"
+                /><input type="hidden" name="_do" value="voucherForm-submit" />
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="modal fade reg-modal"
+        id="registrationModal"
+        tabindex="-1"
+        role="dialog"
+        aria-labelledby="registrationModalLabel"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog" role="document" id="snippet--registration"></div>
+      </div>
+      <div
+        class="modal fade regfirm-modal"
+        id="regfirmModal"
+        tabindex="-1"
+        role="dialog"
+        aria-labelledby="loginModalLabel"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog" role="document" id="snippet--regfirm"></div>
+      </div>
+      <div
+        class="modal fade"
+        id="regcancelModal"
+        tabindex="-1"
+        role="dialog"
+        aria-labelledby="cancelModalLabel"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog" role="document" id="snippet--regcancel"></div>
+      </div>
+      <div
+        class="modal fade view-modal"
+        id="viewModal"
+        tabindex="-1"
+        role="dialog"
+        aria-labelledby="viewModalLabel"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog" role="document" id="snippet--view">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="exampleModalLabel">Náhled</h5>
+              <div
+                class="button-modal-x close"
+                type="button"
+                data-dismiss="modal"
+                aria-label="Close"
+              >
+                <span aria-hidden="true">&times;</span>
+              </div>
+            </div>
+            <form class="ajax" action="/vstupenky-rezervace" method="post" id="frm-viewForm">
+              <div class="modal-body">
+                <div class="flex">
+                  <div class="w-33">
+                    <b>Datum</b>
+                  </div>
+                  <div class="w-33">
+                    <input
+                      name="date_from"
+                      id="frm-viewForm-date_from"
+                      value="2026-11-25"
+                      class="form-control"
+                      placeholder="datum od"
+                      type="date"
+                    />
+                  </div>
+                  <div class="w-33">
+                    <input
+                      name="date_to"
+                      id="frm-viewForm-date_to"
+                      value="2026-12-02"
+                      class="form-control"
+                      placeholder="datum do"
+                      type="date"
+                    />
+                  </div>
+                </div>
+                <p class="margin"><b>Sportoviště</b></p>
+                <div class="field">
+                  <label>
+                    <input
+                      type="checkbox"
+                      class=""
+                      name="ground[]"
+                      id="frm-viewForm-ground-494"
+                      value="494"
+                    />
+                    Beachvolejbal
+                  </label>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <div class="u-ta-c">
+                  <button class="button-modal-blue" type="submit" name="send">nastavit</button>
+                </div>
+              </div>
+              <input type="hidden" name="sections_id" value="14" /><input
+                type="hidden"
+                name="uid"
+                value=""
+              /><input type="hidden" name="_do" value="viewForm-submit" />
+            </form>
+          </div>
+        </div>
+      </div>
+      <div
+        class="modal fade info-modal"
+        id="infoModal"
+        tabindex="-1"
+        role="dialog"
+        aria-labelledby="infoModalLabel"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog" role="document" id="snippet--info"></div>
+      </div>
+      <div
+        class="modal fade reservation-info-modal"
+        id="reservation-infoModal"
+        tabindex="-1"
+        role="dialog"
+        aria-labelledby="reservation-infoModalLabel"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog" role="document" id="snippet--reservation-info-modal">
+          <div class="modal-content">
+            <div class="modal-header">
+              <div></div>
+              <div class="button-modal-x close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">×</span>
+              </div>
+            </div>
+
+            <div class="modal-body">
+              <h5 class="modal-title" id="reservation-infoModalLabel">Informace o rezervaci</h5>
+              <p class="res-time" data-reservation-info-time>--:-- - --:--</p>
+              <hr class="line" />
+              <p>Rezervováno pro:</p>
+              <p class="res-name" data-reservation-info-name>---</p>
+              <div class="res-note-wrap" data-reservation-info-note-wrap hidden>
+                <hr class="line" />
+                <p>Poznámka:</p>
+                <p class="res-note" data-reservation-info-note></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="modal fade reg-cart"
+        id="cartModal"
+        tabindex="-1"
+        role="dialog"
+        aria-labelledby="cartModalLabel"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog modal-lg" role="document" id="snippet--cart">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="exampleModalLabel">Přihláška na akci</h5>
+              <div
+                class="button-modal-x close"
+                type="button"
+                data-dismiss="modal"
+                aria-label="Close"
+              >
+                <span aria-hidden="true">&times;</span>
+              </div>
+            </div>
+
+            <div class="modal-body"></div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="modal fade reg-cart-vip"
+        id="vipModal"
+        tabindex="-1"
+        role="dialog"
+        aria-labelledby="vipModalLabel"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog modal-lg" role="document" id="snippet--vip">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="exampleModalLabel">Přihláška VIP zone</h5>
+              <div
+                class="button-modal-x close"
+                type="button"
+                data-dismiss="modal"
+                aria-label="Close"
+              >
+                <span aria-hidden="true">&times;</span>
+              </div>
+            </div>
+
+            <div class="modal-body"></div>
+          </div>
+        </div>
+      </div>
+      <!-- END - pattern - 01-new-rez-codex.latte -->
+    </main>
+
+    <!-- výběr <footer> z components dle sekce -->
+    <footer id="_footer">
+      <div class="footer-main">
+        <div class="address">
+          <div class="logo-sekce">
+            <img src="/_files/logos_int/beach.svg" alt="Beach Riviéra" loading="lazy" />
+          </div>
+          <p><span>Beachvolejbal Riviéra</span><br />Bauerova 322/7<br />603 00 Brno-Pisárky</p>
+          <a href="/kontakty#_map" class="button-footer">KUDY K NÁM</a>
+        </div>
+
+        <div class="grey-line"></div>
+
+        <div class="details">
+          <h6>Pro návštěvníky</h6>
+          <ul class="no-bullet">
+            <li>
+              <a href="/vstupenky-rezervace">Rezervace kurtů</a>
+            </li>
+            <li>
+              <a href="/oteviraci-doba-cenik">Ceník a otevírací doba</a>
+            </li>
+            <li>
+              <a href="/galerie">Fotogalerie</a>
+            </li>
+          </ul>
+        </div>
+        <div class="details">
+          <h6>Celoroční provoz</h6>
+          <ul class="no-bullet">
+            <li>
+              <a href="/letni-sezona">Letní sezóna</a>
+            </li>
+            <li>
+              <a href="/zimni-sezona">Zimní sezóna</a>
+            </li>
+          </ul>
+        </div>
+        <div class="details">
+          <h6>Informace</h6>
+          <ul class="no-bullet">
+            <li>
+              <a href="https://www.starez.cz/volna-mista">Kariéra</a>
+            </li>
+            <li>
+              <a href="/info-pro-navstevniky">Pro návštěvníky</a>
+            </li>
+            <li>
+              <a href="https://www.starez.cz/gdpr-cookies">GDPR a cookies</a>
+            </li>
+            <li>
+              <a href="http://www.aedjmk.info/postup-resuscitace/"
+                ><img
+                  src="https://www.starez.cz/_files/logos_ext/aed.svg"
+                  alt="AED"
+                  style="height: 32px; margin-bottom: 3px; margin-right: 6px"
+                /><b>AED</b></a
+              >
+            </li>
+          </ul>
+        </div>
+
+        <div class="kontakt">
+          <h6>KONTAKT</h6>
+          <p><span>PO-PÁ:</span> 8:00-15:30</p>
+          <p><span>Tel:</span> <a href="tel:+420533033800">533 033 800</a></p>
+          <p>
+            <span>E-mail</span>:
+            <a href="mailto:info@starezsport.cz">in<!-- @. -->fo@starez<!-- @. -->sport.cz</a>
+          </p>
+
+          <div class="socials">
+            <a href="https://www.facebook.com/starezsport" target="_blank"
+              ><img src="/img/socials/icon-fb.svg" alt="Facebook"
+            /></a>
+            <a href="https://www.instagram.com/starez_sport/" target="_blank"
+              ><img src="/img/socials/icon-insta.svg" alt="Instagram"
+            /></a>
+            <a href="https://www.youtube.com/c/StarezSport1" target="_blank"
+              ><img src="/img/socials/icon-youtube.svg" alt="Youtube"
+            /></a>
+            <a
+              href="https://www.linkedin.com/company/starez/mycompany/?viewAsMember=true"
+              target="_blank"
+              ><img src="/img/socials/icon-linked.svg" alt="LinkedIn"
+            /></a>
+          </div>
+
+          <a href="/kontakty#contact-others" class="button-footer">Všechny kontakty</a>
+        </div>
+      </div>
+
+      <div class="sponsors">
+        <div class="logos">
+          <div class="box">
+            <div class="logo-starez">
+              <a href="https://www.starez.cz" itemscope itemtype="https://schema.org"
+                ><img
+                  itemprop="logo"
+                  src="/_files/logos_int/starez.svg"
+                  loading="lazy"
+                  alt="Starez"
+              /></a>
+            </div>
+            <a href="https://www.brno.cz/"><img src="/img/brno.png" alt="Brno" loading="lazy" /></a>
+          </div>
+
+          <div class="box">
+            <a href="https://ticbrno.cz/"
+              ><img src="/_files/logos_ext/tic-brno.png" loading="lazy" alt="TIC BRNO"
+            /></a>
+            <a href="https://www.fsps.muni.cz/"
+              ><img src="/_files/logos_ext/muni.png" loading="lazy" alt="MUNI"
+            /></a>
+            <a href="https://www.kamzasportemvbrne.cz/"
+              ><img
+                src="/_files/logos_ext/kamzasportem.png"
+                loading="lazy"
+                alt="Kam za sportem v Brně"
+            /></a>
+            <a href="https://www.kudyznudy.cz/"
+              ><img src="/_files/logos_ext/kudyznudy.png" loading="lazy" alt="Kudy z nudy"
+            /></a>
+          </div>
+        </div>
+      </div>
+
+      <div class="copyright">
+        <p>Copyright © 2011-2026 Starez Sport, a.s. | Created by efectel.cz</p>
+      </div>
+    </footer>
+
+    <!-- skripty -->
+    <script>
+      $('.gallery-popup').each(function () {
+        $(this).magnificPopup({
+          delegate: 'a',
+          type: 'image',
+          tLoading: 'Loading image #%curr%...',
+          mainClass: 'mfp-img-mobile',
+          gallery: {
+            enabled: true,
+            navigateByImgClick: true,
+            tCounter: '%curr% z %total%', // Markup for "1 of 7" counter
+            preload: [0, 1], // Will preload 0 - before current, and 1 after the current image
+          },
+          image: {
+            tError: '<a href="%url%">The image #%curr%</a> could not be loaded.',
+            titleSrc: function (item) {
+              return item.el.attr('title');
+            },
+          },
+        });
+      });
+    </script>
+    <script src="/plugins/naja/naja.min.js"></script>
+    <script src="/plugins/popper/popper.min.js"></script>
+    <script src="/js/web/bootstrap.min.js"></script>
+    <script src="/js/web/custom.js"></script>
+    <script>
+      naja.initialize();
+    </script>
+
+    <!-- další skripty z pattern a components -->
+    <script src="/js/web/netteForms.min.js"></script>
+    <script src="/js/web/new-reservation.js?v=20261004-31"></script>
+    <script>
+      var reservationModalFocusTarget = null;
+      var reservationModalRestoreTimer = null;
+      var reservationModalRestoreDelay = 360;
+      var reservationModalTriggerSelector =
+        ".active1, .active2, .active3, .active-deadline, .active4, .late, .full-lection, .voucher, .frmrez, .frmmy, .reservation .booking-entry[data-reservation-info-enabled='1'], .reservation .timeslots > .block.block--occupied[data-reservation-info-enabled='1']";
+
+      function rememberReservationModalFocusTarget(element) {
+        var resolvedTarget = resolveReservationModalFocusTarget(element);
+
+        if (!resolvedTarget) {
+          return;
+        }
+
+        reservationModalFocusTarget = {
+          element: resolvedTarget,
+          focusKey: resolvedTarget.dataset ? resolvedTarget.dataset.reservationFocusKey || '' : '',
+        };
+      }
+
+      function resolveReservationModalFocusTarget(element) {
+        if (!(element instanceof HTMLElement)) {
+          return null;
+        }
+
+        var bookingBlock = element.closest('.reservation .booking-block');
+
+        if (bookingBlock) {
+          return bookingBlock;
+        }
+
+        var interactiveBlock = element.closest('.reservation .block--interactive');
+
+        if (interactiveBlock) {
+          return interactiveBlock;
+        }
+
+        return element.closest(".reservation button, .reservation [role='tab']");
+      }
+
+      function resolveStoredReservationModalFocusTarget() {
+        if (!reservationModalFocusTarget) {
+          return null;
+        }
+
+        if (isReservationModalFocusTargetUsable(reservationModalFocusTarget.element)) {
+          return reservationModalFocusTarget.element;
+        }
+
+        if (reservationModalFocusTarget.focusKey !== '') {
+          return document.querySelector(
+            '[data-reservation-focus-key="' +
+              escapeReservationFocusSelectorValue(reservationModalFocusTarget.focusKey) +
+              '"]',
+          );
+        }
+
+        return null;
+      }
+
+      function isReservationModalFocusTargetUsable(element) {
+        if (!(element instanceof HTMLElement)) {
+          return false;
+        }
+
+        var computedStyle = window.getComputedStyle(element);
+
+        return (
+          document.contains(element) &&
+          computedStyle.display !== 'none' &&
+          computedStyle.visibility !== 'hidden'
+        );
+      }
+
+      function focusStoredReservationModalTarget() {
+        var target = resolveStoredReservationModalFocusTarget();
+
+        if (!target || typeof target.focus !== 'function') {
+          return;
+        }
+
+        try {
+          target.focus({ preventScroll: true });
+        } catch (error) {
+          target.focus();
+        }
+      }
+
+      function scheduleReservationModalFocusRestore() {
+        if (reservationModalRestoreTimer !== null) {
+          window.clearTimeout(reservationModalRestoreTimer);
+        }
+
+        window.setTimeout(function () {
+          focusStoredReservationModalTarget();
+        }, 0);
+
+        reservationModalRestoreTimer = window.setTimeout(function () {
+          focusStoredReservationModalTarget();
+          reservationModalRestoreTimer = null;
+        }, reservationModalRestoreDelay);
+      }
+
+      function escapeReservationFocusSelectorValue(value) {
+        return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      }
+
+      $(document).on('click', reservationModalTriggerSelector, function () {
+        rememberReservationModalFocusTarget(this);
+      });
+
+      $(document).on('keydown', reservationModalTriggerSelector, function (event) {
+        if (event.key !== 'Enter' && event.key !== ' ') {
+          return;
+        }
+
+        rememberReservationModalFocusTarget(this);
+      });
+
+      document.addEventListener(
+        'keydown',
+        function (event) {
+          if (event.key !== 'Escape') {
+            return;
+          }
+
+          var openModal = document.querySelector(".modal.show, .modal[aria-hidden='false']");
+
+          if (!openModal) {
+            return;
+          }
+
+          var activeElement = document.activeElement;
+
+          if (
+            activeElement instanceof HTMLElement &&
+            openModal.contains(activeElement) &&
+            typeof activeElement.blur === 'function'
+          ) {
+            activeElement.blur();
+          }
+
+          scheduleReservationModalFocusRestore();
+        },
+        true,
+      );
+
+      $(document).on('click', '.active1', function () {
+        $('#ajax-spinner').show();
+        naja
+          .makeRequest(
+            'GET',
+            'vstupenky-rezervace',
+            { id: $(this).data('id'), date: $(this).data('date'), do: 'getRegistration' },
+            { history: false },
+          )
+          .then((payload) => {
+            $('#' + payload.modal + 'Modal').modal('show');
+            $('#ajax-spinner').hide();
+          });
+      });
+      $(document).on('click', '.active2', function () {
+        $('#ajax-spinner').show();
+        naja
+          .makeRequest(
+            'GET',
+            'vstupenky-rezervace',
+            { id: $(this).data('id'), do: 'getRegistrationCart' },
+            { history: false },
+          )
+          .then((payload) => {
+            $('#' + payload.modal + 'Modal').modal('show');
+            $('#ajax-spinner').hide();
+          });
+      });
+      $(document).on('click', '.active3', function () {
+        $('#ajax-spinner').show();
+        naja
+          .makeRequest(
+            'GET',
+            'vstupenky-rezervace',
+            { id: $(this).data('id'), do: 'getRegistrationCartVip', actDate: $(this).data('date') },
+            { history: false },
+          )
+          .then((payload) => {
+            $('#' + payload.modal + 'Modal').modal('show');
+            $('#ajax-spinner').hide();
+          });
+      });
+
+      $(document).on('click', '[data-dismiss=modal]', function () {
+        $(this).parents('.modal').modal('hide');
+        scheduleReservationModalFocusRestore();
+      });
+
+      $(document).ready(function () {});
+
+      naja.addEventListener('success', (event) => {
+        if (typeof event.detail.payload.hideModal !== 'undefined') {
+          $('#' + event.detail.payload.hideModal).modal('hide');
+        }
+        if (typeof event.detail.payload.showModal !== 'undefined') {
+          $('#' + event.detail.payload.showModal).modal('show');
+        }
+      });
+      $(document).on('change', '#time_to', function () {
+        $('#frm-registraceNewForm input[name=end]').val($(this).val());
+        if ($('#cart-price').length > 0) {
+          $('#cart-price').text($(this).find(':selected').data('p'));
+          $('#cart-zaloha').text($(this).find(':selected').data('z'));
+          $('#cart-topay').text(
+            $(this).find(':selected').data('p') - $(this).find(':selected').data('z'),
+          );
+        }
+      });
+
+      $(document).on('click', '#cart-add', function (e) {
+        e.preventDefault();
+        var time_to = $('#time_to').is('span') ? $('#time_to').text() : $('#time_to').val();
+        naja.makeRequest(
+          'GET',
+          'vstupenky-rezervace',
+          {
+            id: $(this).data('id'),
+            time_from: $('#time_from').text(),
+            time_to: time_to,
+            do: 'addCart',
+          },
+          { history: false },
+        );
+      });
+      $(document).on('click', '#send_order', function (e) {
+        e.preventDefault();
+        naja
+          .makeRequest(
+            'GET',
+            'vstupenky-rezervace',
+            { id: $(this).data('id'), do: 'sendOrder' },
+            { history: false },
+          )
+          .then((payload) => {
+            $('#send_order_btn').focus();
+            $('#surname').focus();
+          });
+      });
+      $(document).on('click', '.active-deadline', function (e) {
+        if ($(this).data('reservationInfoEnabled') == 1) {
+          return;
+        }
+        e.preventDefault();
+        naja.makeRequest(
+          'GET',
+          'vstupenky-rezervace',
+          { id: 99, do: 'openInfo' },
+          { history: false },
+        );
+      });
+      $(document).on('click', '.active4', function (e) {
+        if ($(this).data('reservationInfoEnabled') == 1) {
+          return;
+        }
+        e.preventDefault();
+        naja.makeRequest(
+          'GET',
+          'vstupenky-rezervace',
+          { id: 98, do: 'openInfo' },
+          { history: false },
+        );
+      });
+      $(document).on('click', '.late', function (e) {
+        if ($(this).data('reservationInfoEnabled') == 1) {
+          return;
+        }
+        e.preventDefault();
+        naja.makeRequest(
+          'GET',
+          'vstupenky-rezervace',
+          { id: 96, do: 'openInfo' },
+          { history: false },
+        );
+      });
+      $(document).on('click', '.full-lection', function (e) {
+        if ($(this).data('reservationInfoEnabled') == 1) {
+          return;
+        }
+        e.preventDefault();
+        naja.makeRequest(
+          'GET',
+          'vstupenky-rezervace',
+          { id: 97, do: 'openInfo' },
+          { history: false },
+        );
+      });
+      $(document).on('click', '.voucher', function (e) {
+        if ($(this).data('reservationInfoEnabled') == 1) {
+          return;
+        }
+        e.preventDefault();
+        naja.makeRequest(
+          'GET',
+          'vstupenky-rezervace',
+          { id: $(this).data('voucher'), do: 'openInfo', date: $(this).data('date') },
+          { history: false },
+        );
+      });
+
+      $(document).on('click', '.frmrez', function () {
+        var activeDate =
+          $('.reservation').first().data('active-date-raw') ||
+          $('.reservation').first().data('active-date');
+        naja.makeRequest(
+          'GET',
+          'vstupenky-rezervace',
+          { id: $(this).data('fullid'), do: 'openFirm', date: activeDate },
+          { history: false },
+        );
+      });
+
+      $(document).on('click', '.frmmy', function () {
+        var activeDate =
+          $('.reservation').first().data('active-date-raw') ||
+          $('.reservation').first().data('active-date');
+        naja.makeRequest(
+          'GET',
+          'vstupenky-rezervace',
+          { id: $(this).data('id'), do: 'cancelRez', date: activeDate },
+          { history: false },
+        );
+      });
+
+      $(document).on('click', '.send-form', function (e) {
+        $(this).attr('disabled', true);
+      });
+    </script>
+
+    <script src="/js/web/modals.js?v=1"></script>
+  </body>
+</html>

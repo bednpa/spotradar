@@ -1,6 +1,13 @@
-import { addDays, toLocalDateTime } from '@spotradar/shared';
+import { addDays, isInSeason, toLocalDateTime } from '@spotradar/shared';
+import type { Season } from '@spotradar/shared';
 import type { Logger } from '../logger.ts';
-import type { VenueRecord, VenueRepository } from '../repositories/venueRepository.ts';
+import type { VenueRepository } from '../repositories/venueRepository.ts';
+import type { AvailabilityTarget } from './types.ts';
+
+/** One sport of one venue to keep warm. */
+interface WarmTarget extends AvailabilityTarget {
+  season: Season | undefined;
+}
 import { AVAILABILITY_CACHE_TTL_MS, sourceHost } from './availabilityService.ts';
 import type { AvailabilityService } from './availabilityService.ts';
 
@@ -55,20 +62,22 @@ export function createCacheWarmer(options: CacheWarmerOptions): CacheWarmer {
 
   async function warmHost(
     host: string,
-    venues: VenueRecord[],
+    targets: WarmTarget[],
     dates: string[],
     report: WarmReport,
   ): Promise<void> {
     if (availability.isHostBackedOff(host)) {
-      report.skipped += venues.length * dates.length;
+      report.skipped += targets.length * dates.length;
       report.skippedHosts.push(host);
       return;
     }
-    let remaining = venues.length * dates.length;
-    for (const venue of venues) {
+    let remaining = targets.length * dates.length;
+    for (const target of targets) {
       for (const [index, date] of dates.entries()) {
         remaining--;
-        const result = await availability.warm(venue, date, { refreshIfOlderThanMs });
+        const result = isInSeason(target.season, date)
+          ? await availability.warm(target, date, { refreshIfOlderThanMs })
+          : 'skipped'; // out of season: never read (see getDayAvailability)
         if (result === 'ok') report.read++;
         else if (result === 'skipped') report.skipped++;
         else report.failed++;
@@ -95,13 +104,23 @@ export function createCacheWarmer(options: CacheWarmerOptions): CacheWarmer {
     try {
       const today = toLocalDateTime(options.now()).date;
       const dates = Array.from({ length: days }, (_, i) => addDays(today, i));
-      const byHost = new Map<string, VenueRecord[]>();
+      const byHost = new Map<string, WarmTarget[]>();
       for (const venue of options.venues.getAll()) {
-        const host = sourceHost(venue.source);
-        if (host === undefined || !availability.supports(venue)) continue;
-        byHost.set(host, [...(byHost.get(host) ?? []), venue]);
+        for (const offering of venue.offerings) {
+          const host = sourceHost(offering.source);
+          if (host === undefined || !availability.supports(offering)) continue;
+          const target: WarmTarget = {
+            venueId: venue.id,
+            sport: offering.sport,
+            source: offering.source,
+            season: offering.openingHours?.season,
+          };
+          byHost.set(host, [...(byHost.get(host) ?? []), target]);
+        }
       }
-      await Promise.all([...byHost].map(([host, venues]) => warmHost(host, venues, dates, report)));
+      await Promise.all(
+        [...byHost].map(([host, targets]) => warmHost(host, targets, dates, report)),
+      );
     } catch (err) {
       logger.warn(`[warmer] pass failed: ${err instanceof Error ? err.message : String(err)}`);
     }
