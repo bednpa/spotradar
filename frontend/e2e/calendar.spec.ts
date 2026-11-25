@@ -82,7 +82,7 @@ test.describe('layout and navigation', () => {
     await expect(page.getByRole('grid')).toBeVisible();
   });
 
-  test('week is the default view on wide screens: 7 days by fixed 06–22 hour rows', async ({
+  test('week is the default view on wide screens: 7 days by hour rows trimmed to the slots', async ({
     page,
   }) => {
     await page.goto('/');
@@ -90,7 +90,8 @@ test.describe('layout and navigation', () => {
     const grid = page.getByRole('grid', { name: /Week calendar/ });
     await expect(grid).toBeVisible();
     await expect(grid.getByRole('columnheader')).toHaveCount(8); // corner + 7 days
-    await expect(grid.getByRole('rowheader')).toHaveCount(17); // 06:00 … 22:00
+    await expect(grid.getByRole('rowheader').first()).toHaveText(/^\d\d:00$/);
+    expect(await grid.getByRole('rowheader').count()).toBeLessThanOrEqual(24);
     await expect(page.locator('#period-title')).toHaveText(/\d{4}$/);
   });
 
@@ -205,7 +206,7 @@ test.describe('hour slot details', () => {
     await expect(page.getByText('to check on website')).toHaveCount(0);
   });
 
-  test('Hala Sprint (MemberZone) shows live free courts with a "Checked … ago" note', async ({
+  test('Hala Sprint (MemberZone) shows live free courts with a "Live · … ago" status', async ({
     page,
   }) => {
     await openDay(page);
@@ -216,9 +217,9 @@ test.describe('hour slot details', () => {
     await expect(sprint).toHaveAttribute('data-state', 'free');
     await expect(sprint).toContainText('Hala Sprint');
     await expect(sprint).toContainText(/\d+ courts? free/);
-    await expect(sprint).toContainText(/Checked (just now|\d+ min ago|\d+ h ago)/);
-    await expect(sprint.locator('time')).toHaveAttribute('title', /^Checked at \d\d:\d\d$/);
-    await expect(sprint.locator('time')).toHaveAttribute('datetime', /^\d{4}-\d\d-\d\dT/);
+    const status = sprint.getByTestId('live-status');
+    await expect(status).toHaveText(/Live · (just now|\d+ min ago|\d+ h ago)/);
+    await expect(status).toHaveAttribute('title', /checked at \d\d:\d\d$/);
     const book = sprint.getByRole('link', { name: /Book on venue's website/ });
     await expect(book).toHaveAttribute('href', /^https:\/\//);
     await expect(book).toHaveAttribute('target', '_blank');
@@ -233,8 +234,8 @@ test.describe('hour slot details', () => {
     const dialog = await openSlotWithFreeVenue(page, 'kuklenska');
     const item = dialog.locator('li[data-venue-id="kuklenska"]');
     await expect(item).toContainText('Sportcentrum Kuklenská');
-    await expect(item).toContainText(/Kč/);
-    await expect(item).toContainText('MultiSport accepted');
+    await expect(item.getByTestId('slot-price')).toHaveText(/^\d+ Kč \/ h$/);
+    await expect(item.getByTestId('multisport')).toContainText('MultiSport');
     await expect(item.getByRole('link', { name: /^Website/ })).toHaveAttribute(
       'href',
       /^https?:\/\//,
@@ -258,7 +259,8 @@ test.describe('hour slot details', () => {
     // Centrum Viktoria's connector fails in stub mode → status "unavailable" → listed as "check".
     const viktoria = section.locator('li[data-venue-id="centrum-viktoria"]');
     await expect(viktoria).toHaveAttribute('data-state', 'check');
-    await expect(viktoria).toContainText('check on website');
+    await expect(viktoria.getByTestId('live-status')).toHaveAttribute('data-status', 'unavailable');
+    await expect(viktoria).toContainText('Unavailable');
     await expect(viktoria.getByRole('link', { name: /Book on venue's website/ })).toHaveAttribute(
       'href',
       /^https?:\/\//,
@@ -571,12 +573,13 @@ test.describe('shareable URL state', () => {
       'aria-pressed',
       'true',
     );
-    await expect(page.getByRole('rowheader')).toHaveCount(17);
+    await expect(page.getByRole('rowheader').first()).toHaveText(/^\d\d:00$/);
   });
 
-  test('old links with time filters still load with the full hour range', async ({ page }) => {
+  test('old links with time filters still load the unfiltered hour rows', async ({ page }) => {
     await page.goto(`/?view=day&date=${tomorrow()}&timeFrom=08%3A00&timeTo=10%3A00&free=1`);
-    await expect(page.getByRole('rowheader')).toHaveCount(17);
+    await expect(page.getByRole('rowheader').first()).toHaveText(/^\d\d:00$/);
+    expect(await page.getByRole('rowheader').count()).toBeGreaterThan(2);
   });
 
   test('a changed view survives a reload', async ({ page }) => {

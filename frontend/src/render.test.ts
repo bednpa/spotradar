@@ -16,7 +16,7 @@ import {
 } from './render.ts';
 import { getDefaultState } from './query.ts';
 import type { AppState } from './query.ts';
-import { NOW, makeCalendar } from './test-fixtures.test.ts';
+import { NOW, hours, makeCalendar, makeVenue } from './test-fixtures.test.ts';
 
 const data = makeCalendar('2026-11-25', '2026-12-09');
 const success = { status: 'success', data } as const;
@@ -62,10 +62,13 @@ test('toolbar has view switcher, today, prev/next and the period title', () => {
   assert.match(renderToolbar(state({ view: 'month' })), /aria-label="Next month"/);
 });
 
-test('week view: 7 columns, fixed 06–23 hour rows, aria labels, disabled past cells', () => {
+test('week view: 7 columns, hour rows trimmed to the slots (07–22), aria labels, disabled past cells', () => {
   const html = renderCalendar(state({ view: 'week' }), success, NOW);
   assert.equal((html.match(/role="columnheader"/g) ?? []).length, 8);
-  assert.equal((html.match(/role="rowheader"/g) ?? []).length, 17);
+  assert.equal((html.match(/role="rowheader"/g) ?? []).length, 15);
+  assert.doesNotMatch(html, />06:00</);
+  assert.match(html, />21:00</);
+  assert.doesNotMatch(html, />22:00</);
   assert.match(html, />Thursday 26 November, 08:00–09:00: 1 venue free<\/span><\/button>/);
   // Monday is in the past: disabled.
   assert.match(html, / disabled>[^]*?Monday 23 November, 08:00–09:00: in the past<\/span>/);
@@ -85,7 +88,34 @@ test('day view shows venues and courts', () => {
   const html = renderCalendar(state({ view: 'day', date: '2026-11-26' }), success, NOW);
   assert.match(html, /1 venue · 3 courts free/);
   assert.match(html, /Nothing free/);
-  assert.equal((html.match(/role="rowheader"/g) ?? []).length, 17);
+  assert.equal((html.match(/role="rowheader"/g) ?? []).length, 15);
+});
+
+test('day view starts at the first hour with a slot (14:00)', () => {
+  const late = makeCalendar('2026-11-25', '2026-11-27', [
+    { venue: makeVenue('viktoria', 'Afternoon Hall', { openingHours: hours('14:00', '17:00') }) },
+  ]);
+  const html = renderCalendar(
+    state({ view: 'day', date: '2026-11-26' }),
+    { status: 'success', data: late },
+    NOW,
+  );
+  const labels = [...html.matchAll(/role="rowheader" class="rh">(\d\d:00)</g)].map((m) => m[1]);
+  assert.deepEqual(labels, ['14:00', '15:00', '16:00']);
+});
+
+test('day and week show the empty state instead of an empty grid when nothing is open or free', () => {
+  const closed = makeCalendar('2026-11-25', '2026-11-27', [
+    { venue: makeVenue('closed', 'Closed Hall', { openingHours: hours(null) }) },
+  ]);
+  const calendar = { status: 'success', data: closed } as const;
+  const day = renderCalendar(state({ view: 'day', date: '2026-11-26' }), calendar, NOW);
+  assert.match(day, /data-testid="no-slots"/);
+  assert.match(day, /No slots this day/);
+  assert.doesNotMatch(day, /role="grid"/);
+  const week = renderCalendar(state({ view: 'week' }), calendar, NOW);
+  assert.match(week, /No slots this week/);
+  assert.doesNotMatch(week, /role="grid"/);
 });
 
 test('week view outside the window shows "not available yet" cells', () => {

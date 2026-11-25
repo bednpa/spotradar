@@ -4,8 +4,8 @@ import {
   GOOGLE_MAPS_LINK_TEXT,
   googleMapsLink,
   groupOpeningHours,
-  multisportText,
   renderMultisportBadge,
+  renderPriceSummary,
 } from './venue-info.ts';
 import { hours } from './test-fixtures.test.ts';
 import { externalLink, telHref } from './html.ts';
@@ -32,20 +32,35 @@ test('groupOpeningHours merges identical consecutive days', () => {
   assert.deepEqual(groupOpeningHours(hours(null)), [{ days: 'Mon–Sun', text: 'Closed' }]);
 });
 
-test('multisport text and badge', () => {
-  assert.equal(multisportText(undefined), 'unknown');
-  assert.equal(multisportText({ accepted: false }), 'not accepted');
-  assert.equal(multisportText({ accepted: true }), 'accepted');
-  assert.equal(
-    multisportText({ accepted: true, terms: '1 card = 60 min' }),
-    'accepted – 1 card = 60 min',
-  );
-  assert.equal(renderMultisportBadge(undefined), '');
+test('multisport badge uses the shared label and shows the note', () => {
+  assert.match(renderMultisportBadge(undefined), /badge-neutral[^>]*>MultiSport: unknown</);
+  assert.match(renderMultisportBadge({ accepted: false }), />No MultiSport</);
   assert.match(
-    renderMultisportBadge({ accepted: true, terms: 'a & b' }),
-    /MultiSport accepted.*a &amp; b/,
+    renderMultisportBadge({ accepted: true }),
+    /badge-multisport[^>]*>MultiSport accepted</,
   );
-  assert.match(renderMultisportBadge({ accepted: false }), /MultiSport not accepted/);
+  const html = renderMultisportBadge({
+    accepted: true,
+    coverage: { kind: 'minutesPerCard', minutes: 30 },
+    note: 'a & b',
+  });
+  assert.match(html, /title="a &amp; b"/);
+  assert.match(html, />MultiSport · 30 min \/ card<\/span>/);
+  assert.match(html, /fact-terms">a &amp; b</);
+});
+
+test('price summary: short form, expandable table, note and unknown', () => {
+  const html = renderPriceSummary({
+    currency: 'CZK',
+    unit: 'hour',
+    rules: [{ days: ['mon', 'tue', 'wed', 'thu', 'fri'], from: '07:00', to: '15:00', price: 280 }],
+    note: 'x <y>',
+  });
+  assert.match(html, /<details[^>]*><summary>from 280 Kč \/ h<\/summary>/);
+  assert.match(html, /<li>Mon–Fri 07:00–15:00: 280 Kč \/ h<\/li>/);
+  assert.match(html, /x &lt;y&gt;/);
+  assert.match(renderPriceSummary(undefined), />Price on website</);
+  assert.doesNotMatch(renderPriceSummary(undefined), /<details/);
 });
 
 test('Google Maps link is labelled as rating & reviews (no fake rating number)', () => {

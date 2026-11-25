@@ -4,11 +4,12 @@ import type { SportId, VenueListItem, VenueQuery, VenuesResponse } from '@spotra
 import { ApiRequestError } from './api.ts';
 import { formatCourts, sportName } from './format.ts';
 import { escapeHtml, externalLink, safeHref, telHref } from './html.ts';
+import { renderLiveStatus } from './live-status.ts';
 import {
   googleMapsLink,
   groupOpeningHours,
-  multisportText,
   renderMultisportBadge,
+  renderPriceSummary,
 } from './venue-info.ts';
 
 /** `sport: null` = all sports. */
@@ -126,12 +127,8 @@ export function renderVenueCard(item: VenueListItem): string {
     ? ' <span class="badge badge-neutral">approximate</span>'
     : '';
 
-  const price = venue.priceInfo
-    ? escapeHtml(venue.priceInfo)
-    : '<span class="muted">unknown</span>';
-  const multisport = venue.multisport
-    ? renderMultisportBadge(venue.multisport)
-    : `<span class="muted">${escapeHtml(multisportText(undefined))}</span>`;
+  const price = renderPriceSummary(venue.pricing);
+  const multisport = renderMultisportBadge(venue.multisport);
   const phoneHref = venue.phone ? telHref(venue.phone) : null;
   const bookHref = safeHref(venue.bookingUrl);
 
@@ -158,7 +155,7 @@ export function renderVenueCard(item: VenueListItem): string {
   return `<li class="vcard" data-venue-id="${escapeHtml(venue.id)}" data-live="${item.liveAvailability}">
   <div class="vcard-head">
     <h3>${escapeHtml(venue.name)}</h3>
-    ${item.liveAvailability ? '<span class="badge badge-live">Live availability</span>' : ''}
+    ${renderLiveStatus({ status: item.liveAvailability ? 'live' : 'unknown' })}
   </div>
   <p class="muted">${escapeHtml(venue.district)} · ${escapeHtml(venue.address)}</p>
   <ul class="tags" aria-label="Sports and activities">${sports.join('')}${others.join('')}</ul>

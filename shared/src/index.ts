@@ -2,6 +2,7 @@ export * from './calendar.ts';
 export * from './catalog.ts';
 export * from './dates.ts';
 export * from './errors.ts';
+export * from './pricing.ts';
 export * from './search.ts';
 export * from './validation.ts';
 export * from './venues.ts';
@@ -23,7 +24,6 @@ export type {
   GeocodeResponse,
   GeocodeSuggestResponse,
   HealthResponse,
-  MultisportInfo,
   OpeningHours,
   SearchQuery,
   SearchQueryParams,

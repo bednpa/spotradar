@@ -19,8 +19,20 @@ const detailed: VenueListItem = {
   venue: makeVenue('lisen', 'Badminton Líšeň', {
     district: 'Brno-Líšeň',
     website: 'https://www.example.com/lisen',
-    priceInfo: '280–400 Kč / hour',
-    multisport: { accepted: true, terms: 'Covers 50 % of one court per hour' },
+    pricing: {
+      currency: 'CZK',
+      unit: 'hour',
+      rules: [
+        { days: ['mon', 'tue', 'wed', 'thu', 'fri'], from: '07:00', to: '15:00', price: 280 },
+        { days: ['sat', 'sun'], from: '08:00', to: '22:00', price: 400 },
+      ],
+      note: 'Students -20 %',
+    },
+    multisport: {
+      accepted: true,
+      coverage: { kind: 'percentOff', percent: 50 },
+      note: 'max 4 players',
+    },
     otherActivities: ['Squash', 'Table <tennis>'],
     phone: '+420 123 456 789',
     openingHours: { ...hours('08:00', '22:00'), approximate: true },
@@ -40,7 +52,15 @@ test('card shows name, district, address, sports, other activities, courts and p
   assert.match(html, /class="tag">Squash</);
   assert.match(html, /Table &lt;tennis&gt;/);
   assert.match(html, /<dt>Courts<\/dt><dd>4 courts<\/dd>/);
-  assert.match(html, /280–400 Kč \/ hour/);
+  assert.match(html, /<summary>from 280 Kč \/ h<\/summary>/);
+});
+
+test('card price expands to the full table and note', () => {
+  const html = renderVenueCard(detailed);
+  assert.match(html, /<details class="price-details"/);
+  assert.match(html, /<li>Mon–Fri 07:00–15:00: 280 Kč \/ h<\/li>/);
+  assert.match(html, /<li>Sat, Sun 08:00–22:00: 400 Kč \/ h<\/li>/);
+  assert.match(html, /Students -20 %/);
 });
 
 test('card shows opening hours compactly and marks approximate hours', () => {
@@ -51,18 +71,18 @@ test('card shows opening hours compactly and marks approximate hours', () => {
   assert.doesNotMatch(exact, /approximate/);
 });
 
-test('card shows MultiSport accepted with terms, and unknown when absent', () => {
-  assert.match(renderVenueCard(detailed), /MultiSport accepted/);
-  assert.match(renderVenueCard(detailed), /Covers 50 % of one court per hour/);
+test('card shows the MultiSport label with note, and unknown when absent', () => {
+  assert.match(renderVenueCard(detailed), />MultiSport · 50 % off</);
+  assert.match(renderVenueCard(detailed), /title="max 4 players"/);
   assert.match(
     renderVenueCard(bare),
-    /<dt>MultiSport<\/dt><dd><span class="muted">unknown<\/span>/,
+    /<dt>MultiSport<\/dt><dd><span class="badge[^>]*>MultiSport: unknown</,
   );
   const not = renderVenueCard({
     ...bare,
     venue: { ...bare.venue, multisport: { accepted: false } },
   });
-  assert.match(not, /MultiSport not accepted/);
+  assert.match(not, />No MultiSport</);
 });
 
 test('card links: website, booking, Google Maps rating link and phone; live badge', () => {
@@ -74,13 +94,16 @@ test('card links: website, booking, Google Maps rating link and phone; live badg
   assert.match(html, /href="https:\/\/example\.com\/lisen"[^>]*>Book on venue's website/);
   assert.match(html, /google\.com\/maps\/search[^"]*"[^>]*>Rating &amp; reviews on Google Maps/);
   assert.match(html, /href="tel:\+420123456789">\+420 123 456 789</);
-  assert.match(html, /badge-live">Live availability</);
+  assert.match(html, /class="live-status live-status-live"[^>]*data-status="live"/);
+  assert.match(html, />Live</);
   assert.match(html, /data-live="true"/);
 
   const plain = renderVenueCard(bare);
-  assert.doesNotMatch(plain, /Live availability|>Website|tel:/);
+  assert.doesNotMatch(plain, />Website|tel:|live-status-live/);
+  assert.match(plain, /live-status-unknown/);
+  assert.match(plain, />Check on website</);
   assert.match(plain, /data-live="false"/);
-  assert.match(plain, /<dt>Price<\/dt><dd><span class="muted">unknown/);
+  assert.match(plain, /<dt>Price<\/dt><dd><span class="muted"[^>]*>Price on website</);
 });
 
 test('card drops unsafe links', () => {

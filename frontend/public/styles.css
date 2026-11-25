@@ -1241,10 +1241,56 @@ input[type='search']:focus-visible {
 }
 
 .live-note {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
+  display: block;
+  min-width: 0;
+}
+
+/* Shared one-line availability status: never wraps, long text is cut with an ellipsis. */
+.live-status {
+  display: inline-block;
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.25rem;
+  /* Exactly one line tall, whatever the font metrics of the children. */
+  height: 1.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.live-status-live {
+  background: var(--lime);
+  color: #0b0b0c;
+}
+
+.live-status-dot {
+  font-size: 0.65em;
+  line-height: 1;
+}
+
+.vcard-head .live-status {
+  flex: 0 1 auto;
+}
+
+.price-details summary {
+  cursor: pointer;
+}
+
+.price-rules {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.price-note {
+  margin: 0.25rem 0 0;
 }
 
 .fact {
