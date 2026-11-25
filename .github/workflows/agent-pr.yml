@@ -207,6 +207,9 @@ jobs:
             playwright-report/
             test-results/
           if-no-files-found: ignore
+          # .test-reports/ (agent log + agent-changes.patch) is a hidden folder,
+          # which upload-artifact v4 skips unless told otherwise.
+          include-hidden-files: true
 
       - name: Commit changes and open Pull Request
         if: success()
