@@ -39,6 +39,7 @@ export function toPublicVenue(record: VenueRecord): Venue {
     openingHours: record.openingHours,
     bookingUrl: record.bookingUrl,
     availabilitySource: record.availabilitySource,
+    multisport: structuredClone(record.multisport), // deep copy incl. limits
   };
   if (record.courts !== undefined) venue.courts = record.courts;
   if (record.phone !== undefined) venue.phone = record.phone;
@@ -48,10 +49,6 @@ export function toPublicVenue(record: VenueRecord): Venue {
       ...record.pricing,
       rules: record.pricing.rules.map((r) => ({ ...r, days: [...r.days] })),
     };
-  }
-  if (record.multisport !== undefined) {
-    const { coverage, ...rest } = record.multisport;
-    venue.multisport = coverage ? { ...rest, coverage: { ...coverage } } : { ...rest };
   }
   if (record.otherActivities !== undefined) venue.otherActivities = [...record.otherActivities];
   return venue;

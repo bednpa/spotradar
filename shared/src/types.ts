@@ -4,7 +4,8 @@
  */
 import type { AvailabilitySource, GeoPoint, SportId } from './catalog.ts';
 import type { ErrorCode } from './errors.ts';
-import type { MultisportInfo, Pricing } from './pricing.ts';
+import type { MultisportInfo } from './multisport.ts';
+import type { Pricing } from './pricing.ts';
 
 /** GET /api/health → 200 */
 export interface HealthResponse {
@@ -48,8 +49,8 @@ export interface Venue {
   website?: string;
   /** Structured court price list (see `priceFor`); absent when unknown. */
   pricing?: Pricing;
-  /** MultiSport card acceptance; absent when unknown. */
-  multisport?: MultisportInfo;
+  /** MultiSport terms; `{ category: 'unknown' }` when not known. */
+  multisport: MultisportInfo;
   /**
    * Other sports/activities offered at the venue that SpotRadar does not search
    * (display only, e.g. ["Squash", "Table tennis"]); absent or empty when none.

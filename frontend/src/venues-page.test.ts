@@ -12,7 +12,10 @@ import {
   venuesFilterFromSearch,
   venuesFilterToSearch,
 } from './venues-page.ts';
+import type { VenuesFilter } from './venues-page.ts';
 import { hours, makeVenue } from './test-fixtures.test.ts';
+
+const NO_FILTER: VenuesFilter = { q: '', sport: null, sort: 'distance', cards: 0 };
 
 const detailed: VenueListItem = {
   liveAvailability: true,
@@ -29,9 +32,8 @@ const detailed: VenueListItem = {
       note: 'Students -20 %',
     },
     multisport: {
-      accepted: true,
-      coverage: { kind: 'percentOff', percent: 50 },
-      note: 'max 4 players',
+      category: 'half-per-card',
+      limits: { maxPlayersPerCourt: 4 },
     },
     otherActivities: ['Squash', 'Table <tennis>'],
     phone: '+420 123 456 789',
@@ -52,7 +54,7 @@ test('card shows name, district, address, sports, other activities, courts and p
   assert.match(html, /class="tag">Squash</);
   assert.match(html, /Table &lt;tennis&gt;/);
   assert.match(html, /<dt>Courts<\/dt><dd>4 courts<\/dd>/);
-  assert.match(html, /<summary>from 280 Kč \/ h<\/summary>/);
+  assert.match(html, /<summary[^>]*>from 280 Kč \/ h<\/summary>/);
 });
 
 test('card price expands to the full table and note', () => {
@@ -72,15 +74,15 @@ test('card shows opening hours compactly and marks approximate hours', () => {
 });
 
 test('card shows the MultiSport label with note, and unknown when absent', () => {
-  assert.match(renderVenueCard(detailed), />MultiSport · 50 % off</);
-  assert.match(renderVenueCard(detailed), /title="max 4 players"/);
+  assert.match(renderVenueCard(detailed), />1 card = 50 % off</);
+  assert.match(renderVenueCard(detailed), /title="max 4 players per court"/);
   assert.match(
     renderVenueCard(bare),
     /<dt>MultiSport<\/dt><dd><span class="badge[^>]*>MultiSport: unknown</,
   );
   const not = renderVenueCard({
     ...bare,
-    venue: { ...bare.venue, multisport: { accepted: false } },
+    venue: { ...bare.venue, multisport: { category: 'not-accepted' } },
   });
   assert.match(not, />No MultiSport</);
 });
@@ -119,7 +121,7 @@ test('card drops unsafe links', () => {
 });
 
 test('body renders the loading skeleton, error with retry and the empty state', () => {
-  const filter = { q: 'zzz <x>', sport: null };
+  const filter: VenuesFilter = { q: 'zzz <x>', sport: null, sort: 'distance', cards: 0 };
   assert.match(renderVenuesBody({ status: 'loading' }, filter), /class="skeleton skeleton-card"/);
   const error = renderVenuesBody({ status: 'error', message: 'Boom' }, filter);
   assert.match(error, /role="alert"/);
@@ -132,7 +134,7 @@ test('body renders the loading skeleton, error with retry and the empty state', 
   assert.match(empty, /data-action="clear-venue-filters"/);
   const unfiltered = renderVenuesBody(
     { status: 'success', data: { query: {}, venues: [] } },
-    { q: '', sport: null },
+    NO_FILTER,
   );
   assert.doesNotMatch(unfiltered, /clear-venue-filters/);
 });
@@ -140,7 +142,7 @@ test('body renders the loading skeleton, error with retry and the empty state', 
 test('body lists cards with a result count', () => {
   const html = renderVenuesBody(
     { status: 'success', data: { query: {}, venues: [detailed, bare] } },
-    { q: '', sport: null },
+    NO_FILTER,
   );
   assert.match(html, /role="status">2 venues</);
   assert.equal((html.match(/class="vcard"/g) ?? []).length, 2);
@@ -149,7 +151,7 @@ test('body lists cards with a result count', () => {
 });
 
 test('controls: labelled search box and sport chips', () => {
-  const html = renderVenuesControls({ q: 'li"sen', sport: 'badminton' });
+  const html = renderVenuesControls({ ...NO_FILTER, q: 'li"sen', sport: 'badminton' });
   assert.match(html, /<label for="venue-search">Search venues<\/label>/);
   assert.match(html, /type="search"[^>]*value="li&quot;sen"/);
   assert.match(html, /data-venue-sport="" aria-pressed="false">All sports</);
@@ -158,16 +160,105 @@ test('controls: labelled search box and sport chips', () => {
 
 test('URL state and API query', () => {
   assert.deepEqual(venuesFilterFromSearch('?q=%20lisen%20&sport=badminton'), {
+    ...NO_FILTER,
     q: 'lisen',
     sport: 'badminton',
   });
-  assert.deepEqual(venuesFilterFromSearch('?sport=tennis'), { q: '', sport: null });
+  assert.deepEqual(venuesFilterFromSearch('?sport=tennis'), NO_FILTER);
   assert.equal(venuesFilterFromSearch(`?q=${'x'.repeat(300)}`).q.length, 100);
-  assert.equal(venuesFilterToSearch({ q: 'a b', sport: 'badminton' }), 'q=a+b&sport=badminton');
-  assert.equal(venuesFilterToSearch({ q: ' ', sport: null }), '');
-  assert.deepEqual(toVenueQuery({ q: ' lisen ', sport: null }), { q: 'lisen' });
-  assert.deepEqual(toVenueQuery({ q: '', sport: 'badminton' }), { sport: 'badminton' });
-  assert.deepEqual(toVenueQuery({ q: '', sport: null }), {});
+  assert.equal(
+    venuesFilterToSearch({ ...NO_FILTER, q: 'a b', sport: 'badminton' }),
+    'q=a+b&sport=badminton',
+  );
+  assert.equal(venuesFilterToSearch({ ...NO_FILTER, q: ' ' }), '');
+  assert.deepEqual(toVenueQuery({ ...NO_FILTER, q: ' lisen ' }), { q: 'lisen' });
+  assert.deepEqual(toVenueQuery({ ...NO_FILTER, sport: 'badminton' }), { sport: 'badminton' });
+  assert.deepEqual(toVenueQuery(NO_FILTER), {});
+});
+
+test('URL state round-trips sort and cards (omitted when default, invalid → default)', () => {
+  const filter: VenuesFilter = { ...NO_FILTER, sort: 'price', cards: 3 };
+  assert.equal(venuesFilterToSearch(filter), 'sort=price&cards=3');
+  assert.deepEqual(venuesFilterFromSearch('?sort=price&cards=3'), filter);
+  assert.deepEqual(venuesFilterFromSearch('?sort=x&cards=7'), NO_FILTER);
+  // sort and cards never reach the API query
+  assert.deepEqual(toVenueQuery(filter), {});
+});
+
+test('controls render the Sort by and MultiSport cards groups', () => {
+  const html = renderVenuesControls({ ...NO_FILTER, sort: 'price', cards: 2 });
+  assert.match(html, /role="group" aria-labelledby="venues-sort-label"/);
+  assert.match(html, /id="venues-sort-label">Sort by</);
+  assert.match(html, /data-sort-mode="distance"[^>]*aria-pressed="false">Distance</);
+  assert.match(html, /data-sort-mode="price"[^>]*aria-pressed="true">Price</);
+  assert.match(html, /id="venues-cards-label">MultiSport cards</);
+  assert.match(html, /data-cards-count="2"[^>]*aria-pressed="true">2</);
+  assert.match(html, /data-cards-count="0"[^>]*aria-pressed="false">0</);
+});
+
+function cardOrder(html: string): string[] {
+  return [...html.matchAll(/class="vcard" data-venue-id="([^"]+)"/g)].map((m) => m[1] ?? '');
+}
+
+function item(id: string, name: string, lat: number, price?: number): VenueListItem {
+  return {
+    liveAvailability: false,
+    venue: makeVenue(id, name, {
+      location: { lat, lng: 16.6 },
+      multisport: { category: 'half-per-card' },
+      ...(price === undefined
+        ? {}
+        : {
+            pricing: {
+              currency: 'CZK' as const,
+              unit: 'hour' as const,
+              rules: [{ days: ['mon' as const], from: '07:00', to: '22:00', price }],
+            },
+          }),
+    }),
+  };
+}
+
+test('venues page sorts by distance from the origin, by price with the cards, unknown last', () => {
+  // the API returns the name order: Alfa (far), Beta (near, 400), Gama (middle, 200), Delta (no price)
+  const items = [
+    item('alfa', 'Alfa', 49.4, 300),
+    item('beta', 'Beta', 49.2, 400),
+    item('gama', 'Gama', 49.3, 200),
+    item('delta', 'Delta', 49.25),
+  ];
+  const state = { status: 'success' as const, data: { query: {}, venues: items } };
+  const origin = { lat: 49.2, lng: 16.6 };
+
+  // no location: distance keeps the API order
+  assert.deepEqual(cardOrder(renderVenuesBody(state, NO_FILTER)), [
+    'alfa',
+    'beta',
+    'gama',
+    'delta',
+  ]);
+  // with a location: nearest first
+  const near = renderVenuesBody(state, NO_FILTER, origin);
+  assert.deepEqual(cardOrder(near), ['beta', 'delta', 'gama', 'alfa']);
+  assert.match(near, /0\.0 km away/);
+
+  const byPrice = { ...NO_FILTER, sort: 'price' as const };
+  assert.deepEqual(cardOrder(renderVenuesBody(state, byPrice, origin)), [
+    'gama',
+    'alfa',
+    'beta',
+    'delta',
+  ]);
+  // 2 cards halve... both cards used: 400 -> 0 and 300 -> 0 ... payable 0 for all priced ones;
+  // ties by distance: beta (nearest), gama, alfa
+  const twoCards = { ...byPrice, cards: 2 as const };
+  const html = renderVenuesBody(state, twoCards, origin);
+  assert.deepEqual(cardOrder(html), ['beta', 'gama', 'alfa', 'delta']);
+  assert.match(html, />from 400 Kč → 0 Kč \/ h</);
+  // one card: 400 -> 200, 300 -> 150, 200 -> 100
+  const oneCard = renderVenuesBody(state, { ...byPrice, cards: 1 }, origin);
+  assert.deepEqual(cardOrder(oneCard), ['gama', 'alfa', 'beta', 'delta']);
+  assert.match(oneCard, />from 200 Kč → 100 Kč \/ h</);
 });
 
 test('error messages', () => {

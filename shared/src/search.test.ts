@@ -17,6 +17,7 @@ const venue = (name: string): Venue => ({
   },
   bookingUrl: 'https://example.com',
   availabilitySource: 'none',
+  multisport: { category: 'unknown' },
 });
 
 const result = (

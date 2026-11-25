@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { renderPanel } from './panel.ts';
-import { NOW, makeCalendar, makeVenue } from './test-fixtures.test.ts';
+import type { Venue } from '@spotradar/shared';
+import { NOW, live, makeCalendar, makeVenue } from './test-fixtures.test.ts';
 
 const data = makeCalendar('2026-11-25', '2026-11-27');
 
@@ -61,30 +62,177 @@ test('live status is one "Live · x min ago" line with the absolute time in the 
   assert.match(hours, />Live · 2 h ago</);
 });
 
-test('free venues show exactly one slot price and the MultiSport price', () => {
+test('every venue row shows one slot price; cards recompute it and name the cards used', () => {
   const evening = renderPanel({ date: '2026-11-26', hour: 18, data, now: NOW });
-  assert.equal((evening.match(/data-testid="slot-price"/g) ?? []).length, 1);
+  // one row per venue (free + check), each with exactly one price and one badge
+  assert.equal((evening.match(/data-testid="slot-price"/g) ?? []).length, 3);
+  assert.equal((evening.match(/data-testid="multisport"/g) ?? []).length, 3);
   assert.match(evening, /data-testid="slot-price">380 Kč \/ h</);
-  assert.match(evening, /380 Kč → 190 Kč with MultiSport/);
+  assert.doesNotMatch(evening, /slot-price-cards|With card|with MultiSport/);
   // Morning slot (08:00) falls into the first price rule.
-  const morning = renderPanel({ date: '2026-11-26', hour: 8, data, now: NOW });
-  assert.match(morning, /data-testid="slot-price">280 Kč \/ h</);
-  assert.match(morning, /280 Kč → 140 Kč with MultiSport/);
+  const morning = renderPanel({ date: '2026-11-26', hour: 8, data, now: NOW, cards: 1 });
+  assert.match(morning, /data-testid="slot-price">280 Kč → 140 Kč</);
+  assert.match(morning, /data-testid="slot-price-cards">with 1 card</);
+  const two = renderPanel({ date: '2026-11-26', hour: 18, data, now: NOW, cards: 2 });
+  assert.match(two, /data-testid="slot-price">380 Kč → 0 Kč</);
+  assert.match(two, /with 2 cards</);
+  // venues without a known price / MultiSport terms are unchanged by the cards
+  assert.equal((two.match(/Price on website/g) ?? []).length, 2);
+  assert.equal((two.match(/data-testid="slot-price-cards"/g) ?? []).length, 1);
 });
 
 test('unknown price and MultiSport are labelled, not hidden', () => {
   const plain = makeCalendar('2026-11-25', '2026-11-27', [
     { venue: makeVenue('kuklenska', 'Plain Hall') },
   ]);
-  const html = renderPanel({ date: '2026-11-26', hour: 18, data: plain, now: NOW });
+  const html = renderPanel({ date: '2026-11-26', hour: 18, data: plain, now: NOW, cards: 2 });
   assert.match(html, /data-testid="slot-price">Price on website</);
   assert.match(html, />MultiSport: unknown</);
-  assert.doesNotMatch(html, /with MultiSport/);
+  assert.doesNotMatch(html, /slot-price-cards|multisport-limits/);
+});
+
+test('"No MultiSport" venues keep the price with cards; limits are a tooltip and visible text', () => {
+  const priced = (price: number): Venue['pricing'] => ({
+    currency: 'CZK',
+    unit: 'hour',
+    rules: [
+      {
+        days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+        from: '00:00',
+        to: '24:00',
+        price,
+      },
+    ],
+  });
+  const cal = makeCalendar('2026-11-25', '2026-11-27', [
+    {
+      venue: makeVenue('kuklenska', 'No Card Hall', {
+        pricing: priced(400),
+        multisport: { category: 'not-accepted' },
+      }),
+    },
+    {
+      venue: makeVenue('viktoria', 'Limits Hall', {
+        pricing: priced(400),
+        multisport: {
+          category: 'half-per-card',
+          limits: { maxPlayersPerCourt: 4, onlyBookingMinutes: 60 },
+        },
+      }),
+    },
+  ]);
+  const html = renderPanel({ date: '2026-11-26', hour: 18, data: cal, now: NOW, cards: 2 });
+  assert.match(html, /badge-neutral"[^>]*data-testid="multisport">No MultiSport</);
+  assert.match(html, /data-testid="slot-price">400 Kč \/ h</);
+  // two cards cover half each: the court is free, 2 cards are used (4 players allowed)
+  assert.match(html, /data-testid="slot-price">400 Kč → 0 Kč</);
+  assert.match(html, /title="max 4 players per court · 60-min bookings only"/);
+  assert.match(
+    html,
+    /data-testid="multisport-limits">max 4 players per court · 60-min bookings only</,
+  );
+  assert.equal((html.match(/data-testid="multisport-limits"/g) ?? []).length, 1);
+});
+
+test('free and check lists are sorted separately by distance (default) and by slot price', () => {
+  const priced = (price: number): Venue['pricing'] => ({
+    currency: 'CZK',
+    unit: 'hour',
+    rules: [
+      {
+        days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+        from: '00:00',
+        to: '24:00',
+        price,
+      },
+    ],
+  });
+  const venues = [
+    // free (live with free slot at 18:00): cheap but far, dear but near
+    { venue: makeVenue('kuklenska', 'Far Cheap', { pricing: priced(200) }), distanceKm: 5 },
+    { venue: makeVenue('near', 'Near Dear', { pricing: priced(500) }), distanceKm: 1 },
+    // check (unavailable / unknown)
+    { venue: makeVenue('viktoria', 'Check Far', { pricing: priced(100) }), distanceKm: 4 },
+    { venue: makeVenue('unknown', 'Check Near No Price'), distanceKm: 2 },
+  ];
+  const cal = makeCalendar('2026-11-25', '2026-11-27', venues);
+  for (const day of cal.days) {
+    day.venues.push({ venueId: 'near', availability: live() });
+  }
+  const byDistance = renderPanel({ date: '2026-11-26', hour: 18, data: cal, now: NOW });
+  assert.deepEqual(order(byDistance), [
+    'near:free',
+    'kuklenska:free',
+    'unknown:check',
+    'viktoria:check',
+  ]);
+  const byPrice = renderPanel({
+    date: '2026-11-26',
+    hour: 18,
+    data: cal,
+    now: NOW,
+    sort: 'price',
+  });
+  assert.deepEqual(order(byPrice), [
+    'kuklenska:free',
+    'near:free',
+    'viktoria:check',
+    'unknown:check',
+  ]);
+  assert.match(byPrice, /data-sort-mode="price"[^>]*aria-pressed="true"/);
+  assert.match(byPrice, /<details class="check-venues">/);
+  // an opened "check" section stays open when the panel is re-rendered
+  const reopened = renderPanel({
+    date: '2026-11-26',
+    hour: 18,
+    data: cal,
+    now: NOW,
+    sort: 'price',
+    checkOpen: true,
+  });
+  assert.match(reopened, /<details class="check-venues" open>/);
+
+  // cards re-sort: with 2 cards the dear venue accepting MultiSport becomes the cheapest
+  const withCards = makeCalendar('2026-11-25', '2026-11-27', [
+    venues[0] as (typeof venues)[number],
+    {
+      venue: makeVenue('near', 'Near Dear', {
+        pricing: priced(500),
+        multisport: { category: 'half-per-card' },
+      }),
+      distanceKm: 1,
+    },
+  ]);
+  for (const day of withCards.days) day.venues.push({ venueId: 'near', availability: live() });
+  const free = (cards: 0 | 2): string[] =>
+    order(
+      renderPanel({
+        date: '2026-11-26',
+        hour: 18,
+        data: withCards,
+        now: NOW,
+        sort: 'price',
+        cards,
+      }),
+    );
+  assert.deepEqual(free(0), ['kuklenska:free', 'near:free']);
+  assert.deepEqual(free(2), ['near:free', 'kuklenska:free']);
+});
+
+test('the panel has the Sort by and MultiSport cards controls above the lists', () => {
+  const html = renderPanel({ date: '2026-11-26', hour: 18, data, now: NOW, cards: 3 });
+  assert.match(html, /role="group" aria-labelledby="panel-sort-label"/);
+  assert.match(html, /data-sort-mode="distance"[^>]*aria-pressed="true">Distance</);
+  assert.match(html, /data-cards-count="3"[^>]*aria-pressed="true">3</);
+  assert.ok(html.indexOf('panel-sort-label') < html.indexOf('class="venue-items"'));
+  // no controls when there is nothing to sort
+  const closed = renderPanel({ date: '2026-11-26', hour: 5, data, now: NOW });
+  assert.doesNotMatch(closed, /data-sort-mode/);
 });
 
 test('free venues show MultiSport, website and Google Maps links', () => {
   const html = renderPanel({ date: '2026-11-26', hour: 18, data, now: NOW });
-  assert.match(html, />MultiSport · 50 % off</);
+  assert.match(html, />1 card = 50 % off</);
   assert.match(html, /href="https:\/\/www\.example\.com\/kuklenska"[^>]*>Website/);
   assert.match(html, /href="https:\/\/www\.google\.com\/maps\/search\/\?api=1&amp;query=/);
   assert.match(html, /Rating &amp; reviews on Google Maps/);

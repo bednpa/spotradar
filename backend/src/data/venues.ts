@@ -75,9 +75,11 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     pricing: czkPerHour([
       rule(MON_FRI, '07:00', '15:00', 280),
       rule(MON_FRI, '15:00', '22:00', 380),
-      rule(SAT_SUN, '08:00', '21:00', 380),
+      rule(SAT_SUN, '08:00', '15:00', 330), // weekend / holidays before 15:00
+      rule(SAT_SUN, '15:00', '21:00', 380),
     ]),
-    multisport: { accepted: true, coverage: { kind: 'percentOff', percent: 50 } },
+    // Source: https://www.sportkuklenska.cz/cenik/ – "Multisport karta 50 % slevy / hodina" (2026-11-25).
+    multisport: { category: 'half-per-card' },
     availabilitySource: 'clubspire',
     source: { type: 'clubspire', baseUrl: KUKLENSKA_BASE_URL, tabIdx: 0 },
   },
@@ -99,7 +101,8 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
       rule(MON_FRI, '15:00', '22:00', 400),
       rule(SAT_SUN, '08:00', '22:00', 400),
     ]),
-    multisport: { accepted: true, coverage: { kind: 'minutesPerCard', minutes: 30 } },
+    // Source: https://www.centrumviktoria.cz/badminton – "MULTISPORT HRADÍ 1 KARTA PŮL HODINY HRACÍHO ČASU" (2026-11-25).
+    multisport: { category: 'minutes-per-card', minutesPerCard: 30 },
     otherActivities: ['Padel', 'Squash', 'Beach volleyball', 'Bowling', 'Tennis'],
     availabilitySource: 'clubspire',
     source: { type: 'clubspire', baseUrl: VIKTORIA_BASE_URL, tabIdx: 1 },
@@ -123,6 +126,8 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
       rule(MON_FRI, '17:00', '22:00', 290),
       rule(SAT_SUN, '07:00', '22:00', 290),
     ]),
+    // Source: http://www.badmintonjehnice.cz/ does not mention MultiSport (checked 2026-11-25).
+    multisport: { category: 'unknown' },
     availabilitySource: 'bizzy',
     source: {
       type: 'bizzy',
@@ -145,7 +150,8 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
       rule(MON_FRI, '14:00', '22:00', 400),
       rule(SAT_SUN, '08:00', '22:00', 400),
     ]),
-    multisport: { accepted: true, coverage: { kind: 'percentOff', percent: 50 } },
+    // Source: https://www.badmintonlisen.cz/cenik – "MultiSport karta hradí 50% ceny jednoho kurtu za hodinu." (2026-11-25).
+    multisport: { category: 'half-per-card' },
     bookingUrl: 'http://badmintonlisen.e-rezervace.cz/Branch/pages/Schedule.faces',
     availabilitySource: 'bizzy',
     source: {
@@ -169,11 +175,9 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
       rule(MON_FRI, '14:00', '22:00', 400),
       rule(SAT_SUN, '08:00', '22:00', 400),
     ]),
-    multisport: {
-      accepted: true,
-      coverage: { kind: 'percentOff', percent: 50 },
-      note: 'max 4 players per court',
-    },
+    // Source: https://www.xarena.cz/cenik/ – "Multisport karta hradí 50 % ceny jednoho kurtu za hodinu."
+    // and "Na jeden kurt max. 4 hráči, případně jinak po individuální domluvě" (2026-11-25).
+    multisport: { category: 'half-per-card', limits: { maxPlayersPerCourt: 4 } },
     otherActivities: ['Table tennis'],
     bookingUrl: 'http://xarena.e-rezervace.cz/Branch/pages/Schedule.faces',
     availabilitySource: 'bizzy',
@@ -200,6 +204,8 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
       rule(MON_FRI, '15:00', '22:00', 380),
       rule(SAT_SUN, '07:00', '22:00', 380),
     ]),
+    // Source: https://www.sprinttenis.cz/ and its provozní řád do not mention MultiSport (checked 2026-11-25).
+    multisport: { category: 'unknown' },
     otherActivities: ['Tennis'],
     bookingUrl:
       'https://memberzone.cz/sprint_tenis/Sportoviste.aspx?ID_Sportoviste=3&NAZEV=Badminton%20hala',
@@ -226,10 +232,14 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
       rule(FRI, '15:00', '21:00', 440), // Friday closes at 21:00
       rule(SAT_SUN, '08:00', '21:00', 440),
     ]),
+    // Source: http://www.sportcentrum-ivanovice.cz/cenik/ (2026-11-25) – "Karta hradí 50% z ceny kurtu
+    // u raketových sportů. Pokud uplatníte 2 karty, je kartami hrazeno 100% ceny", "Rezervace u raketových
+    // sportů je možná pouze na 60 min.", "Využití karty je povinen držitel karty hlásit obsluze předem",
+    // "Kartu lze využít každý den pouze na 1 sportovní aktivitu."
     multisport: {
-      accepted: true,
-      coverage: { kind: 'percentOff', percent: 50 },
-      note: '2 cards = 100 %; 60-min bookings only, tell staff in advance',
+      category: 'full-two-cards',
+      limits: { maxCardsPerCourt: 2, onlyBookingMinutes: 60, requiresNotice: true },
+      note: 'One sports activity per card per day',
     },
     otherActivities: ['Squash', 'Table tennis', 'Fitness classes', 'Indoor cycling'],
     bookingUrl: 'https://memberzone.cz/ivanovice/',

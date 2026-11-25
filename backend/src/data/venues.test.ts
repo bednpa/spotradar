@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { WEEKDAYS, isValidTime, priceFor, timeToMinutes, validatePricing } from '@spotradar/shared';
+import {
+  WEEKDAYS,
+  courtPrice,
+  isValidTime,
+  priceFor,
+  timeToMinutes,
+  validateMultisport,
+  validatePricing,
+} from '@spotradar/shared';
 import { createVenueRepository, toPublicVenue } from '../repositories/venueRepository.ts';
 import { VENUE_RECORDS } from './venues.ts';
 
@@ -52,11 +60,7 @@ describe('venue data', () => {
       assert.match(v.website, /^https?:\/\//, v.id);
       assert.doesNotThrow(() => new URL(v.website ?? ''));
       assert.ok(v.pricing, `${v.id} pricing`);
-      if (v.multisport) {
-        assert.equal(typeof v.multisport.accepted, 'boolean');
-        if (!v.multisport.accepted) assert.equal(v.multisport.coverage, undefined, v.id);
-        else assert.ok(v.multisport.coverage, `${v.id} coverage`);
-      }
+      assert.deepEqual(validateMultisport(v.multisport), [], `${v.id} multisport`);
       if (v.otherActivities) {
         assert.ok(v.otherActivities.length > 0, v.id);
         assert.ok(
@@ -100,7 +104,12 @@ describe('venue data', () => {
       priceFor(byId.get(id)?.pricing, date, time);
     assert.equal(price('kuklenska', '2026-11-25', 14), 280); // Wed
     assert.equal(price('kuklenska', '2026-11-25', '15:00'), 380);
-    assert.equal(price('kuklenska', '2026-11-28', 10), 380); // Sat
+    assert.equal(price('kuklenska', '2026-11-28', 10), 330); // Sat before 15:00
+    assert.equal(price('kuklenska', '2026-11-28', 8), 330);
+    assert.equal(price('kuklenska', '2026-11-28', 14), 330);
+    assert.equal(price('kuklenska', '2026-11-28', 15), 380);
+    assert.equal(price('kuklenska', '2026-11-29', 20), 380); // Sun
+    assert.equal(price('kuklenska', '2026-11-29', 21), null); // closed
     assert.equal(price('badminton-jehnice', '2026-11-25', 16), 240);
     assert.equal(price('badminton-jehnice', '2026-11-25', 17), 290);
     assert.equal(price('badminton-jehnice', '2026-11-28', 7), 290);
@@ -110,18 +119,63 @@ describe('venue data', () => {
     assert.equal(price('sportcentrum-ivanovice', '2026-11-27', 21), null); // Fri closed
   });
 
-  it('describes MultiSport coverage', () => {
+  it('describes MultiSport terms per venue', () => {
     const byId = new Map(VENUE_RECORDS.map((v) => [v.id, v]));
-    assert.deepEqual(byId.get('kuklenska')?.multisport, {
-      accepted: true,
-      coverage: { kind: 'percentOff', percent: 50 },
+    const ms = (id: string) => byId.get(id)?.multisport;
+    assert.deepEqual(ms('kuklenska'), { category: 'half-per-card' });
+    assert.deepEqual(ms('centrum-viktoria'), { category: 'minutes-per-card', minutesPerCard: 30 });
+    assert.deepEqual(ms('badminton-jehnice'), { category: 'unknown' });
+    assert.deepEqual(ms('badminton-lisen'), { category: 'half-per-card' });
+    assert.deepEqual(ms('x-arena-slatina'), {
+      category: 'half-per-card',
+      limits: { maxPlayersPerCourt: 4 },
     });
-    assert.deepEqual(byId.get('centrum-viktoria')?.multisport?.coverage, {
-      kind: 'minutesPerCard',
-      minutes: 30,
+    assert.deepEqual(ms('hala-sprint'), { category: 'unknown' });
+    assert.deepEqual(ms('sportcentrum-ivanovice'), {
+      category: 'full-two-cards',
+      limits: { maxCardsPerCourt: 2, onlyBookingMinutes: 60, requiresNotice: true },
+      note: 'One sports activity per card per day',
     });
-    assert.equal(byId.get('x-arena-slatina')?.multisport?.note, 'max 4 players per court');
-    assert.ok(byId.get('sportcentrum-ivanovice')?.multisport?.note);
+  });
+
+  it('computes court prices with MultiSport cards on real data', () => {
+    const byId = new Map(VENUE_RECORDS.map((v) => [v.id, v]));
+    const at = (id: string, date: string, hour: number, cards: number) => {
+      const v = byId.get(id);
+      return courtPrice({ pricing: v?.pricing, multisport: v?.multisport, date, hour, cards });
+    };
+    // Ivanovice: 2 cards pay the whole court (440 Kč Wed evening).
+    assert.deepEqual(at('sportcentrum-ivanovice', '2026-11-25', 18, 2), {
+      basePrice: 440,
+      cardsUsed: 2,
+      payable: 0,
+    });
+    // More cards than the venue accepts are ignored.
+    assert.equal(at('sportcentrum-ivanovice', '2026-11-25', 18, 4)?.cardsUsed, 2);
+    // X-Arena: 4 cards requested, half-per-card makes only 2 useful.
+    assert.deepEqual(at('x-arena-slatina', '2026-11-25', 18, 4), {
+      basePrice: 400,
+      cardsUsed: 2,
+      payable: 0,
+    });
+    // Kuklenská weekend morning: 330 Kč, 1 card = half.
+    assert.deepEqual(at('kuklenska', '2026-11-28', 10, 1), {
+      basePrice: 330,
+      cardsUsed: 1,
+      payable: 165,
+    });
+    // Viktoria: 1 card = 30 min of 400 Kč.
+    assert.deepEqual(at('centrum-viktoria', '2026-11-25', 18, 1), {
+      basePrice: 400,
+      cardsUsed: 1,
+      payable: 200,
+    });
+    // Unknown terms: cards are never applied.
+    assert.deepEqual(at('hala-sprint', '2026-11-25', 18, 2), {
+      basePrice: 380,
+      cardsUsed: 0,
+      payable: 380,
+    });
   });
 
   it('has HH:MM opening hours with open before close for every day', () => {
@@ -157,8 +211,6 @@ describe('venue data', () => {
     assert.deepEqual(ivanovice?.days.thu, { open: '07:00', close: '22:00' });
     assert.deepEqual(ivanovice?.days.fri, { open: '07:00', close: '21:00' });
     assert.deepEqual(ivanovice?.days.sat, { open: '08:00', close: '21:00' });
-    assert.equal(byId.get('badminton-jehnice')?.multisport, undefined);
-    assert.equal(byId.get('hala-sprint')?.multisport, undefined);
     assert.deepEqual(byId.get('kuklenska')?.otherActivities, undefined);
     assert.deepEqual(byId.get('x-arena-slatina')?.otherActivities, ['Table tennis']);
     assert.equal(
@@ -198,7 +250,11 @@ describe('venue repository', () => {
       if (venue.pricing && record.pricing) {
         assert.notEqual(venue.pricing.rules[0], record.pricing.rules[0]);
       }
-      assert.equal('multisport' in venue, record.multisport !== undefined);
+      assert.ok('multisport' in venue);
+      if ('limits' in record.multisport && record.multisport.limits) {
+        assert.ok('limits' in venue.multisport && venue.multisport.limits);
+        assert.notEqual(venue.multisport.limits, record.multisport.limits);
+      }
       assert.equal('otherActivities' in venue, record.otherActivities !== undefined);
     }
   });

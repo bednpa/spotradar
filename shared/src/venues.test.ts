@@ -26,6 +26,7 @@ const venue = (
   },
   bookingUrl: 'https://example.com',
   availabilitySource: 'none',
+  multisport: { category: 'unknown' },
 });
 
 test('foldText lower-cases and strips Czech diacritics', () => {

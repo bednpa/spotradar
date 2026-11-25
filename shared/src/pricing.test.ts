@@ -1,19 +1,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  MULTISPORT_NOT_ACCEPTED_LABEL,
-  MULTISPORT_UNKNOWN_LABEL,
   PRICE_UNKNOWN_LABEL,
   formatDays,
   formatHourlyPrice,
-  formatMultisport,
-  formatMultisportPrice,
   formatPriceFrom,
   formatPriceRule,
   minPrice,
   priceFor,
   priceRuleFor,
-  priceWithMultisport,
   validatePricing,
 } from './pricing.ts';
 import type { Pricing } from './pricing.ts';
@@ -102,42 +97,4 @@ test('validatePricing accepts a valid list and reports problems', () => {
     validatePricing({ ...PRICING, rules: [{ ...PRICING.rules[0]!, to: '24:00' }] }),
     [],
   );
-});
-
-test('formatMultisport gives one short label', () => {
-  assert.equal(formatMultisport(undefined), MULTISPORT_UNKNOWN_LABEL);
-  assert.equal(formatMultisport(undefined), 'MultiSport: unknown');
-  assert.equal(formatMultisport({ accepted: false }), MULTISPORT_NOT_ACCEPTED_LABEL);
-  assert.equal(formatMultisport({ accepted: false }), 'No MultiSport');
-  assert.equal(formatMultisport({ accepted: true }), 'MultiSport accepted');
-  assert.equal(
-    formatMultisport({ accepted: true, coverage: { kind: 'percentOff', percent: 50 } }),
-    'MultiSport · 50 % off',
-  );
-  assert.equal(
-    formatMultisport({ accepted: true, coverage: { kind: 'minutesPerCard', minutes: 30 } }),
-    'MultiSport · 30 min / card',
-  );
-  assert.equal(
-    formatMultisport({ accepted: true, coverage: { kind: 'fixedDiscount', amountCzk: 100 } }),
-    'MultiSport · −100 Kč',
-  );
-});
-
-test('price with MultiSport where computable', () => {
-  const half = { accepted: true, coverage: { kind: 'percentOff', percent: 50 } } as const;
-  const fixed = { accepted: true, coverage: { kind: 'fixedDiscount', amountCzk: 150 } } as const;
-  const minutes = { accepted: true, coverage: { kind: 'minutesPerCard', minutes: 30 } } as const;
-  assert.equal(priceWithMultisport(380, half), 190);
-  assert.equal(priceWithMultisport(285, half), 143, 'rounded');
-  assert.equal(priceWithMultisport(380, fixed), 230);
-  assert.equal(priceWithMultisport(100, fixed), 0, 'never negative');
-  assert.equal(priceWithMultisport(380, minutes), null);
-  assert.equal(priceWithMultisport(380, { accepted: true }), null);
-  assert.equal(priceWithMultisport(380, { accepted: false }), null);
-  assert.equal(priceWithMultisport(380, undefined), null);
-  assert.equal(priceWithMultisport(null, half), null);
-  assert.equal(formatMultisportPrice(380, half), '380 Kč → 190 Kč with MultiSport');
-  assert.equal(formatMultisportPrice(380, minutes), null);
-  assert.equal(formatMultisportPrice(null, half), null);
 });

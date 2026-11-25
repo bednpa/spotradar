@@ -26,6 +26,7 @@ const venue = (id: string, openingHours = hours('07:00', '22:00')): Venue => ({
   openingHours,
   bookingUrl: 'https://example.com',
   availabilitySource: 'none',
+  multisport: { category: 'unknown' },
 });
 
 test('freeCourtsBetween: min over covering slots, 0 on gaps', () => {

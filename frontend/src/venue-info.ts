@@ -2,8 +2,11 @@
 import {
   PRICE_UNKNOWN_LABEL,
   WEEKDAYS,
+  acceptsMultisport,
+  courtPriceFrom,
+  formatCzk,
   formatMultisport,
-  formatPriceFrom,
+  formatMultisportLimits,
   formatPriceRule,
   googleMapsUrl,
 } from '@spotradar/shared';
@@ -62,17 +65,33 @@ export function groupOpeningHours(hours: OpeningHours): HoursGroup[] {
  * and short extra text.
  */
 export function renderMultisportBadge(multisport: MultisportInfo | undefined): string {
-  const cls = multisport?.accepted ? 'badge-multisport' : 'badge-neutral';
-  const note = multisport?.note ? multisport.note : '';
-  const title = note ? ` title="${escapeHtml(note)}"` : '';
-  return `<span class="badge ${cls}" data-testid="multisport"${title}>${escapeHtml(formatMultisport(multisport))}</span>${note ? `<span class="muted fact-terms">${escapeHtml(note)}</span>` : ''}`;
+  const cls = acceptsMultisport(multisport) ? 'badge-multisport' : 'badge-neutral';
+  const limits = formatMultisportLimits(multisport).join(' · ');
+  const title = limits ? ` title="${escapeHtml(limits)}"` : '';
+  return `<span class="badge ${cls}" data-testid="multisport"${title}>${escapeHtml(formatMultisport(multisport))}</span>${limits ? `<span class="muted venue-ms-limits" data-testid="multisport-limits">${escapeHtml(limits)}</span>` : ''}`;
+}
+
+/** "from 280 Kč / h" or, when cards reduce it, "from 280 Kč → 140 Kč / h". */
+export function formatPriceFromWithCards(
+  pricing: Pricing | undefined,
+  multisport: MultisportInfo | undefined,
+  cards: number,
+): string {
+  const price = courtPriceFrom(pricing, multisport, cards);
+  if (price === null) return PRICE_UNKNOWN_LABEL;
+  if (price.cardsUsed === 0) return `from ${formatCzk(price.basePrice)} / h`;
+  return `from ${formatCzk(price.basePrice)} → ${formatCzk(price.payable)} / h`;
 }
 
 /**
- * Short price ("from 280 Kč / h") that expands to the full price table and note.
- * Unknown price: plain "Price on website".
+ * Short price ("from 280 Kč / h", computed with the selected cards) that expands to the full
+ * price table and note. Unknown price: plain "Price on website".
  */
-export function renderPriceSummary(pricing: Pricing | undefined): string {
+export function renderPriceSummary(
+  pricing: Pricing | undefined,
+  multisport?: MultisportInfo,
+  cards = 0,
+): string {
   if (!pricing || pricing.rules.length === 0) {
     return `<span class="muted" data-testid="price-unknown">${escapeHtml(PRICE_UNKNOWN_LABEL)}</span>`;
   }
@@ -80,7 +99,7 @@ export function renderPriceSummary(pricing: Pricing | undefined): string {
     .map((rule) => `<li>${escapeHtml(formatPriceRule(rule))}</li>`)
     .join('');
   const note = pricing.note ? `<p class="muted price-note">${escapeHtml(pricing.note)}</p>` : '';
-  return `<details class="price-details" data-testid="price-details"><summary>${escapeHtml(formatPriceFrom(pricing))}</summary><ul class="price-rules">${rows}</ul>${note}</details>`;
+  return `<details class="price-details" data-testid="price-details"><summary data-testid="price-from">${escapeHtml(formatPriceFromWithCards(pricing, multisport, cards))}</summary><ul class="price-rules">${rows}</ul>${note}</details>`;
 }
 
 export function googleMapsLink(venue: Pick<Venue, 'name' | 'address'>): string {

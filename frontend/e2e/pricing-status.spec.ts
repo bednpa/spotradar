@@ -24,6 +24,7 @@ function craftedVenue(overrides: Partial<Venue> = {}): Venue {
     },
     bookingUrl: 'https://example.com/crafted',
     availabilitySource: 'clubspire',
+    multisport: { category: 'unknown' },
     ...overrides,
   };
 }
@@ -161,11 +162,11 @@ test.describe('price and MultiSport', () => {
     const item = dialog.locator('li[data-venue-id="kuklenska"]');
     await expect(item.getByTestId('slot-price')).toHaveCount(1);
     await expect(item.getByTestId('slot-price')).toHaveText(/^\d+ Kč \/ h$/);
-    await expect(item.getByTestId('multisport')).toContainText(/^MultiSport/);
-    // The old free-text price must be gone: exactly one "Kč / h" price line per venue
-    // (plus the optional "→ … with MultiSport" line).
+    await expect(item.getByTestId('multisport')).toHaveText('1 card = 50 % off');
+    // Exactly one price line per venue (no separate "With card" row any more).
     const priceLines = await item.locator('.fact').filter({ hasText: /Kč/ }).count();
-    expect(priceLines).toBeLessThanOrEqual(2);
+    expect(priceLines).toBe(1);
+    await expect(item).not.toContainText('With card');
   });
 
   test('the venue list shows "from NNN Kč / h" that expands to the price table', async ({
@@ -190,7 +191,7 @@ test.describe('price and MultiSport', () => {
     const item = page.getByRole('dialog').locator('li[data-venue-id="crafted"]');
     await expect(item.getByTestId('slot-price')).toHaveText('Price on website');
     await expect(item.getByTestId('multisport')).toHaveText('MultiSport: unknown');
-    await expect(item).not.toContainText('with MultiSport');
+    await expect(item.getByTestId('slot-price-cards')).toHaveCount(0);
   });
 
   test('a venue without pricing or MultiSport data shows the unknown labels in the list', async ({

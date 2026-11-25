@@ -2,10 +2,12 @@
  * Detail panel for one hour slot: venues with free courts (with details and
  * booking links) and, collapsed, venues that are open but have no live data.
  */
-import { formatHourlyPrice, formatMultisportPrice, priceFor } from '@spotradar/shared';
+import { courtPrice, formatCardsUsed, formatCourtPrice } from '@spotradar/shared';
 import type {
   CalendarResponse,
   CalendarVenue,
+  CourtPrice,
+  MultisportCards,
   SlotVenueStatus,
   Venue,
   VenueAvailability,
@@ -20,12 +22,20 @@ import {
 } from './format.ts';
 import { escapeHtml, externalLink, safeHref } from './html.ts';
 import { renderLiveStatus } from './live-status.ts';
+import { DEFAULT_CARDS, DEFAULT_SORT, renderListControls, sortEntries } from './sorting.ts';
+import type { SortMode } from './sorting.ts';
 import { googleMapsLink, renderMultisportBadge } from './venue-info.ts';
 
 export interface PanelProps {
   date: string;
   hour: number;
   data: CalendarResponse;
+  /** Sort order of both lists (default: distance). */
+  sort?: SortMode;
+  /** MultiSport cards used for the court (default 0). */
+  cards?: MultisportCards;
+  /** Keep the "check on website" section open (when the user opened it). */
+  checkOpen?: boolean;
   /** Injectable clock for "x min ago". */
   now?: Date;
 }
@@ -62,15 +72,33 @@ function liveNote(availability: VenueAvailability | undefined, now: Date): strin
   })}</p>`;
 }
 
-/** Exactly one price for the clicked slot, plus the MultiSport price when computable. */
-function renderSlotPrice(venue: Venue, date: string, hour: number): string {
-  const price = priceFor(venue.pricing, date, hour);
-  const withCard = formatMultisportPrice(price, venue.multisport);
-  return `<p class="fact"><span class="fact-label">Price</span> <span data-testid="slot-price">${escapeHtml(formatHourlyPrice(price))}</span></p>${
-    withCard
-      ? `<p class="fact"><span class="fact-label">With card</span> <span data-testid="slot-price-multisport">${escapeHtml(withCard)}</span></p>`
+/** The price of one venue for the clicked slot with the selected cards (null = unknown). */
+function slotPrice(venue: Venue, ctx: SlotContext): CourtPrice | null {
+  return courtPrice({
+    pricing: venue.pricing,
+    multisport: venue.multisport,
+    date: ctx.date,
+    hour: ctx.hour,
+    cards: ctx.cards,
+  });
+}
+
+/** MultiSport badge (+ limits) and the price of exactly this slot: the same row for every venue. */
+function renderMultisportAndPrice(venue: Venue, ctx: SlotContext): string {
+  const price = slotPrice(venue, ctx);
+  const cardsText = price ? formatCardsUsed(price.cardsUsed) : '';
+  return `<div class="venue-ms">${renderMultisportBadge(venue.multisport)}</div>
+  <p class="fact"><span class="fact-label">Price</span> <span data-testid="slot-price">${escapeHtml(formatCourtPrice(price))}</span>${
+    cardsText
+      ? ` <span class="slot-price-cards" data-testid="slot-price-cards">${escapeHtml(cardsText)}</span>`
       : ''
-  }`;
+  }</p>`;
+}
+
+interface SlotContext {
+  date: string;
+  hour: number;
+  cards: MultisportCards;
 }
 
 function renderFreeItem(
@@ -78,14 +106,10 @@ function renderFreeItem(
   entry: CalendarVenue,
   availability: VenueAvailability | undefined,
   now: Date,
-  date: string,
-  hour: number,
+  ctx: SlotContext,
 ): string {
   const { venue } = entry;
-  const facts = [
-    renderSlotPrice(venue, date, hour),
-    `<p class="fact"><span class="fact-label">MultiSport</span> ${renderMultisportBadge(venue.multisport)}</p>`,
-  ].join('');
+  const facts = renderMultisportAndPrice(venue, ctx);
   const links = [externalLink(venue.website, 'Website'), googleMapsLink(venue)]
     .filter((link) => link !== '')
     .join('');
@@ -103,6 +127,7 @@ function renderCheckItem(
   entry: CalendarVenue,
   availability: VenueAvailability | undefined,
   now: Date,
+  ctx: SlotContext,
 ): string {
   const { venue } = entry;
   const note = liveNote(
@@ -113,32 +138,52 @@ function renderCheckItem(
   <div class="venue-item-head"><h3>${escapeHtml(venue.name)}</h3><span class="pill pill-check">Check on website</span></div>
   <p class="muted">${addressLine(entry)}</p>
   ${note}
+  ${renderMultisportAndPrice(venue, ctx)}
   ${bookLink(venue.bookingUrl)}
 </li>`;
 }
 
 /** Contents of the panel (backdrop + dialog). Full and closed venues are not listed. */
-export function renderPanel({ date, hour, data, now = new Date() }: PanelProps): string {
+export function renderPanel({
+  date,
+  hour,
+  data,
+  now = new Date(),
+  sort = DEFAULT_SORT,
+  cards = DEFAULT_CARDS,
+  checkOpen = false,
+}: PanelProps): string {
   const range = hourRangeLabel(hour);
+  const ctx: SlotContext = { date, hour, cards };
   const statuses = hourStatuses(indexDays(data), data.venues, date, hour);
   const byId = new Map(data.venues.map((entry) => [entry.venue.id, entry]));
 
-  const free = statuses.filter((s) => s.state === 'free');
-  const check = statuses.filter((s) => s.state === 'check');
+  // Sections stay separate; each is sorted by the same rule. Statuses of unknown venues drop out.
+  const sorted = (state: 'free' | 'check'): { status: SlotVenueStatus; entry: CalendarVenue }[] => {
+    const rows = statuses
+      .filter((s) => s.state === state)
+      .flatMap((status) => {
+        const entry = byId.get(status.venueId);
+        return entry ? [{ status, entry }] : [];
+      });
+    return sortEntries(rows, sort, ({ entry }) => ({
+      name: entry.venue.name,
+      distanceKm: entry.distanceKm,
+      price: slotPrice(entry.venue, ctx),
+    }));
+  };
+  const free = sorted('free');
+  const check = sorted('check');
 
   const freeItems = free
-    .map((status) => {
-      const entry = byId.get(status.venueId);
-      return entry
-        ? renderFreeItem(status, entry, availabilityOf(data, date, status.venueId), now, date, hour)
-        : '';
-    })
+    .map(({ status, entry }) =>
+      renderFreeItem(status, entry, availabilityOf(data, date, status.venueId), now, ctx),
+    )
     .join('');
   const checkItems = check
-    .map((status) => {
-      const entry = byId.get(status.venueId);
-      return entry ? renderCheckItem(entry, availabilityOf(data, date, status.venueId), now) : '';
-    })
+    .map(({ status, entry }) =>
+      renderCheckItem(entry, availabilityOf(data, date, status.venueId), now, ctx),
+    )
     .join('');
 
   const intro =
@@ -152,7 +197,7 @@ export function renderPanel({ date, hour, data, now = new Date() }: PanelProps):
 
   const checkSection =
     check.length > 0
-      ? `<details class="check-venues"${free.length === 0 ? ' open' : ''}>
+      ? `<details class="check-venues"${free.length === 0 || checkOpen ? ' open' : ''}>
   <summary>${check.length} ${check.length === 1 ? 'venue' : 'venues'} without live data – check on website</summary>
   <ul class="venue-items">${checkItems}</ul>
 </details>`
@@ -168,6 +213,7 @@ export function renderPanel({ date, hour, data, now = new Date() }: PanelProps):
     <button type="button" class="icon-btn" data-action="close-panel" aria-label="Close details"><span aria-hidden="true">×</span></button>
   </header>
   <div class="detail-body">
+    ${free.length + check.length > 0 ? renderListControls(sort, cards, 'panel') : ''}
     ${intro}
     ${free.length > 0 ? `<ul class="venue-items">${freeItems}</ul>` : ''}
     ${checkSection}

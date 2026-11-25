@@ -23,13 +23,28 @@ test('state round-trips through the URL (sport is always present)', () => {
     date: '2026-12-01',
     origin: { lat: 49.2, lng: 16.6, label: 'Selected location', source: 'url' },
     maxDistanceKm: 5,
+    sort: 'price',
+    cards: 2,
   };
   const search = stateToSearch(state);
   assert.equal(
     search,
-    'view=month&date=2026-12-01&sport=badminton&lat=49.2&lng=16.6&maxDistanceKm=5',
+    'view=month&date=2026-12-01&sport=badminton&lat=49.2&lng=16.6&maxDistanceKm=5&sort=price&cards=2',
   );
   assert.deepEqual(stateFromSearch(`?${search}`, NOW, true), state);
+});
+
+test('sort and cards are omitted when default and fall back when invalid', () => {
+  const base = getDefaultState(NOW, true);
+  assert.equal(stateToSearch({ ...base, sort: 'distance', cards: 0 }), stateToSearch(base));
+  assert.match(stateToSearch({ ...base, sort: 'price' }), /&sort=price$/);
+  assert.match(stateToSearch({ ...base, cards: 4 }), /&cards=4$/);
+  const parsed = stateFromSearch('?sort=cheap&cards=9', NOW, true);
+  assert.equal(parsed.sort, 'distance');
+  assert.equal(parsed.cards, 0);
+  assert.equal(stateFromSearch('?cards=1.5', NOW, true).cards, 0);
+  assert.equal(stateFromSearch('?cards=-1', NOW, true).cards, 0);
+  assert.equal(stateFromSearch('?cards=3&sort=price', NOW, true).cards, 3);
 });
 
 test('the default state serialises to view, date and sport only', () => {
