@@ -8,6 +8,7 @@ import {
   formatDistance,
   formatLongDate,
   formatShortDate,
+  formatShortWeekday,
   formatSlotRange,
   formatVenues,
   hourLabel,
@@ -21,6 +22,11 @@ import {
 test('formatDistance uses one decimal', () => {
   assert.equal(formatDistance(1.234), '1.2 km');
   assert.equal(formatDistance(5), '5.0 km');
+});
+
+test('formatShortWeekday', () => {
+  assert.equal(formatShortWeekday('2026-11-25'), 'Wed');
+  assert.equal(formatShortWeekday('nope'), 'nope');
 });
 
 test('date labels', () => {

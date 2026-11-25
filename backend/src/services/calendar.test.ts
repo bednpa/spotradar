@@ -134,6 +134,7 @@ describe('getCalendar', () => {
   it('maps a rejecting availability service to unavailable', async () => {
     const availability: AvailabilityService = {
       getAvailability: () => Promise.reject(new Error('boom')),
+      supports: () => true,
     };
     const response = await getCalendar(
       { sport: 'badminton', from: TODAY, to: TOMORROW },

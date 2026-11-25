@@ -7,6 +7,7 @@ import {
   GEOCODE_QUERY_MAX,
   GEOCODE_QUERY_MIN,
   MAX_DISTANCE_KM,
+  VENUE_QUERY_MAX,
   isSportId,
 } from './catalog.ts';
 import { daysBetween, isValidDate, isValidTime } from './dates.ts';
@@ -18,6 +19,8 @@ import type {
   SearchQuery,
   SearchQueryParams,
   ValidationIssue,
+  VenueQuery,
+  VenueQueryParams,
 } from './types.ts';
 
 export type ValidationResult<T> = { ok: true; value: T } | { ok: false; issues: ValidationIssue[] };
@@ -174,7 +177,28 @@ export function parseCalendarQuery(params: CalendarQueryParams): ValidationResul
   return { ok: true, value: { ...value, ...location } };
 }
 
-/** Validates the raw query string of GET /api/geocode. `q` is trimmed. */
+/**
+ * Validates the raw query string of GET /api/venues. Both fields are optional;
+ * empty strings are treated as "not provided". `q` is trimmed.
+ */
+export function parseVenueQuery(params: VenueQueryParams): ValidationResult<VenueQuery> {
+  const issues: ValidationIssue[] = [];
+  const value: VenueQuery = {};
+  const sport = params.sport?.trim();
+  if (!isBlank(sport)) {
+    if (isSportId(sport)) value.sport = sport;
+    else issues.push({ field: 'sport', message: 'unknown sport' });
+  }
+  const q = params.q?.trim();
+  if (!isBlank(q)) {
+    if (q.length > VENUE_QUERY_MAX)
+      issues.push({ field: 'q', message: `q must be at most ${VENUE_QUERY_MAX} characters` });
+    else value.q = q;
+  }
+  return issues.length > 0 ? { ok: false, issues } : { ok: true, value };
+}
+
+/** Validates the raw query string of GET /api/geocode and /api/geocode/suggest. `q` is trimmed. */
 export function parseGeocodeQuery(params: GeocodeQueryParams): ValidationResult<GeocodeQuery> {
   const q = params.q?.trim() ?? '';
   if (q.length < GEOCODE_QUERY_MIN || q.length > GEOCODE_QUERY_MAX) {

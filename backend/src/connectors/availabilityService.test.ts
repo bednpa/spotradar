@@ -3,7 +3,11 @@ import { describe, it } from 'node:test';
 import { VENUE_RECORDS } from '../data/venues.ts';
 import type { VenueRecord } from '../repositories/venueRepository.ts';
 import { fakeClock, fakeConnector, silentLogger, slot } from '../testHelpers.ts';
-import { AVAILABILITY_CACHE_TTL_MS, createAvailabilityService } from './availabilityService.ts';
+import {
+  AVAILABILITY_CACHE_TTL_MS,
+  createAvailabilityService,
+  createDefaultConnectors,
+} from './availabilityService.ts';
 
 function venue(id: string): VenueRecord {
   const found = VENUE_RECORDS.find((v) => v.id === id);
@@ -39,13 +43,38 @@ describe('availability service', () => {
       now: fakeClock().now,
       logger: silentLogger,
     });
-    for (const id of ['badminton-jehnice', 'hala-sprint', 'sportcentrum-ivanovice']) {
+    // Only the Bizzy venues have no connector in the default set (see createDefaultConnectors).
+    for (const id of ['badminton-jehnice', 'badminton-lisen', 'x-arena-slatina']) {
       assert.deepEqual(await service.getAvailability(venue(id), DATE), {
         status: 'unknown',
         freeSlots: [],
       });
     }
     assert.equal(connector.calls.length, 0);
+  });
+
+  it('registers connectors for ClubSpire, MemberZone and MemberPro but not yet for Bizzy', () => {
+    const service = createAvailabilityService({
+      connectors: createDefaultConnectors({ fetch: () => Promise.reject(new Error('no network')) }),
+      now: fakeClock().now,
+      logger: silentLogger,
+    });
+    for (const id of ['kuklenska', 'centrum-viktoria', 'hala-sprint', 'sportcentrum-ivanovice']) {
+      assert.equal(service.supports(venue(id)), true, id);
+    }
+    for (const id of ['badminton-jehnice', 'badminton-lisen', 'x-arena-slatina']) {
+      assert.equal(service.supports(venue(id)), false, id);
+    }
+  });
+
+  it('supports() reports whether a connector exists for the booking system', () => {
+    const service = createAvailabilityService({
+      connectors: [fakeConnector('clubspire', () => Promise.resolve([]))],
+      now: fakeClock().now,
+      logger: silentLogger,
+    });
+    assert.equal(service.supports(KUKLENSKA), true);
+    assert.equal(service.supports(venue('badminton-jehnice')), false);
   });
 
   it('returns "unavailable" (and logs a warning) when the connector throws', async () => {

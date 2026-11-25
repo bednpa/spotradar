@@ -4,11 +4,14 @@ import {
   ApiRequestError,
   calendarQueryToParams,
   fetchCalendar,
+  fetchVenues,
   geocodeAddress,
+  suggestAddresses,
   toValidationIssues,
+  venueQueryToParams,
 } from './api.ts';
 import type { FetchFn } from './api.ts';
-import { QUERY, jsonResponse, makeCalendar } from './test-fixtures.test.ts';
+import { QUERY, jsonResponse, makeCalendar, makeVenue } from './test-fixtures.test.ts';
 
 function fetchReturning(response: Response, calls: string[] = []): FetchFn {
   return (input) => {
@@ -109,6 +112,92 @@ test('network failure and malformed bodies become client errors', async () => {
   );
   await assert.rejects(
     geocodeAddress('x', fetchReturning(jsonResponse(200, { lat: 'a' }))),
+    (e: unknown) => e instanceof ApiRequestError && e.code === 'INVALID_RESPONSE',
+  );
+});
+
+test('fetchVenues calls /api/venues with the filters and returns the body', async () => {
+  const calls: string[] = [];
+  const body = {
+    query: { q: 'lisen' },
+    venues: [{ venue: makeVenue('lisen', 'Badminton Líšeň'), liveAvailability: false }],
+  };
+  const result = await fetchVenues(
+    { q: ' lisen ', sport: 'badminton' },
+    fetchReturning(jsonResponse(200, body), calls),
+  );
+  assert.deepEqual(result, body);
+  assert.equal(calls[0], '/api/venues?sport=badminton&q=lisen');
+
+  await fetchVenues({}, fetchReturning(jsonResponse(200, { query: {}, venues: [] }), calls));
+  assert.equal(calls[1], '/api/venues');
+});
+
+test('venueQueryToParams only includes set filters', () => {
+  assert.equal(venueQueryToParams({}).toString(), '');
+  assert.equal(venueQueryToParams({ q: '   ' }).toString(), '');
+  assert.equal(venueQueryToParams({ q: 'a b' }).toString(), 'q=a+b');
+});
+
+test('fetchVenues maps a 400 VALIDATION_ERROR and rejects malformed bodies', async () => {
+  const invalid = jsonResponse(400, {
+    error: 'Invalid query',
+    code: 'VALIDATION_ERROR',
+    details: [{ field: 'q', message: 'too long' }],
+  });
+  await assert.rejects(fetchVenues({ q: 'x' }, fetchReturning(invalid)), (e: unknown) => {
+    assert.ok(e instanceof ApiRequestError);
+    assert.equal(e.status, 400);
+    assert.equal(e.code, 'VALIDATION_ERROR');
+    assert.deepEqual(e.details, [{ field: 'q', message: 'too long' }]);
+    return true;
+  });
+  const server = jsonResponse(500, { error: 'Internal error', code: 'INTERNAL_ERROR' });
+  await assert.rejects(
+    fetchVenues({}, fetchReturning(server)),
+    (e: unknown) => e instanceof ApiRequestError && e.code === 'INTERNAL_ERROR',
+  );
+  await assert.rejects(
+    fetchVenues({}, fetchReturning(jsonResponse(200, { venues: [{ venue: 1 }] }))),
+    (e: unknown) => e instanceof ApiRequestError && e.code === 'INVALID_RESPONSE',
+  );
+  const offline: FetchFn = () => Promise.reject(new TypeError('offline'));
+  await assert.rejects(
+    fetchVenues({}, offline),
+    (e: unknown) => e instanceof ApiRequestError && e.code === 'NETWORK_ERROR',
+  );
+});
+
+test('suggestAddresses returns the suggestions (also an empty list)', async () => {
+  const calls: string[] = [];
+  const suggestions = [{ lat: 49.19, lng: 16.63, label: 'Kuklenská, Brno' }];
+  const result = await suggestAddresses(
+    'kukl',
+    fetchReturning(jsonResponse(200, { suggestions }), calls),
+  );
+  assert.deepEqual(result, suggestions);
+  assert.equal(calls[0], '/api/geocode/suggest?q=kukl');
+  assert.deepEqual(
+    await suggestAddresses('nowhere', fetchReturning(jsonResponse(200, { suggestions: [] }))),
+    [],
+  );
+});
+
+test('suggestAddresses maps 400 and 502 and rejects malformed bodies', async () => {
+  const bad = jsonResponse(400, { error: 'bad', code: 'VALIDATION_ERROR' });
+  await assert.rejects(
+    suggestAddresses('a', fetchReturning(bad)),
+    (e: unknown) => e instanceof ApiRequestError && e.code === 'VALIDATION_ERROR',
+  );
+  const down = jsonResponse(502, { error: 'down', code: 'GEOCODER_UNAVAILABLE' });
+  await assert.rejects(suggestAddresses('fail', fetchReturning(down)), (e: unknown) => {
+    assert.ok(e instanceof ApiRequestError);
+    assert.equal(e.status, 502);
+    assert.equal(e.code, 'GEOCODER_UNAVAILABLE');
+    return true;
+  });
+  await assert.rejects(
+    suggestAddresses('ab', fetchReturning(jsonResponse(200, { suggestions: [{ lat: 'x' }] }))),
     (e: unknown) => e instanceof ApiRequestError && e.code === 'INVALID_RESPONSE',
   );
 });

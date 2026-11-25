@@ -1,7 +1,10 @@
-/** Pure render-to-string functions. All dynamic text is escaped. */
+/** Pure render-to-string functions for the calendar page. All dynamic text is escaped. */
 import { CALENDAR_VIEWS, DISTANCE_OPTIONS_KM, SPORTS, getSearchWindow } from '@spotradar/shared';
 import type { CalendarResponse, CalendarView, SportId } from '@spotradar/shared';
+import { LISTBOX_ID } from './address-suggest.ts';
 import {
+  DEFAULT_FROM_HOUR,
+  DEFAULT_TO_HOUR,
   anchorFor,
   isInRange,
   monthGrid,
@@ -30,23 +33,14 @@ import {
   sportNameLower,
   windowDescription,
 } from './format.ts';
+import { escapeHtml, safeHref } from './html.ts';
 import type { AppState } from './query.ts';
+import { ROUTE_PATHS } from './router.ts';
+import type { Route } from './router.ts';
 import { isDistanceFilterEnabled, locationStatusText } from './state.ts';
 import type { CalendarState, LocationState } from './state.ts';
 
-export function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-/** Only http(s) links are rendered as hrefs. */
-export function safeHref(url: string): string | null {
-  return /^https?:\/\//i.test(url) ? url : null;
-}
+export { escapeHtml, safeHref };
 
 const VIEW_LABELS: Record<CalendarView, string> = {
   day: 'Day',
@@ -59,10 +53,23 @@ const WEEKDAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
 
 // ---------- header and filters ----------
 
-export function renderSportNav(selected: SportId): string {
+const NAV_ITEMS: { route: Route; label: string }[] = [
+  { route: 'calendar', label: 'Reserve' },
+  { route: 'venues', label: 'Venues' },
+];
+
+/** Primary navigation: Reserve (calendar) and Venues (directory). */
+export function renderMainNav(active: Route): string {
+  return NAV_ITEMS.map(
+    ({ route, label }) =>
+      `<a class="nav-pill" href="${ROUTE_PATHS[route]}" data-route="${route}"${route === active ? ' aria-current="page"' : ''}>${label}</a>`,
+  ).join('');
+}
+
+export function renderSportChips(selected: SportId): string {
   return SPORTS.map(
     (sport) =>
-      `<button type="button" class="sport-pill" data-sport="${sport.id}"${sport.id === selected ? ' aria-current="page"' : ''}>${escapeHtml(sport.name)}</button>`,
+      `<button type="button" class="chip" data-sport="${sport.id}" aria-pressed="${sport.id === selected}">${escapeHtml(sport.name)}</button>`,
   ).join('');
 }
 
@@ -76,47 +83,34 @@ export function renderDistanceChips(selectedKm: number | null, enabled: boolean)
   return any + options;
 }
 
-function hourOptions(values: number[], selected: number): string {
-  return values
-    .map((h) => `<option value="${h}"${h === selected ? ' selected' : ''}>${hourLabel(h)}</option>`)
-    .join('');
-}
+const ARROW_ICON =
+  '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M3.5 11.2 20.2 3.8c.7-.3 1.4.4 1.1 1.1L13.9 21.6c-.3.7-1.3.6-1.5-.1l-1.6-6.7a1 1 0 0 0-.7-.7l-6.7-1.6c-.7-.2-.8-1.2-.1-1.5z" fill="currentColor"/></svg>';
 
 export function renderFilters(state: AppState, location: LocationState): string {
-  const range = (from: number, to: number): number[] =>
-    Array.from({ length: to - from + 1 }, (_, i) => from + i);
   const status = locationStatusText(location);
   const busy = location.status === 'locating' || location.status === 'resolving';
+  const hasOrigin = location.status === 'set';
   return `
 <div class="filter-group">
-  <label for="goto-date">Go to date</label>
-  <input id="goto-date" type="date" value="${escapeHtml(state.date)}" />
-</div>
-<div class="filter-group">
-  <label for="from-hour">From</label>
-  <select id="from-hour">${hourOptions(range(0, 23), state.fromHour)}</select>
-</div>
-<div class="filter-group">
-  <label for="to-hour">To</label>
-  <select id="to-hour">${hourOptions(range(1, 24), state.toHour)}</select>
+  <span id="sport-label" class="label">Sport</span>
+  <div id="sport-chips" class="chips" role="group" aria-labelledby="sport-label">${renderSportChips(state.sport)}</div>
 </div>
 <div class="filter-group filter-location">
   <label for="address">Address</label>
-  <div class="input-row">
-    <input id="address" type="text" autocomplete="street-address" placeholder="e.g. Brno centrum" />
-    <button type="button" id="find-address" class="btn btn-ghost"${busy ? ' disabled' : ''}>Find address</button>
-    <button type="button" id="use-location" class="btn btn-ghost"${busy ? ' disabled' : ''}>Use my location</button>
+  <div class="combo">
+    <div class="field">
+      <input id="address" type="text" role="combobox" aria-expanded="false" aria-controls="${LISTBOX_ID}" aria-autocomplete="list" autocomplete="off" placeholder="Search an address in Brno" />
+      <button type="button" id="clear-location" class="field-btn" aria-label="Clear location"${hasOrigin ? '' : ' hidden'}><span aria-hidden="true">×</span></button>
+      <button type="button" id="use-location" class="field-btn field-btn-accent" aria-label="Use my location"${busy ? ' disabled' : ''}>${ARROW_ICON}</button>
+    </div>
+    <ul id="${LISTBOX_ID}" class="listbox" role="listbox" aria-label="Address suggestions" hidden></ul>
   </div>
+  <p id="suggest-status" class="hint" role="status"></p>
   <p id="location-status" class="hint${location.status === 'error' ? ' is-error' : ''}" role="status">${escapeHtml(status)}</p>
 </div>
 <div class="filter-group">
   <span id="distance-label" class="label">Max distance</span>
   <div id="distance-chips" class="chips" role="group" aria-labelledby="distance-label">${renderDistanceChips(state.maxDistanceKm, isDistanceFilterEnabled(location))}</div>
-</div>
-<div class="filter-group filter-actions">
-  <label class="check"><input id="only-free" type="checkbox"${state.onlyFree ? ' checked' : ''} /> Only show free</label>
-  <button type="button" id="next-free" class="btn btn-primary">Next free court</button>
-  <p id="next-free-status" class="hint" role="status"></p>
 </div>`;
 }
 
@@ -179,33 +173,35 @@ export function renderWindowHint(): string {
 function cellContent(cell: HourCell, size: 'week' | 'day'): string {
   const { summary } = cell;
   if (size === 'week') {
-    switch (cell.kind) {
-      case 'free':
-        return `<span class="cell-n">${summary.freeVenues}</span>`;
-      case 'check':
-        return '<span class="cell-tag">check</span>';
-      default:
-        return '';
-    }
+    return cell.kind === 'free'
+      ? `<span class="cell-n" aria-hidden="true">${summary.freeVenues}</span>`
+      : '';
   }
+  // The visible text is decorative: the button's aria-label carries the full description.
   switch (cell.kind) {
     case 'free':
-      return `<span class="cell-main">${formatVenues(summary.freeVenues)} · ${summary.freeCourts} ${summary.freeCourts === 1 ? 'court' : 'courts'} free</span>`;
-    case 'check':
-      return `<span class="cell-main">${formatVenues(summary.checkVenues)} to check on website</span>`;
+      return `<span class="cell-main" aria-hidden="true">${formatVenues(summary.freeVenues)} · ${summary.freeCourts} ${summary.freeCourts === 1 ? 'court' : 'courts'} free</span>`;
     case 'none':
-      return '<span class="cell-main">Nothing free</span>';
+      return '<span class="cell-main" aria-hidden="true">Nothing free</span>';
     case 'past':
-      return '<span class="cell-main">Past</span>';
+      return '<span class="cell-main" aria-hidden="true">Past</span>';
     case 'outside':
-      return '<span class="cell-main">Not available yet</span>';
+      return '<span class="cell-main" aria-hidden="true">Not available yet</span>';
   }
+}
+
+/**
+ * Accessible name of a button whose visible text is shortened: the visible text is
+ * aria-hidden and this visually hidden text is the name (so name and content never disagree).
+ */
+function hiddenLabel(text: string): string {
+  return `<span class="visually-hidden">${escapeHtml(text)}</span>`;
 }
 
 function renderCell(cell: HourCell, size: 'week' | 'day', col: number, row: number): string {
   const key = `cell-${cell.date}-${cell.hour}`;
   const disabled = isCellSelectable(cell) ? '' : ' disabled';
-  return `<div role="gridcell" class="gc"><button type="button" class="cell cell-${cell.kind} cell-${size}" data-level="${cell.level}" data-action="open-slot" data-date="${cell.date}" data-hour="${cell.hour}" data-key="${key}" data-col="${col}" data-row="${row}" aria-label="${escapeHtml(cellAriaLabel(cell))}"${disabled}>${cellContent(cell, size)}</button></div>`;
+  return `<div role="gridcell" class="gc"><button type="button" class="cell cell-${cell.kind} cell-${size}" data-level="${cell.level}" data-action="open-slot" data-date="${cell.date}" data-hour="${cell.hour}" data-key="${key}" data-col="${col}" data-row="${row}"${disabled}>${cellContent(cell, size)}${hiddenLabel(cellAriaLabel(cell))}</button></div>`;
 }
 
 export interface GridContext {
@@ -216,8 +212,11 @@ export interface GridContext {
 }
 
 function cellOptions(ctx: GridContext): CellOptions {
-  return { now: ctx.now, onlyFree: ctx.state.onlyFree };
+  return { now: ctx.now };
 }
+
+/** The calendar always shows the full fixed hour range (06:00–23:00). */
+const HOURS = visibleHours(DEFAULT_FROM_HOUR, DEFAULT_TO_HOUR);
 
 export function renderWeek(ctx: GridContext): string {
   const dates = weekDates(ctx.state.date);
@@ -229,32 +228,28 @@ export function renderWeek(ctx: GridContext): string {
       return `<div role="columnheader" class="ch${date === today ? ' is-today' : ''}"${current}><span class="ch-day">${WEEKDAY_SHORT[i]}</span><span class="ch-num">${day}</span></div>`;
     })
     .join('');
-  const rows = visibleHours(ctx.state.fromHour, ctx.state.toHour)
-    .map((hour, r) => {
-      const cells = dates
-        .map((date, c) =>
-          renderCell(
-            computeCell(ctx.days, ctx.data.venues, date, hour, cellOptions(ctx)),
-            'week',
-            c,
-            r,
-          ),
-        )
-        .join('');
-      return `<div role="row" class="gr gr-week"><div role="rowheader" class="rh">${hourLabel(hour)}</div>${cells}</div>`;
-    })
-    .join('');
+  const rows = HOURS.map((hour, r) => {
+    const cells = dates
+      .map((date, c) =>
+        renderCell(
+          computeCell(ctx.days, ctx.data.venues, date, hour, cellOptions(ctx)),
+          'week',
+          c,
+          r,
+        ),
+      )
+      .join('');
+    return `<div role="row" class="gr gr-week"><div role="rowheader" class="rh">${hourLabel(hour)}</div>${cells}</div>`;
+  }).join('');
   return `<div class="grid-scroll"><div role="grid" class="grid grid-week" aria-label="Week calendar, hours by day" data-grid><div role="row" class="gr gr-week gr-head"><div role="columnheader" class="ch ch-corner"><span class="visually-hidden">Hour</span></div>${header}</div>${rows}</div></div>`;
 }
 
 export function renderDay(ctx: GridContext): string {
   const { date } = ctx.state;
-  const rows = visibleHours(ctx.state.fromHour, ctx.state.toHour)
-    .map(
-      (hour, r) =>
-        `<div role="row" class="gr gr-day"><div role="rowheader" class="rh">${hourLabel(hour)}</div>${renderCell(computeCell(ctx.days, ctx.data.venues, date, hour, cellOptions(ctx)), 'day', 0, r)}</div>`,
-    )
-    .join('');
+  const rows = HOURS.map(
+    (hour, r) =>
+      `<div role="row" class="gr gr-day"><div role="rowheader" class="rh">${hourLabel(hour)}</div>${renderCell(computeCell(ctx.days, ctx.data.venues, date, hour, cellOptions(ctx)), 'day', 0, r)}</div>`,
+  ).join('');
   return `<div class="grid-scroll"><div role="grid" class="grid grid-day" aria-label="${escapeHtml(formatLongDate(date))}, hours" data-grid>${rows}</div></div>`;
 }
 
@@ -275,26 +270,16 @@ export function renderMonth(ctx: GridContext): string {
           const num = parseYmd(date).day;
           if (!inWindow) {
             const reason = date < window.from ? 'in the past' : 'not available yet';
-            return `<div role="gridcell" class="gc"><button type="button" class="mday is-disabled${other}" disabled aria-label="${escapeHtml(formatLongDate(date))}: ${reason}"><span class="mday-num">${num}</span></button></div>`;
+            return `<div role="gridcell" class="gc"><button type="button" class="mday is-disabled${other}" disabled><span class="mday-num" aria-hidden="true">${num}</span>${hiddenLabel(`${formatLongDate(date)}: ${reason}`)}</button></div>`;
           }
-          const s = summarizeDay(
-            ctx.days,
-            ctx.data.venues,
-            date,
-            ctx.state.fromHour,
-            ctx.state.toHour,
-            options,
-          );
+          const s = summarizeDay(ctx.days, ctx.data.venues, date, options);
           let label = `${formatLongDate(date)}: nothing free`;
-          let body = '<span class="mday-line muted">Nothing free</span>';
+          let body = '<span class="mday-line muted" aria-hidden="true">Nothing free</span>';
           if (s.freeHours > 0) {
             label = `${formatLongDate(date)}: ${s.freeHours} free ${s.freeHours === 1 ? 'hour' : 'hours'}, best at ${hourLabel(s.bestHour ?? 0)}`;
-            body = `<span class="mday-line mday-free">${s.freeHours} free ${s.freeHours === 1 ? 'hour' : 'hours'}</span><span class="mday-line muted">best ${hourLabel(s.bestHour ?? 0)}</span>`;
-          } else if (s.checkHours > 0) {
-            label = `${formatLongDate(date)}: no live data, check on website`;
-            body = '<span class="mday-line mday-check">check</span>';
+            body = `<span class="mday-line mday-free" aria-hidden="true">${s.freeHours} free ${s.freeHours === 1 ? 'hour' : 'hours'}</span><span class="mday-line muted" aria-hidden="true">best ${hourLabel(s.bestHour ?? 0)}</span>`;
           }
-          return `<div role="gridcell" class="gc"><button type="button" class="mday${other}${today}" data-action="open-day" data-date="${date}" data-key="day-${date}" aria-label="${escapeHtml(label)}"><span class="mday-num">${num}</span>${body}</button></div>`;
+          return `<div role="gridcell" class="gc"><button type="button" class="mday${other}${today}" data-action="open-day" data-date="${date}" data-key="day-${date}"><span class="mday-num" aria-hidden="true">${num}</span>${body}${hiddenLabel(label)}</button></div>`;
         })
         .join('');
       return `<div role="row" class="gr gr-month">${cells}</div>`;
@@ -359,9 +344,9 @@ export function renderCalendar(state: AppState, calendar: CalendarState, now: Da
 // ---------- legend ----------
 
 const COVERAGE_BADGE = {
-  live: ['badge-live', 'Live'],
-  unavailable: ['badge-check', 'Check on website (temporarily unreadable)'],
-  unknown: ['badge-check', 'Check on website'],
+  live: ['badge-live', 'Live data'],
+  unavailable: ['badge-neutral', 'Live data temporarily unreadable'],
+  unknown: ['badge-neutral', 'No live data yet'],
 } as const;
 
 export function renderLegend(data: CalendarResponse): string {
@@ -376,11 +361,10 @@ export function renderLegend(data: CalendarResponse): string {
     .join('');
   return `
 <h2 id="legend-title">Venues and data quality</h2>
-<p class="muted">Live venues are read from their own booking pages. For the others there is no live connector yet – open their website to check.</p>
+<p class="muted">The calendar shows free courts at venues with live data, read from their own booking pages. For the others there is no live data yet – open a slot to see them and check their websites.</p>
 <ul class="key" aria-label="Calendar colours">
   <li><span class="swatch swatch-free"></span>Free court (number = venues)</li>
-  <li><span class="swatch swatch-check"></span>Check on website</li>
-  <li><span class="swatch swatch-none"></span>Nothing free / closed</li>
+  <li><span class="swatch swatch-none"></span>Nothing free</li>
 </ul>
 <ul class="venue-list">${items}</ul>`;
 }

@@ -60,7 +60,14 @@ export const UNAVAILABLE: VenueAvailability = { status: 'unavailable', freeSlots
 /** live (kuklenska, with distance 1.5), unavailable, unknown, a full live venue and a closed one. */
 export function makeVenues(): CalendarVenue[] {
   return [
-    { venue: makeVenue('kuklenska', 'Sportcentrum Kuklenská'), distanceKm: 1.5 },
+    {
+      venue: makeVenue('kuklenska', 'Sportcentrum Kuklenská', {
+        website: 'https://www.example.com/kuklenska',
+        priceInfo: '280–380 Kč / hour',
+        multisport: { accepted: true, terms: '50 % off the court price' },
+      }),
+      distanceKm: 1.5,
+    },
     { venue: makeVenue('viktoria', 'Centrum Viktoria'), distanceKm: 2.5 },
     { venue: makeVenue('unknown', 'Unknown Hall', { availabilitySource: 'none' }) },
     { venue: makeVenue('full', 'Full Hall') },

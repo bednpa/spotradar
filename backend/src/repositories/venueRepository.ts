@@ -42,5 +42,9 @@ export function toPublicVenue(record: VenueRecord): Venue {
   };
   if (record.courts !== undefined) venue.courts = record.courts;
   if (record.phone !== undefined) venue.phone = record.phone;
+  if (record.website !== undefined) venue.website = record.website;
+  if (record.priceInfo !== undefined) venue.priceInfo = record.priceInfo;
+  if (record.multisport !== undefined) venue.multisport = { ...record.multisport };
+  if (record.otherActivities !== undefined) venue.otherActivities = [...record.otherActivities];
   return venue;
 }

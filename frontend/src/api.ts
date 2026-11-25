@@ -5,7 +5,10 @@ import type {
   CalendarResponse,
   ErrorCode,
   GeocodeResponse,
+  GeocodeSuggestResponse,
   ValidationIssue,
+  VenueQuery,
+  VenuesResponse,
 } from '@spotradar/shared';
 
 export type FetchFn = (input: string, init?: RequestInit) => Promise<Response>;
@@ -139,6 +142,53 @@ export function fetchCalendar(
     isCalendarResponse,
     fetchFn,
   );
+}
+
+function isVenuesResponse(body: unknown): body is VenuesResponse {
+  return (
+    isRecord(body) &&
+    Array.isArray(body.venues) &&
+    body.venues.every(
+      (item) =>
+        isRecord(item) && isRecord(item.venue) && typeof item.liveAvailability === 'boolean',
+    )
+  );
+}
+
+function isGeocodeSuggestResponse(body: unknown): body is GeocodeSuggestResponse {
+  return (
+    isRecord(body) && Array.isArray(body.suggestions) && body.suggestions.every(isGeocodeResponse)
+  );
+}
+
+/** VenueQuery → URLSearchParams (only the filters that are set). */
+export function venueQueryToParams(query: VenueQuery): URLSearchParams {
+  const params = new URLSearchParams();
+  if (query.sport !== undefined) params.set('sport', query.sport);
+  if (query.q !== undefined && query.q.trim() !== '') params.set('q', query.q.trim());
+  return params;
+}
+
+/** GET /api/venues */
+export function fetchVenues(
+  query: VenueQuery,
+  fetchFn: FetchFn = defaultFetch,
+): Promise<VenuesResponse> {
+  const search = venueQueryToParams(query).toString();
+  return requestJson(`/api/venues${search ? `?${search}` : ''}`, isVenuesResponse, fetchFn);
+}
+
+/** GET /api/geocode/suggest – live address suggestions while typing. */
+export async function suggestAddresses(
+  q: string,
+  fetchFn: FetchFn = defaultFetch,
+): Promise<GeocodeResponse[]> {
+  const body = await requestJson(
+    `/api/geocode/suggest?${new URLSearchParams({ q }).toString()}`,
+    isGeocodeSuggestResponse,
+    fetchFn,
+  );
+  return body.suggestions;
 }
 
 /** GET /api/geocode */

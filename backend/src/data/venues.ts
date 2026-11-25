@@ -25,6 +25,12 @@ function weekdaysAndWeekend(approximate: boolean, weekdays: Range, weekend: Rang
   return { approximate, days };
 }
 
+/** Different closing time on Friday (Mon–Thu and Sat–Sun share their own ranges). */
+function withFriday(approximate: boolean, monThu: Range, fri: Range, weekend: Range): OpeningHours {
+  const base = weekdaysAndWeekend(approximate, monThu, weekend);
+  return { approximate, days: { ...base.days, fri: range(fri) } };
+}
+
 function clubspireBookingUrl(baseUrl: string, tabIdx: number): string {
   return `${baseUrl}timeline/day?tabIdx=${tabIdx}`;
 }
@@ -45,10 +51,13 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     location: { lat: 49.19522, lng: 16.63242 },
     sports: ['badminton'],
     courts: 4,
-    // Hours unknown: the live timeline shows columns 7:00-21:00, so 07:00-22:00 is an estimate.
-    openingHours: daily(true, ['07:00', '22:00']),
+    // Details from https://www.sportkuklenska.cz/ (researched 2026-11-25).
+    openingHours: weekdaysAndWeekend(false, ['07:00', '22:00'], ['08:00', '21:00']),
     bookingUrl: clubspireBookingUrl(KUKLENSKA_BASE_URL, 0),
     phone: '775 738 188',
+    website: 'https://www.sportkuklenska.cz/',
+    priceInfo: '280–380 Kč / hour (Mon–Fri 7–15: 280 Kč, 15–22: 380 Kč)',
+    multisport: { accepted: true, terms: '50 % off the court price per hour' },
     availabilitySource: 'clubspire',
     source: { type: 'clubspire', baseUrl: KUKLENSKA_BASE_URL, tabIdx: 0 },
   },
@@ -63,6 +72,11 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     openingHours: weekdaysAndWeekend(false, ['07:00', '22:00'], ['08:00', '22:00']),
     bookingUrl: clubspireBookingUrl(VIKTORIA_BASE_URL, 1),
     phone: '776 282 575',
+    // Details from https://www.centrumviktoria.cz/ (researched 2026-11-25).
+    website: 'https://www.centrumviktoria.cz/',
+    priceInfo: '300–400 Kč / hour (Mon–Fri 7–15: 300 Kč, otherwise 400 Kč)',
+    multisport: { accepted: true, terms: '1 card covers 30 min of play' },
+    otherActivities: ['Padel', 'Squash', 'Beach volleyball', 'Bowling', 'Tennis'],
     availabilitySource: 'clubspire',
     source: { type: 'clubspire', baseUrl: VIKTORIA_BASE_URL, tabIdx: 1 },
   },
@@ -70,7 +84,7 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     id: 'badminton-jehnice',
     name: 'Badminton Jehnice',
     district: 'Brno-Jehnice',
-    address: 'Blanenská 350, Brno',
+    address: 'Blanenská 3a, Brno',
     // Approximate location (village centre), not the exact building.
     location: { lat: 49.26955, lng: 16.59594 },
     sports: ['badminton'],
@@ -78,6 +92,9 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     openingHours: weekdaysAndWeekend(false, ['14:00', '22:00'], ['07:00', '22:00']),
     bookingUrl: 'https://badminton-jehnice.e-rezervace.cz/Branch/pages/Schedule.faces',
     phone: '724 337 542',
+    // Details from http://www.badmintonjehnice.cz/ (researched 2026-11-25); Multisport unknown.
+    website: 'http://www.badmintonjehnice.cz/',
+    priceInfo: '240–290 Kč / hour (Mon–Fri 14–17: 240 Kč, otherwise 290 Kč)',
     availabilitySource: 'bizzy',
     source: {
       type: 'bizzy',
@@ -92,7 +109,11 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     location: { lat: 49.19469, lng: 16.67056 },
     sports: ['badminton'],
     courts: 6,
-    openingHours: daily(true, ['07:00', '22:00']),
+    // Details from https://www.badmintonlisen.cz/ (researched 2026-11-25); hours derived from the price list.
+    openingHours: weekdaysAndWeekend(true, ['07:00', '22:00'], ['08:00', '22:00']),
+    website: 'https://www.badmintonlisen.cz/',
+    priceInfo: '280–400 Kč / hour (Mon–Fri 7–14: 280 Kč, otherwise 400 Kč)',
+    multisport: { accepted: true, terms: 'Covers 50 % of one court per hour' },
     bookingUrl: 'http://badmintonlisen.e-rezervace.cz/Branch/pages/Schedule.faces',
     availabilitySource: 'bizzy',
     source: {
@@ -108,7 +129,15 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     location: { lat: 49.1734, lng: 16.68352 },
     sports: ['badminton'],
     courts: 6,
-    openingHours: daily(true, ['07:00', '22:00']),
+    // Details from https://www.xarena.cz/ (researched 2026-11-25).
+    openingHours: weekdaysAndWeekend(false, ['07:00', '22:00'], ['08:00', '22:00']),
+    website: 'https://www.xarena.cz/',
+    priceInfo: '280–400 Kč / hour (Mon–Fri 7–14: 280 Kč, otherwise 400 Kč)',
+    multisport: {
+      accepted: true,
+      terms: 'Covers 50 % of one court per hour; max 4 players per court',
+    },
+    otherActivities: ['Table tennis'],
     bookingUrl: 'http://xarena.e-rezervace.cz/Branch/pages/Schedule.faces',
     availabilitySource: 'bizzy',
     source: {
@@ -125,6 +154,10 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     sports: ['badminton'],
     courts: 6,
     openingHours: daily(false, ['07:00', '22:00']),
+    // Details from https://www.sprinttenis.cz/ (researched 2026-11-25); Multisport unknown.
+    website: 'https://www.sprinttenis.cz/',
+    priceInfo: '280–380 Kč / hour (Mon–Fri 7–15: 280 Kč, otherwise 380 Kč)',
+    otherActivities: ['Tennis'],
     bookingUrl:
       'https://memberzone.cz/sprint_tenis/Sportoviste.aspx?ID_Sportoviste=3&NAZEV=Badminton%20hala',
     availabilitySource: 'memberzone',
@@ -140,8 +173,17 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     address: 'Černohorská 245/22, Brno',
     location: { lat: 49.25891, lng: 16.57203 },
     sports: ['badminton'],
-    // Number of courts unknown.
-    openingHours: daily(true, ['07:00', '22:00']),
+    courts: 3, // Badminton 1-3 in the booking grid
+    // Details from http://www.sportcentrum-ivanovice.cz/ (researched 2026-11-25).
+    openingHours: withFriday(false, ['07:00', '22:00'], ['07:00', '21:00'], ['08:00', '21:00']),
+    website: 'http://www.sportcentrum-ivanovice.cz/',
+    priceInfo: '330–440 Kč / hour (Mon–Fri 7–15: 330 Kč, otherwise 440 Kč)',
+    multisport: {
+      accepted: true,
+      terms:
+        '1 card = 50 % of the court, 2 cards = 100 %; 60-min bookings only, tell staff in advance',
+    },
+    otherActivities: ['Squash', 'Table tennis', 'Fitness classes', 'Indoor cycling'],
     bookingUrl: 'https://memberzone.cz/ivanovice/',
     phone: '730 899 399',
     availabilitySource: 'memberpro',

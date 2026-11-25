@@ -46,6 +46,27 @@ describe('venue data', () => {
     }
   });
 
+  it('has website, price info and consistent Multisport / activity details', () => {
+    for (const v of VENUE_RECORDS) {
+      assert.ok(v.website, `${v.id} website`);
+      assert.match(v.website, /^https?:\/\//, v.id);
+      assert.doesNotThrow(() => new URL(v.website ?? ''));
+      assert.ok(v.priceInfo && v.priceInfo.includes('Kč'), `${v.id} priceInfo`);
+      if (v.multisport) {
+        assert.equal(typeof v.multisport.accepted, 'boolean');
+        if (!v.multisport.accepted) assert.equal(v.multisport.terms, undefined, v.id);
+        else assert.ok(v.multisport.terms, `${v.id} terms`);
+      }
+      if (v.otherActivities) {
+        assert.ok(v.otherActivities.length > 0, v.id);
+        assert.ok(
+          v.otherActivities.every((a) => a.trim() !== ''),
+          v.id,
+        );
+      }
+    }
+  });
+
   it('has HH:MM opening hours with open before close for every day', () => {
     for (const v of VENUE_RECORDS) {
       for (const day of WEEKDAYS) {
@@ -68,8 +89,21 @@ describe('venue data', () => {
       open: '14:00',
       close: '22:00',
     });
-    assert.equal(byId.get('kuklenska')?.openingHours.approximate, true);
-    assert.equal(byId.get('sportcentrum-ivanovice')?.courts, undefined);
+    assert.equal(byId.get('kuklenska')?.openingHours.approximate, false);
+    assert.deepEqual(byId.get('kuklenska')?.openingHours.days.sun, {
+      open: '08:00',
+      close: '21:00',
+    });
+    assert.equal(byId.get('badminton-lisen')?.openingHours.approximate, true);
+    assert.equal(byId.get('badminton-jehnice')?.address, 'Blanenská 3a, Brno');
+    const ivanovice = byId.get('sportcentrum-ivanovice')?.openingHours;
+    assert.deepEqual(ivanovice?.days.thu, { open: '07:00', close: '22:00' });
+    assert.deepEqual(ivanovice?.days.fri, { open: '07:00', close: '21:00' });
+    assert.deepEqual(ivanovice?.days.sat, { open: '08:00', close: '21:00' });
+    assert.equal(byId.get('badminton-jehnice')?.multisport, undefined);
+    assert.equal(byId.get('hala-sprint')?.multisport, undefined);
+    assert.deepEqual(byId.get('kuklenska')?.otherActivities, undefined);
+    assert.deepEqual(byId.get('x-arena-slatina')?.otherActivities, ['Table tennis']);
     assert.equal(
       byId.get('kuklenska')?.bookingUrl,
       'https://kuklenska.clubspire.cz/timeline/day?tabIdx=0',
@@ -99,6 +133,10 @@ describe('venue repository', () => {
       assert.equal(venue.availabilitySource, record.source.type);
       assert.equal('courts' in venue, record.courts !== undefined);
       assert.equal('phone' in venue, record.phone !== undefined);
+      assert.equal('website' in venue, record.website !== undefined);
+      assert.equal('priceInfo' in venue, record.priceInfo !== undefined);
+      assert.equal('multisport' in venue, record.multisport !== undefined);
+      assert.equal('otherActivities' in venue, record.otherActivities !== undefined);
     }
   });
 });

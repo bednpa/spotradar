@@ -10,14 +10,19 @@ _(on the free plan the first request after 15 minutes of inactivity takes about 
 
 ## What it does
 
-SpotRadar is a **badminton court finder for Brno** with a **calendar-based UI** ("Court & Shuttle" design, light and dark).
-Pick a **sport** in the top menu (badminton for now) and browse availability in a **Day / Week / Month / Year** calendar
-(today … +14 days). Every hour cell shows how many venues have a free court (or "check" when only venues without live data
-are open). Click an hour to open a panel that lists **every venue's status** (free, check on website, full, closed) with a
-**"Book on venue's website"** link. Filters: jump to a date, narrow the visible hours, set a location (browser geolocation
-or an address) with a max distance, and "Only show free". **"Next free court"** jumps to the earliest free hour, and a legend
-shows which venues have live data. The view and filters are kept in the URL, so links are shareable. Free courts are
-**read from the venues' own public booking pages** (where a connector exists) via `GET /api/calendar`.
+SpotRadar is a **badminton court finder for Brno** with a modern, app-like UI (light and dark) and two pages in the top bar:
+
+- **Reserve** (`/`) – a **Day / Week / Month / Year** availability calendar (today … +14 days) with a swipeable **date
+  strip**, a **sport** filter (badminton for now) and a location filter: type an address and pick one of the **live
+  suggestions**, or tap the arrow icon in the field to use your location, then set a max distance. The calendar shows
+  **only free courts from live data**. Click an hour to open a panel listing the venues with free courts (with price,
+  MultiSport terms, website, Google Maps and a **"Book on venue's website"** link) and when each was checked ("checked
+  5 min ago"). Venues without live data are listed in a collapsed "check on website" section.
+- **Venues** (`/venues`) – a searchable directory of all venues: sports and other activities, courts, opening hours,
+  price, MultiSport acceptance and terms, address, website, booking link, phone and a Google Maps link for ratings and reviews.
+
+The view and filters are kept in the URL, so links are shareable. Free courts are **read from the venues' own public
+booking pages** (where a connector exists) via `GET /api/calendar`.
 **SpotRadar never books anything itself** – booking always happens on the venue's website.
 
 Availability is read live (cached for 15 minutes per venue and date) and may be a few minutes old.
@@ -28,21 +33,26 @@ Venues are a static data file in the backend (`backend/src/data/venues.ts`). Eac
 (`availabilitySource`) and a backend-only connector configuration. Connectors implement a pluggable
 `AvailabilityConnector` interface, so new booking systems can be added without touching the search logic.
 
-| Venue                  | District          | Courts | Booking system | Connector status              |
-| ---------------------- | ----------------- | ------ | -------------- | ----------------------------- |
-| Sportcentrum Kuklenská | Brno-Židenice     | 4      | ClubSpire      | ✅ live                       |
-| Centrum Viktoria       | Brno-Komárov      | 3      | ClubSpire      | ✅ live                       |
-| Badminton Jehnice      | Brno-Jehnice      | 5      | Bizzy          | ⏳ not yet – status `unknown` |
-| Badminton Líšeň        | Brno-Líšeň        | 6      | Bizzy          | ⏳ not yet – status `unknown` |
-| X-Arena Slatina        | Brno-Slatina      | 6      | Bizzy          | ⏳ not yet – status `unknown` |
-| Hala Sprint            | Brno-Královo Pole | 6      | MemberZone     | ⏳ not yet – status `unknown` |
-| Sportcentrum Ivanovice | Brno-Ivanovice    | ?      | MemberPro      | ⏳ not yet – status `unknown` |
+| Venue                  | District          | Courts | Booking system | Connector status                                   |
+| ---------------------- | ----------------- | ------ | -------------- | -------------------------------------------------- |
+| Sportcentrum Kuklenská | Brno-Židenice     | 4      | ClubSpire      | ✅ live                                            |
+| Centrum Viktoria       | Brno-Komárov      | 3      | ClubSpire      | ✅ live                                            |
+| Hala Sprint            | Brno-Královo Pole | 6      | MemberZone     | ✅ live                                            |
+| Sportcentrum Ivanovice | Brno-Ivanovice    | 3      | MemberPro      | ✅ live                                            |
+| Badminton Jehnice      | Brno-Jehnice      | 5      | Bizzy          | ⛔ blocked (server unreachable) – status `unknown` |
+| Badminton Líšeň        | Brno-Líšeň        | 6      | Bizzy          | ⛔ blocked (server unreachable) – status `unknown` |
+| X-Arena Slatina        | Brno-Slatina      | 6      | Bizzy          | ⛔ blocked (server unreachable) – status `unknown` |
 
 Availability status per venue: `live` (read from the booking page), `unavailable` (a connector exists but reading failed –
-the search still succeeds), `unknown` (no connector yet). Opening hours marked `approximate` are estimates. In the calendar,
-venues without live data are shown as **"check on website"** during their opening hours – a free court is never guessed.
-The plan for bringing the remaining 5 venues live (one Bizzy connector covers 3 of them) is in
+the search still succeeds), `unknown` (no connector yet). Opening hours marked `approximate` are estimates. Venues without
+live data are listed under **"check on website"** in the slot panel – a free court is never guessed. Why the Bizzy
+venues are blocked, how the MemberZone/MemberPro connectors work and the next steps are in
 [`docs/live-data-connectors.md`](docs/live-data-connectors.md).
+
+**MemberZone / MemberPro connectors** (Hala Sprint, Ivanovice): ASP.NET WebForms pages read with plain HTTP. A GET, then a
+form postback with the page's hidden fields and session cookie switches the date. MemberZone returns a whole week of free
+60-minute windows per page, which is cached briefly. MemberPro returns one day's grid of 30-minute cells. Both run on
+`memberzone.cz` and share one per-host limiter.
 
 **ClubSpire connector:** fetches the server-rendered day timeline
 `{base}/timeline/day?tabIdx={tabIdx}&criteriaTimestamp={local midnight Europe/Prague in epoch ms}&resetFilter=true`
@@ -59,18 +69,24 @@ the real pages – never the live sites. Refresh a raw page with
 
 ### API (contract in `shared/src`)
 
-| Method | Path            | Success                | Errors                                                                       |
-| ------ | --------------- | ---------------------- | ---------------------------------------------------------------------------- |
-| GET    | `/api/health`   | 200 `{ status: 'ok' }` | –                                                                            |
-| GET    | `/api/search`   | 200 `SearchResponse`   | 400 `VALIDATION_ERROR`, 422 `DATE_OUT_OF_RANGE`                              |
-| GET    | `/api/calendar` | 200 `CalendarResponse` | 400 `VALIDATION_ERROR`, 422 `DATE_OUT_OF_RANGE`                              |
-| GET    | `/api/geocode`  | 200 `GeocodeResponse`  | 400 `VALIDATION_ERROR`, 404 `LOCATION_NOT_FOUND`, 502 `GEOCODER_UNAVAILABLE` |
+| Method | Path                   | Success                      | Errors                                                                       |
+| ------ | ---------------------- | ---------------------------- | ---------------------------------------------------------------------------- |
+| GET    | `/api/health`          | 200 `{ status: 'ok' }`       | –                                                                            |
+| GET    | `/api/search`          | 200 `SearchResponse`         | 400 `VALIDATION_ERROR`, 422 `DATE_OUT_OF_RANGE`                              |
+| GET    | `/api/calendar`        | 200 `CalendarResponse`       | 400 `VALIDATION_ERROR`, 422 `DATE_OUT_OF_RANGE`                              |
+| GET    | `/api/geocode`         | 200 `GeocodeResponse`        | 400 `VALIDATION_ERROR`, 404 `LOCATION_NOT_FOUND`, 502 `GEOCODER_UNAVAILABLE` |
+| GET    | `/api/geocode/suggest` | 200 `GeocodeSuggestResponse` | 400 `VALIDATION_ERROR`, 502 `GEOCODER_UNAVAILABLE`                           |
+| GET    | `/api/venues`          | 200 `VenuesResponse`         | 400 `VALIDATION_ERROR`                                                       |
 
 `/api/search` query: `sport`, `date` (YYYY-MM-DD, today … today + 14 days, Europe/Prague), optional `time` (HH:MM),
 optional `lat` + `lng` (together), optional `maxDistanceKm` (requires `lat`/`lng`). Results list venues with a free court
 (at `time`, or anytime that day) first, then sort by distance (or name). `/api/calendar` query: `sport`, `from` + `to`
 (YYYY-MM-DD, both inside the search window, `from` ≤ `to`, at most 15 days), optional `lat` + `lng`, optional `maxDistanceKm`;
 returns the matching venues plus per-day availability for each. `/api/geocode` query: `q` (2–200 characters).
+`/api/geocode/suggest` query: `q` (2–200 characters); returns up to 5 Czech address suggestions (Brno-biased, empty list
+when nothing matches) from [Photon](https://photon.komoot.io/) (OSM data, allows search-as-you-type; cached, calls spaced 300 ms apart).
+`/api/venues` query: optional `sport`, optional `q` (max 100 characters; every word must occur in name, district or
+address, ignoring case and diacritics); returns the venue directory sorted by name, each with `liveAvailability`.
 
 ### Toolchain
 

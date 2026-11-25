@@ -2,6 +2,8 @@ import type { FreeSlot, VenueAvailability } from '@spotradar/shared';
 import type { VenueRecord } from '../repositories/venueRepository.ts';
 import { createClubspireConnector } from './clubspire/connector.ts';
 import { createHostLimiter } from './hostLimiter.ts';
+import { createMemberproConnector } from './memberpro/connector.ts';
+import { createMemberzoneConnector } from './memberzone/connector.ts';
 import type { AvailabilityConnector, FetchFn } from './types.ts';
 
 export const AVAILABILITY_CACHE_TTL_MS = 15 * 60 * 1000;
@@ -9,6 +11,8 @@ export const AVAILABILITY_CACHE_TTL_MS = 15 * 60 * 1000;
 /** Never rejects: failures are mapped to a status. */
 export interface AvailabilityService {
   getAvailability(venue: VenueRecord, date: string): Promise<VenueAvailability>;
+  /** True when a connector is registered for the venue's booking system (live data possible). */
+  supports(venue: VenueRecord): boolean;
 }
 
 export interface AvailabilityServiceOptions {
@@ -25,14 +29,19 @@ interface CacheEntry {
 }
 
 /**
- * Default connector set. Add new booking-system connectors here (Bizzy,
- * MemberZone, MemberPro); until then those venues report status "unknown".
+ * Default connector set. Add new booking-system connectors here (Bizzy);
+ * until then those venues report status "unknown".
  */
 export function createDefaultConnectors(
   options: { fetch?: FetchFn } = {},
 ): AvailabilityConnector[] {
   const limiter = createHostLimiter();
-  return [createClubspireConnector({ fetch: options.fetch, limiter })];
+  // One limiter for all: MemberZone (Sprint) and MemberPro (Ivanovice) share memberzone.cz.
+  return [
+    createClubspireConnector({ fetch: options.fetch, limiter }),
+    createMemberzoneConnector({ fetch: options.fetch, limiter }),
+    createMemberproConnector({ fetch: options.fetch, limiter }),
+  ];
 }
 
 /**
@@ -82,6 +91,9 @@ export function createAvailabilityService(
   }
 
   return {
+    supports(venue) {
+      return byType.has(venue.source.type);
+    },
     async getAvailability(venue, date) {
       const connector = byType.get(venue.source.type);
       if (!connector) return { status: 'unknown', freeSlots: [] };

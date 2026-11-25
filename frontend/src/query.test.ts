@@ -1,12 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  getDefaultState,
-  parseGotoDate,
-  stateFromSearch,
-  stateToSearch,
-  toCalendarQuery,
-} from './query.ts';
+import { getDefaultState, stateFromSearch, stateToSearch, toCalendarQuery } from './query.ts';
 import type { AppState } from './query.ts';
 import { NOW } from './test-fixtures.test.ts';
 
@@ -14,8 +8,7 @@ test('defaults depend on the viewport and start today', () => {
   const wide = getDefaultState(NOW, true);
   assert.equal(wide.view, 'week');
   assert.equal(wide.date, '2026-11-25');
-  assert.equal(wide.fromHour, 6);
-  assert.equal(wide.toHour, 23);
+  assert.equal(wide.sport, 'badminton');
   assert.equal(getDefaultState(NOW, false).view, 'day');
 });
 
@@ -23,32 +16,37 @@ test('empty query string yields defaults', () => {
   assert.deepEqual(stateFromSearch('', NOW, true), getDefaultState(NOW, true));
 });
 
-test('state round-trips through the URL', () => {
+test('state round-trips through the URL (sport is always present)', () => {
   const state: AppState = {
     sport: 'badminton',
     view: 'month',
     date: '2026-12-01',
-    fromHour: 8,
-    toHour: 21,
     origin: { lat: 49.2, lng: 16.6, label: 'Selected location', source: 'url' },
     maxDistanceKm: 5,
-    onlyFree: true,
   };
   const search = stateToSearch(state);
   assert.equal(
     search,
-    'view=month&date=2026-12-01&timeFrom=08%3A00&timeTo=21%3A00&lat=49.2&lng=16.6&maxDistanceKm=5&free=1',
+    'view=month&date=2026-12-01&sport=badminton&lat=49.2&lng=16.6&maxDistanceKm=5',
   );
   assert.deepEqual(stateFromSearch(`?${search}`, NOW, true), state);
 });
 
-test('defaults are omitted from the URL', () => {
-  assert.equal(stateToSearch(getDefaultState(NOW, true)), 'view=week&date=2026-11-25');
+test('the default state serialises to view, date and sport only', () => {
+  assert.equal(
+    stateToSearch(getDefaultState(NOW, true)),
+    'view=week&date=2026-11-25&sport=badminton',
+  );
+});
+
+test('removed filters (time range, only free) in old links are ignored', () => {
+  const state = stateFromSearch('?timeFrom=08:00&timeTo=10:00&free=1', NOW, true);
+  assert.deepEqual(state, getDefaultState(NOW, true));
 });
 
 test('invalid values fall back to defaults', () => {
   const state = stateFromSearch(
-    '?view=decade&date=2026-13-40&sport=tennis&timeFrom=25:00&timeTo=nope&lat=abc&lng=1&maxDistanceKm=5',
+    '?view=decade&date=2026-13-40&sport=tennis&lat=abc&lng=1&maxDistanceKm=5',
     NOW,
     true,
   );
@@ -59,22 +57,6 @@ test('distance needs an origin and must be within bounds', () => {
   assert.equal(stateFromSearch('?maxDistanceKm=5', NOW, true).maxDistanceKm, null);
   assert.equal(stateFromSearch('?lat=49&lng=16&maxDistanceKm=500', NOW, true).maxDistanceKm, null);
   assert.equal(stateFromSearch('?lat=49&lng=16&maxDistanceKm=10', NOW, true).maxDistanceKm, 10);
-});
-
-test('inverted time range is reset', () => {
-  const state = stateFromSearch('?timeFrom=20:00&timeTo=10:00', NOW, true);
-  assert.equal(state.fromHour, 6);
-  assert.equal(state.toHour, 23);
-});
-
-test('parseGotoDate accepts only real dates inside the search window', () => {
-  assert.equal(parseGotoDate('2026-11-25', NOW), '2026-11-25');
-  assert.equal(parseGotoDate('2026-12-09', NOW), '2026-12-09');
-  assert.equal(parseGotoDate('2026-12-10', NOW), null);
-  assert.equal(parseGotoDate('2026-11-24', NOW), null);
-  assert.equal(parseGotoDate('2026-02-31', NOW), null);
-  assert.equal(parseGotoDate('', NOW), null);
-  assert.equal(parseGotoDate('nope', NOW), null);
 });
 
 test('toCalendarQuery includes location only when set', () => {

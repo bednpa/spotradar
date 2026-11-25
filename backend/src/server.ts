@@ -7,7 +7,8 @@ import {
 import { VENUE_RECORDS } from './data/venues.ts';
 import { createVenueRepository } from './repositories/venueRepository.ts';
 import { createGeocoder } from './services/geocode.ts';
-import { createStubFetch, createStubGeocoder, isStubMode } from './stubs.ts';
+import { createSuggester } from './services/suggest.ts';
+import { createStubFetch, createStubGeocoder, createStubSuggester, isStubMode } from './stubs.ts';
 
 const port = Number(process.env.PORT) || 3000;
 const host = '0.0.0.0';
@@ -22,6 +23,7 @@ const server = createApp({
     now,
   }),
   geocoder: stub ? createStubGeocoder() : createGeocoder({ now }),
+  suggest: stub ? createStubSuggester() : createSuggester({ now }),
   now,
   staticDir: fileURLToPath(new URL('../../frontend/dist/', import.meta.url)),
 });

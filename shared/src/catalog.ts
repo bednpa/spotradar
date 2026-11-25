@@ -62,3 +62,9 @@ export const MAX_DISTANCE_KM = 100;
 /** Accepted length of the geocoding query `q` (after trimming). */
 export const GEOCODE_QUERY_MIN = 2;
 export const GEOCODE_QUERY_MAX = 200;
+
+/** Max number of items returned by GET /api/geocode/suggest. */
+export const GEOCODE_SUGGEST_LIMIT = 5;
+
+/** Max length of the venue directory search `q` (after trimming). */
+export const VENUE_QUERY_MAX = 100;

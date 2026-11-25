@@ -55,6 +55,12 @@ export function formatCheckedAgo(checkedAt: string | undefined, now: Date): stri
   return 'over a day ago';
 }
 
+/** "2026-11-25" → "Wed". Unparseable input is returned unchanged. */
+export function formatShortWeekday(date: string): string {
+  const short = formatShortDate(date);
+  return short === date ? date : (short.split(' ')[0] ?? date);
+}
+
 /** 1 → "1 court", 3 → "3 courts" */
 export function formatCourts(count: number): string {
   return `${count} ${count === 1 ? 'court' : 'courts'}`;
