@@ -1,6 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isPlainLeftClick, isRoute, routeFromPath, routeUrl } from './router.ts';
+import { isPlainLeftClick, isRoute, pageTitle, routeFromPath, routeUrl } from './router.ts';
+
+test('pageTitle names the selected sport on the calendar', () => {
+  assert.equal(pageTitle('calendar', 'badminton'), 'SpotRadar – free badminton courts in Brno');
+  assert.equal(
+    pageTitle('calendar', 'beach-volleyball'),
+    'SpotRadar – free beach volleyball courts in Brno',
+  );
+  assert.equal(
+    pageTitle('calendar', 'table-tennis'),
+    'SpotRadar – free table tennis tables in Brno',
+  );
+  assert.equal(pageTitle('venues', 'tennis'), 'Venues – SpotRadar');
+});
 
 test('routeFromPath maps the two pages and falls back to the calendar', () => {
   assert.equal(routeFromPath('/'), 'calendar');

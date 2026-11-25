@@ -1,13 +1,24 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import type { CalendarResponse, FreeSlot, SportId, Venue, VenuesResponse } from '@spotradar/shared';
+import type {
+  CalendarResponse,
+  FreeSlot,
+  OpeningHours,
+  SportId,
+  SportOffering,
+  Venue,
+  VenuesResponse,
+} from '@spotradar/shared';
 import { addDays, openDay, openSlotWithFreeVenue, tomorrow } from './helpers.ts';
 
 const SPORT: SportId = 'badminton';
 const WEEK_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 
-/** A venue for crafted API responses (tests only). Pricing/multisport are left out on purpose. */
-function craftedVenue(overrides: Partial<Venue> = {}): Venue {
+/**
+ * A venue with one badminton offering for crafted API responses (tests only). Pricing is left
+ * out on purpose; `overrides` are offering fields.
+ */
+function craftedVenue(overrides: Partial<SportOffering> = {}): Venue {
   return {
     id: 'crafted',
     name: 'Crafted Hall',
@@ -15,17 +26,23 @@ function craftedVenue(overrides: Partial<Venue> = {}): Venue {
     address: 'Test street 1, Brno',
     location: { lat: 49.2, lng: 16.6 },
     sports: [SPORT],
-    courts: 2,
-    openingHours: {
-      approximate: false,
-      days: Object.fromEntries(
-        WEEK_DAYS.map((d) => [d, { open: '08:00', close: '22:00' }]),
-      ) as Venue['openingHours']['days'],
-    },
-    bookingUrl: 'https://example.com/crafted',
-    availabilitySource: 'clubspire',
-    multisport: { category: 'unknown' },
-    ...overrides,
+    offerings: [
+      {
+        sport: SPORT,
+        courts: 2,
+        openingHours: {
+          approximate: false,
+          days: Object.fromEntries(
+            WEEK_DAYS.map((d) => [d, { open: '08:00', close: '22:00' }]),
+          ) as OpeningHours['days'],
+        },
+        bookingUrl: 'https://example.com/crafted',
+        bookingSystem: 'clubspire',
+        availabilitySource: 'clubspire',
+        multisport: { category: 'unknown' },
+        ...overrides,
+      },
+    ],
   };
 }
 
@@ -57,7 +74,7 @@ async function routeCraftedCalendar(
     }
     const body: CalendarResponse = {
       query: { sport: SPORT, from, to },
-      venues: [{ venue }],
+      venues: [{ venue, offering: venue.offerings[0] as SportOffering }],
       days,
     };
     return route.fulfill({
@@ -88,7 +105,7 @@ test.describe('trimmed hour rows', () => {
     const closed = craftedVenue({
       openingHours: {
         approximate: false,
-        days: Object.fromEntries(WEEK_DAYS.map((d) => [d, null])) as Venue['openingHours']['days'],
+        days: Object.fromEntries(WEEK_DAYS.map((d) => [d, null])) as OpeningHours['days'],
       },
     });
     // A closed venue has no free slots (a live free slot would still be shown as free).
@@ -200,7 +217,7 @@ test.describe('price and MultiSport', () => {
     await page.route('**/api/venues**', (route) => {
       const body: VenuesResponse = {
         query: {},
-        venues: [{ venue: craftedVenue(), liveAvailability: false }],
+        venues: [{ venue: craftedVenue(), liveAvailability: false, liveSports: [] }],
       };
       return route.fulfill({
         status: 200,
@@ -213,6 +230,8 @@ test.describe('price and MultiSport', () => {
     await expect(card.getByTestId('price-unknown')).toHaveText('Price on website');
     await expect(card.getByTestId('price-details')).toHaveCount(0);
     await expect(card.getByTestId('multisport')).toHaveText('MultiSport: unknown');
-    await expect(card.getByTestId('live-status')).toHaveText('● Check on website');
+    await expect(card.locator('.vcard-head').getByTestId('live-status')).toHaveText(
+      '● Check on website',
+    );
   });
 });

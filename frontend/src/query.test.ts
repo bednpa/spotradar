@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { SPORT_IDS } from '@spotradar/shared';
 import { getDefaultState, stateFromSearch, stateToSearch, toCalendarQuery } from './query.ts';
 import type { AppState } from './query.ts';
 import { NOW } from './test-fixtures.test.ts';
@@ -59,9 +60,17 @@ test('removed filters (time range, only free) in old links are ignored', () => {
   assert.deepEqual(state, getDefaultState(NOW, true));
 });
 
+test('every sport id survives the URL round trip', () => {
+  for (const sport of SPORT_IDS) {
+    const state = stateFromSearch(`?sport=${sport}`, NOW, true);
+    assert.equal(state.sport, sport);
+    assert.match(stateToSearch(state), new RegExp(`sport=${sport}`));
+  }
+});
+
 test('invalid values fall back to defaults', () => {
   const state = stateFromSearch(
-    '?view=decade&date=2026-13-40&sport=tennis&lat=abc&lng=1&maxDistanceKm=5',
+    '?view=decade&date=2026-13-40&sport=golf&lat=abc&lng=1&maxDistanceKm=5',
     NOW,
     true,
   );

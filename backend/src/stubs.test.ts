@@ -14,14 +14,17 @@ import { HttpError } from './errors.ts';
 import { createVenueRepository } from './repositories/venueRepository.ts';
 import { getCalendar } from './services/calendar.ts';
 import { createStubFetch, createStubGeocoder, createStubSuggester, isStubMode } from './stubs.ts';
-import { FIXED_NOW, TOMORROW, silentLogger } from './testHelpers.ts';
+import { FIXED_NOW, TOMORROW, silentLogger, targetOf } from './testHelpers.ts';
+import type { SportId } from '@spotradar/shared';
+import type { AvailabilityTarget } from './connectors/types.ts';
 
 const slot = (start: string, end: string, freeCourts: number) => ({ start, end, freeCourts });
 
-function venue(id: string) {
+/** A real venue's offering (badminton by default) as an availability target. */
+function venue(id: string, sport: SportId = 'badminton'): AvailabilityTarget {
   const found = VENUE_RECORDS.find((v) => v.id === id);
   if (!found) throw new Error(id);
-  return found;
+  return targetOf(found, sport);
 }
 
 describe('stub mode', () => {
@@ -52,6 +55,52 @@ describe('stub mode', () => {
       (await service.getAvailability(venue('badminton-jehnice'), TOMORROW)).status,
       'live',
     );
+  });
+
+  it('serves every offering with a connector live (except Viktoria badminton) for any date', async () => {
+    const service = createAvailabilityService({
+      connectors: createDefaultConnectors({ fetch: createStubFetch() }),
+      now: () => FIXED_NOW,
+      logger: silentLogger,
+    });
+    const expectedUnavailable = new Set(['centrum-viktoria/badminton']);
+    // The stub builds "today's" pages from the real clock, so use dates relative to it.
+    const realToday = toLocalDateTime(new Date()).date;
+    for (const record of VENUE_RECORDS) {
+      for (const offering of record.offerings) {
+        if (!service.supports(offering)) continue;
+        const key = `${record.id}/${offering.sport}`;
+        for (const date of [addDays(realToday, 1), addDays(realToday, 8)]) {
+          const result = await service.getAvailability(venue(record.id, offering.sport), date);
+          const expected = expectedUnavailable.has(key) ? 'unavailable' : 'live';
+          assert.equal(result.status, expected, `${key} ${date}`);
+          // X-Arena's 2-hour lead time uses the real clock: late in the day nothing is left.
+          if (expected === 'live' && record.id !== 'x-arena-slatina') {
+            assert.ok(result.freeSlots.length > 0, `${key} ${date}`);
+          }
+        }
+      }
+    }
+  });
+
+  it('serves the sport-specific pages: Viktoria padel only counts padel courts', async () => {
+    const service = createAvailabilityService({
+      connectors: createDefaultConnectors({ fetch: createStubFetch() }),
+      now: () => FIXED_NOW,
+      logger: silentLogger,
+    });
+    const padel = await service.getAvailability(venue('centrum-viktoria', 'padel'), TOMORROW);
+    assert.ok(Math.max(...padel.freeSlots.map((s) => s.freeCourts)) <= 3);
+    const beach = await service.getAvailability(
+      venue('beach-riviera', 'beach-volleyball'),
+      '2026-12-02',
+    );
+    assert.deepEqual(beach.freeSlots, [slot('15:00', '16:00', 2), slot('20:00', '21:00', 1)]);
+    const squash = await service.getAvailability(
+      venue('sportcentrum-ivanovice', 'squash'),
+      TOMORROW,
+    );
+    assert.ok(Math.max(...squash.freeSlots.map((s) => s.freeCourts)) === 4);
   });
 
   it('serves Hala Sprint and Ivanovice live for any date through the real connectors', async () => {

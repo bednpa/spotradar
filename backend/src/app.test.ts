@@ -17,6 +17,10 @@ import type {
 import { createApp } from './app.ts';
 import { createAvailabilityService } from './connectors/availabilityService.ts';
 import { VENUE_RECORDS } from './data/venues.ts';
+
+const BADMINTON_VENUE_COUNT = VENUE_RECORDS.filter((v) =>
+  v.offerings.some((o) => o.sport === 'badminton'),
+).length;
 import { createVenueRepository } from './repositories/venueRepository.ts';
 import { createGeocoder } from './services/geocode.ts';
 import { createSuggester } from './services/suggest.ts';
@@ -50,7 +54,7 @@ let close: () => Promise<void> = () => Promise.resolve();
 const appLogs: string[] = [];
 
 const connector = fakeConnector('clubspire', (venue) => {
-  if (venue.id === 'kuklenska') {
+  if (venue.venueId === 'kuklenska') {
     return Promise.resolve([
       slot('07:00', '08:00', 1), // already ended on "today" (now = 09:00)
       slot('10:00', '11:00', 3),
@@ -152,7 +156,8 @@ describe('GET /api/search', () => {
     );
     assert.equal(status, 200);
     assert.deepEqual(body.query, { sport: 'badminton', date: TOMORROW });
-    assert.equal(body.results.length, VENUE_RECORDS.length);
+    assert.equal(body.results.length, BADMINTON_VENUE_COUNT);
+    assert.ok(body.results.every((r) => r.offering.sport === 'badminton'));
     assert.equal(JSON.stringify(body).includes('"source"'), false);
     assert.equal(JSON.stringify(body).includes('baseUrl'), false);
 
@@ -164,7 +169,7 @@ describe('GET /api/search', () => {
     assert.equal(byId.get('centrum-viktoria')?.availability.status, 'unavailable');
     assert.equal(byId.get('hala-sprint')?.availability.status, 'unknown');
     assert.equal(
-      kuklenska?.venue.bookingUrl,
+      kuklenska?.offering.bookingUrl,
       'https://kuklenska.clubspire.cz/timeline/day?tabIdx=0',
     );
     assert.equal(body.results[0]?.venue.id, 'kuklenska'); // the only venue with free courts
@@ -183,7 +188,7 @@ describe('GET /api/search', () => {
       lng: 16.6068,
       maxDistanceKm: 3,
     });
-    assert.ok(body.results.length > 0 && body.results.length < VENUE_RECORDS.length);
+    assert.ok(body.results.length > 0 && body.results.length < BADMINTON_VENUE_COUNT);
     assert.ok(body.results.every((r) => typeof r.distanceKm === 'number' && r.distanceKm <= 3));
     const kuklenska = body.results.find((r) => r.venue.id === 'kuklenska');
     assert.equal(kuklenska?.freeCourtsAtTime, 3);
@@ -209,7 +214,7 @@ describe('GET /api/search', () => {
   it('returns 400 VALIDATION_ERROR with issues for invalid input', async () => {
     const cases = [
       '/api/search',
-      '/api/search?sport=tennis&date=2026-11-25',
+      '/api/search?sport=golf&date=2026-11-25',
       `/api/search?sport=badminton&date=25.11.2026`,
       `/api/search?sport=badminton&date=${TOMORROW}&time=25:00`,
       `/api/search?sport=badminton&date=${TOMORROW}&lat=49.1`,
@@ -258,7 +263,7 @@ describe('GET /api/calendar', () => {
     assert.match(
       lines[0] ?? '',
       new RegExp(
-        `^\\[calendar\\] ${TODAY}\\.\\.2026-11-26 ${VENUE_RECORDS.length} venues in \\d+ ms$`,
+        `^\\[calendar\\] ${TODAY}\\.\\.2026-11-26 ${BADMINTON_VENUE_COUNT} venues in \\d+ ms$`,
       ),
     );
   });
@@ -269,7 +274,7 @@ describe('GET /api/calendar', () => {
     );
     assert.equal(status, 200);
     assert.deepEqual(body.query, { sport: 'badminton', from: TODAY, to: '2026-11-26' });
-    assert.equal(body.venues.length, VENUE_RECORDS.length);
+    assert.equal(body.venues.length, BADMINTON_VENUE_COUNT);
     assert.equal(JSON.stringify(body).includes('"source"'), false);
     assert.deepEqual(
       body.days.map((d) => d.date),
@@ -289,10 +294,11 @@ describe('GET /api/calendar', () => {
     assert.equal(kuklenska(TOMORROW)?.availability.freeSlots.length, 2);
     const viktoria = body.days[0]?.venues.find((v) => v.venueId === 'centrum-viktoria');
     assert.equal(viktoria?.availability.status, 'unavailable');
-    const venueOf = (id: string) => body.venues.find((v) => v.venue.id === id)?.venue;
-    assert.deepEqual(venueOf('kuklenska')?.multisport, { category: 'half-per-card' });
-    assert.deepEqual(venueOf('badminton-jehnice')?.multisport, { category: 'unknown' });
-    assert.deepEqual(venueOf('sportcentrum-ivanovice')?.multisport, {
+    const offeringOf = (id: string) => body.venues.find((v) => v.venue.id === id)?.offering;
+    assert.ok(body.venues.every((v) => v.offering.sport === 'badminton'));
+    assert.deepEqual(offeringOf('kuklenska')?.multisport, { category: 'half-per-card' });
+    assert.deepEqual(offeringOf('badminton-jehnice')?.multisport, { category: 'unknown' });
+    assert.deepEqual(offeringOf('sportcentrum-ivanovice')?.multisport, {
       category: 'full-two-cards',
       limits: { maxCardsPerCourt: 2, onlyBookingMinutes: 60, requiresNotice: true },
       note: 'One sports activity per card per day',
@@ -304,7 +310,7 @@ describe('GET /api/calendar', () => {
       `/api/calendar?sport=badminton&from=${TODAY}&to=${TOMORROW}&lat=49.1951&lng=16.6068&maxDistanceKm=3`,
     );
     assert.equal(status, 200);
-    assert.ok(body.venues.length > 0 && body.venues.length < VENUE_RECORDS.length);
+    assert.ok(body.venues.length > 0 && body.venues.length < BADMINTON_VENUE_COUNT);
     assert.ok(body.venues.every((v) => typeof v.distanceKm === 'number' && v.distanceKm <= 3));
     const distances = body.venues.map((v) => v.distanceKm ?? 0);
     assert.deepEqual(
@@ -319,7 +325,7 @@ describe('GET /api/calendar', () => {
   it('returns 400 VALIDATION_ERROR with issue fields for invalid input', async () => {
     const cases: [string, string][] = [
       ['/api/calendar', 'sport'],
-      [`/api/calendar?sport=tennis&from=${TODAY}&to=${TOMORROW}`, 'sport'],
+      [`/api/calendar?sport=golf&from=${TODAY}&to=${TOMORROW}`, 'sport'],
       [`/api/calendar?sport=badminton&from=24.11.2026&to=${TOMORROW}`, 'from'],
       [`/api/calendar?sport=badminton&from=${TODAY}`, 'to'],
       [`/api/calendar?sport=badminton&from=${TODAY}&to=${TOMORROW}&lat=49.1`, 'lng'],
@@ -494,11 +500,12 @@ describe('GET /api/venues', () => {
     // the test service only has a ClubSpire connector
     assert.equal(live.get('kuklenska'), true);
     assert.equal(live.get('hala-sprint'), false);
-    const kuklenska = body.venues.find((v) => v.venue.id === 'kuklenska')?.venue;
-    assert.equal(kuklenska?.website, 'https://www.sportkuklenska.cz/');
+    const kuklenskaVenue = body.venues.find((v) => v.venue.id === 'kuklenska')?.venue;
+    assert.equal(kuklenskaVenue?.website, 'https://www.sportkuklenska.cz/');
+    const kuklenska = kuklenskaVenue?.offerings[0];
     assert.deepEqual(kuklenska?.multisport, { category: 'half-per-card' });
     const multisportOf = (id: string) =>
-      body.venues.find((v) => v.venue.id === id)?.venue.multisport;
+      body.venues.find((v) => v.venue.id === id)?.venue.offerings[0]?.multisport;
     assert.deepEqual(multisportOf('badminton-jehnice'), { category: 'unknown' });
     assert.deepEqual(multisportOf('centrum-viktoria'), {
       category: 'minutes-per-card',
@@ -509,18 +516,45 @@ describe('GET /api/venues', () => {
       limits: { maxCardsPerCourt: 2, onlyBookingMinutes: 60, requiresNotice: true },
       note: 'One sports activity per card per day',
     });
-    // multisport is required: every venue has it
-    assert.ok(body.venues.every((v) => typeof v.venue.multisport.category === 'string'));
+    // multisport is required: every offering has it
+    assert.ok(
+      body.venues.every((v) =>
+        v.venue.offerings.every((o) => typeof o.multisport.category === 'string'),
+      ),
+    );
     assert.equal(kuklenska?.pricing?.currency, 'CZK');
     assert.equal(kuklenska?.pricing?.rules[0]?.price, 280);
     assert.ok(!('priceInfo' in (kuklenska ?? {})));
+    assert.equal(JSON.stringify(body).includes('"source"'), false);
   });
 
   it('filters by sport', async () => {
     const { status, body } = await get<VenuesResponse>('/api/venues?sport=badminton');
     assert.equal(status, 200);
     assert.deepEqual(body.query, { sport: 'badminton' });
-    assert.equal(body.venues.length, VENUE_RECORDS.length);
+    assert.equal(body.venues.length, BADMINTON_VENUE_COUNT);
+  });
+
+  it('filters by a new sport and reports live sports per venue', async () => {
+    const { status, body } = await get<VenuesResponse>('/api/venues?sport=squash');
+    assert.equal(status, 200);
+    const ids = body.venues.map((v) => v.venue.id);
+    assert.ok(ids.includes('centrum-viktoria') && ids.includes('fitness-boby'), ids.join());
+    assert.ok(!ids.includes('kuklenska'));
+    assert.ok(body.venues.every((v) => v.venue.sports.includes('squash')));
+    const viktoria = body.venues.find((v) => v.venue.id === 'centrum-viktoria');
+    // The test service only has a ClubSpire connector: Viktoria's tennis has none.
+    assert.equal(viktoria?.liveAvailability, true);
+    assert.deepEqual(viktoria?.liveSports, ['badminton', 'squash', 'padel', 'beach-volleyball']);
+    const ivanovice = body.venues.find((v) => v.venue.id === 'sportcentrum-ivanovice');
+    assert.equal(ivanovice?.liveAvailability, false);
+    assert.deepEqual(ivanovice?.liveSports, []);
+  });
+
+  it('returns every venue of a sport, including the ones without a connector', async () => {
+    const { body } = await get<VenuesResponse>('/api/venues?sport=volleyball');
+    assert.ok(body.venues.length > 0);
+    assert.ok(body.venues.every((v) => v.liveAvailability === false));
   });
 
   it('filters by q, ignoring case and diacritics', async () => {

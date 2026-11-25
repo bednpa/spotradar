@@ -1,7 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { compareSearchResults, distanceKm, freeCourtsAt, hasFreeCourt, roundKm } from './search.ts';
-import type { FreeSlot, SearchResult, Venue } from './types.ts';
+import type { FreeSlot, SearchResult, SportOffering, Venue } from './types.ts';
+
+const OFFERING: SportOffering = {
+  sport: 'badminton',
+  courts: 4,
+  bookingUrl: 'https://example.com',
+  bookingSystem: 'unknown',
+  availabilitySource: 'none',
+  multisport: { category: 'unknown' },
+};
 
 const venue = (name: string): Venue => ({
   id: name.toLowerCase(),
@@ -10,14 +19,7 @@ const venue = (name: string): Venue => ({
   address: 'Test 1, Brno',
   location: { lat: 49.2, lng: 16.6 },
   sports: ['badminton'],
-  courts: 4,
-  openingHours: {
-    approximate: true,
-    days: { mon: null, tue: null, wed: null, thu: null, fri: null, sat: null, sun: null },
-  },
-  bookingUrl: 'https://example.com',
-  availabilitySource: 'none',
-  multisport: { category: 'unknown' },
+  offerings: [OFFERING],
 });
 
 const result = (
@@ -26,6 +28,7 @@ const result = (
   slots: FreeSlot[] = [],
 ): SearchResult => ({
   venue: venue(name),
+  offering: OFFERING,
   availability: { status: slots.length ? 'live' : 'unknown', freeSlots: slots },
   ...extra,
 });

@@ -18,7 +18,7 @@ import { getDefaultState } from './query.ts';
 import type { AppState } from './query.ts';
 import { calendarStatusText } from './state.ts';
 import type { CalendarState } from './state.ts';
-import { NOW, hours, makeCalendar, makeVenue } from './test-fixtures.test.ts';
+import { NOW, calendarVenue, hours, makeCalendar, makeVenue } from './test-fixtures.test.ts';
 
 const data = makeCalendar('2026-11-25', '2026-12-09');
 const success = { status: 'success', data } as const;
@@ -45,10 +45,13 @@ test('main nav has Reserve and Venues links; the active one has aria-current', (
 });
 
 test('sport chips mark the selected sport', () => {
-  assert.match(
-    renderSportChips('badminton'),
-    /data-sport="badminton" aria-pressed="true">Badminton</,
-  );
+  const html = renderSportChips('squash');
+  assert.match(html, /data-sport="squash" aria-pressed="true"[^>]*>.*title="Squash">Squash</);
+  assert.match(html, /data-sport="badminton" aria-pressed="false"/);
+  // all 7 sports, icons are decorative, Czech names are tooltips
+  assert.equal((html.match(/data-sport="/g) ?? []).length, 7);
+  assert.match(html, /aria-hidden="true">🎾<\/span> <span title="Tenis">Tennis</);
+  assert.match(html, /<span title="Beachvolejbal">Beach volleyball</);
 });
 
 test('toolbar has view switcher, today, prev/next and the period title', () => {
@@ -170,7 +173,7 @@ test('loading, error, empty and outside states', () => {
   );
   assert.match(empty, /No badminton venues within 5 km/);
   assert.match(empty, /data-action="clear-distance"/);
-  assert.match(renderEmptyVenues(null, 'badminton'), /No badminton venues found/);
+  assert.match(renderEmptyVenues(null, 'badminton'), /No badminton venues in SpotRadar yet/);
 
   const outside = renderCalendar(state(), { status: 'outside' }, NOW);
   assert.match(outside, /Not available yet/);
@@ -229,7 +232,7 @@ test('partial week: the loaded day has real cells, the other days are aria-hidde
 test('partial week with an empty loaded day still shows rows, not the "no slots" state', () => {
   const closed = {
     ...FOCUS_DAY,
-    venues: [{ venue: makeVenue('closed', 'Closed Hall', { openingHours: hours(null) }) }],
+    venues: [calendarVenue(makeVenue('closed', 'Closed Hall', { openingHours: hours(null) }))],
   };
   const html = renderCalendar(
     state({ view: 'week' }),

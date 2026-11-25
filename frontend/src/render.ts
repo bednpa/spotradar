@@ -1,12 +1,7 @@
 /** Pure render-to-string functions for the calendar page. All dynamic text is escaped. */
-import {
-  CALENDAR_VIEWS,
-  DISTANCE_OPTIONS_KM,
-  SPORTS,
-  dateRange,
-  getSearchWindow,
-} from '@spotradar/shared';
+import { CALENDAR_VIEWS, DISTANCE_OPTIONS_KM, dateRange, getSearchWindow } from '@spotradar/shared';
 import type { CalendarResponse, CalendarView, SportId } from '@spotradar/shared';
+import { renderSportChipButtons } from './sports.ts';
 import { LISTBOX_ID } from './address-suggest.ts';
 import {
   DEFAULT_FROM_HOUR,
@@ -74,10 +69,7 @@ export function renderMainNav(active: Route): string {
 }
 
 export function renderSportChips(selected: SportId): string {
-  return SPORTS.map(
-    (sport) =>
-      `<button type="button" class="chip" data-sport="${sport.id}" aria-pressed="${sport.id === selected}">${escapeHtml(sport.name)}</button>`,
-  ).join('');
+  return renderSportChipButtons(selected, 'sport');
 }
 
 export function renderDistanceChips(selectedKm: number | null, enabled: boolean): string {
@@ -184,7 +176,7 @@ export function renderEmptyVenues(maxDistanceKm: number | null, sport: SportId):
   if (maxDistanceKm !== null) {
     return `<div class="state state-empty"><h3>No ${name} venues within ${maxDistanceKm} km</h3><p>Try a larger distance or remove the limit.</p><button type="button" class="btn btn-primary" data-action="clear-distance">Clear distance</button></div>`;
   }
-  return `<div class="state state-empty"><h3>No ${name} venues found</h3><p>There are no venues for this sport yet.</p></div>`;
+  return `<div class="state state-empty"><h3>No ${name} venues in SpotRadar yet</h3><p>There are no venues for this sport yet – pick another sport above.</p></div>`;
 }
 
 export function renderOutside(): string {

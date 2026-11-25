@@ -10,11 +10,13 @@ import {
   summarizeDay,
   venueCoverage,
 } from './cells.ts';
-import { NOW, hours, live, makeCalendar, makeVenue } from './test-fixtures.test.ts';
+import { NOW, calendarVenue, hours, live, makeCalendar, makeVenue } from './test-fixtures.test.ts';
 
 test('slotHourRange: Day starts at the first hour with a slot and ends after the last', () => {
   const calendar = makeCalendar('2026-11-25', '2026-11-27', [
-    { venue: makeVenue('viktoria', 'Afternoon Hall', { openingHours: hours('14:00', '18:00') }) },
+    calendarVenue(
+      makeVenue('viktoria', 'Afternoon Hall', { openingHours: hours('14:00', '18:00') }),
+    ),
   ]);
   const idx = indexDays(calendar);
   assert.deepEqual(slotHourRange(idx, calendar.venues, ['2026-11-26']), {
@@ -25,8 +27,8 @@ test('slotHourRange: Day starts at the first hour with a slot and ends after the
 
 test('slotHourRange: Week uses one shared range and keeps empty hours in between', () => {
   const calendar = makeCalendar('2026-11-23', '2026-11-29', [
-    { venue: makeVenue('viktoria', 'Early Hall', { openingHours: hours('07:00', '09:00') }) },
-    { venue: makeVenue('unknown', 'Late Hall', { openingHours: hours('20:00', '22:00') }) },
+    calendarVenue(makeVenue('viktoria', 'Early Hall', { openingHours: hours('07:00', '09:00') })),
+    calendarVenue(makeVenue('unknown', 'Late Hall', { openingHours: hours('20:00', '22:00') })),
   ]);
   const idx = indexDays(calendar);
   const week = ['2026-11-26', '2026-11-27'];
@@ -40,8 +42,8 @@ test('slotHourRange: Week uses one shared range and keeps empty hours in between
 
 test('slotHourRange: a week is widened by the day with the earliest / latest slot', () => {
   const base = makeCalendar('2026-11-25', '2026-11-27', [
-    {
-      venue: makeVenue('viktoria', 'Weekend Hall', {
+    calendarVenue(
+      makeVenue('viktoria', 'Weekend Hall', {
         openingHours: {
           approximate: false,
           days: {
@@ -51,7 +53,7 @@ test('slotHourRange: a week is widened by the day with the earliest / latest slo
           },
         },
       }),
-    },
+    ),
   ]);
   const idx = indexDays(base);
   assert.deepEqual(slotHourRange(idx, base.venues, ['2026-11-26']), { fromHour: 10, toHour: 12 });
@@ -64,7 +66,7 @@ test('slotHourRange: a week is widened by the day with the earliest / latest slo
 
 test('slotHourRange: free slots of a live venue count, full hours do not', () => {
   const calendar = makeCalendar('2026-11-25', '2026-11-27', [
-    { venue: makeVenue('kuklenska', 'Live Hall') },
+    calendarVenue(makeVenue('kuklenska', 'Live Hall')),
   ]);
   calendar.days = calendar.days.map((day) => ({
     ...day,
@@ -87,11 +89,11 @@ test('slotHourRange: null without data, when all venues are closed or fully book
   assert.equal(slotHourRange(idx, calendar.venues, ['2026-12-20']), null);
   assert.equal(slotHourRange(idx, calendar.venues, []), null);
   const closed = makeCalendar('2026-11-25', '2026-11-27', [
-    { venue: makeVenue('closed', 'Closed Hall', { openingHours: hours(null) }) },
+    calendarVenue(makeVenue('closed', 'Closed Hall', { openingHours: hours(null) })),
   ]);
   assert.equal(slotHourRange(indexDays(closed), closed.venues, ['2026-11-26']), null);
   const full = makeCalendar('2026-11-25', '2026-11-27', [
-    { venue: makeVenue('full', 'Full Hall') },
+    calendarVenue(makeVenue('full', 'Full Hall')),
   ]);
   assert.equal(slotHourRange(indexDays(full), full.venues, ['2026-11-26']), null);
   assert.equal(slotHourRange(indexDays(null), [], ['2026-11-26']), null);

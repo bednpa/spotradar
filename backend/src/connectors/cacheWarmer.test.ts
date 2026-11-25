@@ -1,29 +1,31 @@
 import assert from 'node:assert/strict';
 import { describe, it, mock } from 'node:test';
-import { VENUE_RECORDS } from '../data/venues.ts';
 import { createVenueRepository } from '../repositories/venueRepository.ts';
 import type { VenueRecord } from '../repositories/venueRepository.ts';
-import { fakeClock, fakeConnector, silentLogger, slot } from '../testHelpers.ts';
+import {
+  fakeClock,
+  fakeConnector,
+  silentLogger,
+  slot,
+  targetOf,
+  testVenue,
+} from '../testHelpers.ts';
 import { createAvailabilityService } from './availabilityService.ts';
 import { createCacheWarmer } from './cacheWarmer.ts';
-
-const found = VENUE_RECORDS.find((v) => v.id === 'kuklenska');
-if (!found) throw new Error('kuklenska missing');
-const BASE: VenueRecord = found;
+import type { AvailabilityTarget } from './types.ts';
 
 function venue(id: string, host: string): VenueRecord {
-  return { ...BASE, id, source: { type: 'clubspire', baseUrl: `https://${host}/`, tabIdx: 1 } };
+  return testVenue(id, { type: 'clubspire', baseUrl: `https://${host}/`, tabIdx: 1 });
 }
 
 const A1 = venue('a1', 'a.example');
 const A2 = venue('a2', 'a.example');
 const B1 = venue('b1', 'b.example');
 // No connector is registered for Bizzy in these tests -> never warmed.
-const BIZZY: VenueRecord = {
-  ...BASE,
-  id: 'bizzy-venue',
-  source: { type: 'bizzy', scheduleUrl: 'https://c.example/s' },
-};
+const BIZZY: VenueRecord = testVenue('bizzy-venue', {
+  type: 'bizzy',
+  scheduleUrl: 'https://c.example/s',
+});
 
 const WEEK = [
   '2026-11-24',
@@ -38,7 +40,7 @@ const WEEK = [
 const refused = (): Error =>
   new TypeError('fetch failed', { cause: Object.assign(new Error('x'), { code: 'ECONNREFUSED' }) });
 
-type Impl = (venue: VenueRecord, date: string) => Promise<ReturnType<typeof slot>[]>;
+type Impl = (target: AvailabilityTarget, date: string) => Promise<ReturnType<typeof slot>[]>;
 
 function setup(
   impl: Impl = () => Promise.resolve([slot('10:00', '11:00', 1)]),
@@ -91,7 +93,7 @@ describe('cache warmer', () => {
     let maxTotal = 0;
     let total = 0;
     const { warmer } = setup(async (v) => {
-      const host = v.id.startsWith('a') ? 'a' : 'b';
+      const host = v.venueId.startsWith('a') ? 'a' : 'b';
       active.set(host, (active.get(host) ?? 0) + 1);
       total++;
       maxPerHost = Math.max(maxPerHost, active.get(host) ?? 0);
@@ -108,7 +110,7 @@ describe('cache warmer', () => {
 
   it('skips the rest of a host after a connection error but still warms other hosts', async () => {
     const { connector, warmer, availability } = setup((v) =>
-      v.id.startsWith('a') ? Promise.reject(refused()) : Promise.resolve([]),
+      v.venueId.startsWith('a') ? Promise.reject(refused()) : Promise.resolve([]),
     );
     const report = await warmer.runOnce();
     assert.equal(connector.calls.filter((c) => c.venueId.startsWith('a')).length, 1);
@@ -123,9 +125,9 @@ describe('cache warmer', () => {
 
   it('skips backed-off hosts entirely', async () => {
     const { connector, warmer, availability } = setup((v) =>
-      v.id.startsWith('a') ? Promise.reject(refused()) : Promise.resolve([]),
+      v.venueId.startsWith('a') ? Promise.reject(refused()) : Promise.resolve([]),
     );
-    await availability.getAvailability(A1, WEEK[0] ?? ''); // puts a.example into backoff
+    await availability.getAvailability(targetOf(A1), WEEK[0] ?? ''); // puts a.example into backoff
     connector.calls.length = 0;
     const report = await warmer.runOnce();
     assert.equal(
@@ -139,7 +141,7 @@ describe('cache warmer', () => {
 
   it('after a non-connection error skips only the rest of that venue in this pass', async () => {
     const { connector, warmer } = setup((v, date) =>
-      v.id === 'a1' && date === '2026-11-26'
+      v.venueId === 'a1' && date === '2026-11-26'
         ? Promise.reject(new Error('HTTP 500'))
         : Promise.resolve([]),
     );

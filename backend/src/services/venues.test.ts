@@ -36,8 +36,31 @@ describe('listVenues', () => {
     assert.equal(live.get('badminton-lisen'), false);
   });
 
-  it('filters by sport', () => {
-    assert.equal(listVenues({ sport: 'badminton' }, deps).length, VENUE_RECORDS.length);
+  it('filters by sport (venues with an offering for it)', () => {
+    const badminton = listVenues({ sport: 'badminton' }, deps);
+    assert.equal(badminton.length, 7);
+    assert.ok(badminton.every((i) => i.venue.sports.includes('badminton')));
+    const padel = ids(listVenues({ sport: 'padel' }, deps));
+    assert.ok(padel.includes('centrum-viktoria') && padel.includes('padel-powers-slatina'));
+    assert.ok(!padel.includes('kuklenska'));
+  });
+
+  it('reports liveSports and liveAvailability per sport filter', () => {
+    const item = (sport: Parameters<typeof listVenues>[0]['sport']) =>
+      listVenues({ sport, q: 'viktoria' }, deps)[0];
+    // Only a ClubSpire connector here: Viktoria's tennis has no connector at all.
+    assert.deepEqual(item(undefined)?.liveSports, [
+      'badminton',
+      'squash',
+      'padel',
+      'beach-volleyball',
+    ]);
+    assert.equal(item(undefined)?.liveAvailability, true);
+    assert.equal(item('squash')?.liveAvailability, true);
+    assert.equal(item('tennis')?.liveAvailability, false);
+    const padelPowers = listVenues({ sport: 'padel', q: 'slatina padel' }, deps)[0];
+    assert.equal(padelPowers?.liveAvailability, false);
+    assert.deepEqual(padelPowers?.liveSports, []);
   });
 
   it('filters by text ignoring case and diacritics, all words must match', () => {

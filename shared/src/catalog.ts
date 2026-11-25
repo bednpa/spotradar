@@ -3,17 +3,46 @@
  * supported sports, availability sources and search rules.
  */
 
-/** Supported sports. Only badminton for now – add new ids here to extend the model. */
-export const SPORT_IDS = ['badminton'] as const;
+/** Supported sports (URL-safe ids). Add new ids here and to `SPORTS` to extend the model. */
+export const SPORT_IDS = [
+  'badminton',
+  'tennis',
+  'squash',
+  'padel',
+  'table-tennis',
+  'volleyball',
+  'beach-volleyball',
+] as const;
 
 export type SportId = (typeof SPORT_IDS)[number];
 
 export interface SportInfo {
   id: SportId;
+  /** English display name, e.g. "Table tennis". */
   name: string;
+  /** Czech display name, e.g. "Stolní tenis". */
+  nameCs: string;
+  /** Short decorative icon (an emoji); always shown next to the name, never alone. */
+  icon: string;
 }
 
-export const SPORTS: readonly SportInfo[] = [{ id: 'badminton', name: 'Badminton' }];
+/** Display order of the sport selectors. */
+export const SPORTS: readonly SportInfo[] = [
+  { id: 'badminton', name: 'Badminton', nameCs: 'Badminton', icon: '🏸' },
+  { id: 'tennis', name: 'Tennis', nameCs: 'Tenis', icon: '🎾' },
+  { id: 'squash', name: 'Squash', nameCs: 'Squash', icon: '🟡' },
+  { id: 'padel', name: 'Padel', nameCs: 'Padel', icon: '🥎' },
+  { id: 'table-tennis', name: 'Table tennis', nameCs: 'Stolní tenis', icon: '🏓' },
+  { id: 'volleyball', name: 'Volleyball', nameCs: 'Volejbal', icon: '🏐' },
+  { id: 'beach-volleyball', name: 'Beach volleyball', nameCs: 'Beachvolejbal', icon: '🏖️' },
+];
+
+/** Catalogue entry of a sport id. */
+export function sportInfo(id: SportId): SportInfo {
+  const info = SPORTS.find((sport) => sport.id === id);
+  if (!info) throw new Error(`Sport ${id} is missing from SPORTS`);
+  return info;
+}
 
 export const DEFAULT_SPORT_ID: SportId = 'badminton';
 
@@ -35,10 +64,53 @@ export const AVAILABILITY_SOURCES = [
   'bizzy',
   'memberzone',
   'memberpro',
+  'starez',
   'none',
 ] as const;
 
 export type AvailabilitySource = (typeof AVAILABILITY_SOURCES)[number];
+
+/**
+ * Booking systems Brno venues use (researched 2026-11-25, see docs/live-data-connectors.md),
+ * whether or not SpotRadar has a connector for them. "own" = the venue's own web system,
+ * "phone" = phone/e-mail booking only, "unknown" = not found out.
+ */
+export const BOOKING_SYSTEMS = [
+  'clubspire',
+  'memberzone',
+  'memberpro',
+  'bizzy',
+  'starez',
+  'playtomic',
+  'reenio',
+  'jdemenato',
+  'hamr',
+  'padelos',
+  'rezervuj',
+  'own',
+  'phone',
+  'unknown',
+] as const;
+
+export type BookingSystem = (typeof BOOKING_SYSTEMS)[number];
+
+/** Display names of the booking systems. */
+export const BOOKING_SYSTEM_LABELS: Record<BookingSystem, string> = {
+  clubspire: 'ClubSpire',
+  memberzone: 'MemberZone',
+  memberpro: 'MemberPro',
+  bizzy: 'Bizzy',
+  starez: 'STAREZ',
+  playtomic: 'Playtomic',
+  reenio: 'Reenio',
+  jdemenato: 'JDEMENATO',
+  hamr: 'HAMR',
+  padelos: 'PadelOS',
+  rezervuj: 'Rezervuj.cz',
+  own: 'Own booking system',
+  phone: 'Phone / e-mail',
+  unknown: 'Unknown',
+};
 
 /** Searchable dates: today (Europe/Prague) up to and including today + SEARCH_WINDOW_DAYS. */
 export const SEARCH_WINDOW_DAYS = 14;

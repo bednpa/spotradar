@@ -1,7 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { freeCourtsBetween, isOpenDuring, slotStatuses, summarizeSlot } from './calendar.ts';
-import type { CalendarDay, CalendarVenue, OpeningHours, Venue } from './types.ts';
+import {
+  freeCourtsBetween,
+  isInSeason,
+  isOpenDuring,
+  slotStatuses,
+  summarizeSlot,
+} from './calendar.ts';
+import type { CalendarDay, CalendarVenue, OpeningHours, SportOffering } from './types.ts';
 
 const hours = (open: string, close: string, sunClosed = false): OpeningHours => ({
   approximate: false,
@@ -16,17 +22,29 @@ const hours = (open: string, close: string, sunClosed = false): OpeningHours => 
   },
 });
 
-const venue = (id: string, openingHours = hours('07:00', '22:00')): Venue => ({
-  id,
-  name: id,
-  district: 'Brno',
-  address: 'Test 1, Brno',
-  location: { lat: 49.2, lng: 16.6 },
-  sports: ['badminton'],
-  openingHours,
-  bookingUrl: 'https://example.com',
-  availabilitySource: 'none',
-  multisport: { category: 'unknown' },
+const offering = (openingHours?: OpeningHours): SportOffering => {
+  const o: SportOffering = {
+    sport: 'badminton',
+    bookingUrl: 'https://example.com',
+    bookingSystem: 'unknown',
+    availabilitySource: 'none',
+    multisport: { category: 'unknown' },
+  };
+  if (openingHours) o.openingHours = openingHours;
+  return o;
+};
+
+const venue = (id: string, openingHours = hours('07:00', '22:00')): CalendarVenue => ({
+  venue: {
+    id,
+    name: id,
+    district: 'Brno',
+    address: 'Test 1, Brno',
+    location: { lat: 49.2, lng: 16.6 },
+    sports: ['badminton'],
+    offerings: [offering(openingHours)],
+  },
+  offering: offering(openingHours),
 });
 
 test('freeCourtsBetween: min over covering slots, 0 on gaps', () => {
@@ -64,11 +82,11 @@ test('isOpenDuring: whole interval within opening hours; closed days', () => {
 
 test('slotStatuses: states, ordering and summary', () => {
   const venues: CalendarVenue[] = [
-    { venue: venue('a') },
-    { venue: venue('b') },
-    { venue: venue('c') },
-    { venue: venue('d', hours('14:00', '22:00')) },
-    { venue: venue('e') },
+    venue('a'),
+    venue('b'),
+    venue('c'),
+    venue('d', hours('14:00', '22:00')),
+    venue('e'),
   ];
   const day: CalendarDay = {
     date: '2026-11-25',
@@ -107,4 +125,69 @@ test('slotStatuses: states, ordering and summary', () => {
   const late = slotStatuses(day, venues, '22:00', '23:00');
   assert.ok(late.every((s) => s.state === 'closed'));
   assert.deepEqual(summarizeSlot(late), { freeVenues: 0, checkVenues: 0, freeCourts: 0 });
+});
+
+test('isInSeason: inclusive bounds, year-end wrap, no season = all year', () => {
+  const summer = { from: '05-01', to: '09-30' };
+  assert.equal(isInSeason(summer, '2026-05-01'), true);
+  assert.equal(isInSeason(summer, '2026-09-30'), true);
+  assert.equal(isInSeason(summer, '2026-11-25'), false);
+  const winter = { from: '10-01', to: '04-30' };
+  assert.equal(isInSeason(winter, '2026-11-25'), true);
+  assert.equal(isInSeason(winter, '2027-01-15'), true);
+  assert.equal(isInSeason(winter, '2026-06-01'), false);
+  assert.equal(isInSeason(undefined, '2026-06-01'), true);
+});
+
+test('isOpenDuring: out of season is closed, unknown hours count as possibly open (07–22)', () => {
+  const outdoor: OpeningHours = {
+    ...hours('08:00', '21:00'),
+    season: { from: '05-01', to: '09-30' },
+  };
+  assert.equal(isOpenDuring(outdoor, '2026-11-25', '10:00', '11:00'), false);
+  assert.equal(isOpenDuring(outdoor, '2026-06-03', '10:00', '11:00'), true);
+  assert.equal(isOpenDuring(undefined, '2026-11-25', '07:00', '08:00'), true);
+  assert.equal(isOpenDuring(undefined, '2026-11-29', '21:00', '22:00'), true);
+  assert.equal(isOpenDuring(undefined, '2026-11-25', '03:00', '04:00'), false);
+  assert.equal(isOpenDuring(undefined, '2026-11-25', '22:00', '23:00'), false);
+});
+
+test('slotStatuses: unknown hours → check during the daytime window, never free by hours', () => {
+  const unknownHours: CalendarVenue = { ...venue('u'), offering: offering() };
+  const day: CalendarDay = {
+    date: '2026-11-25',
+    venues: [{ venueId: 'u', availability: { status: 'unknown', freeSlots: [] } }],
+  };
+  assert.deepEqual(slotStatuses(day, [unknownHours], '10:00', '11:00'), [
+    { venueId: 'u', state: 'check' },
+  ]);
+  assert.deepEqual(slotStatuses(day, [unknownHours], '23:00', '24:00'), [
+    { venueId: 'u', state: 'closed' },
+  ]);
+});
+
+test('slotStatuses: out of season is closed even when live data lists free courts', () => {
+  const summer: OpeningHours = {
+    ...hours('07:00', '22:00'),
+    season: { from: '05-01', to: '09-30' },
+  };
+  const beach = venue('beach', summer);
+  const live = (date: string): CalendarDay => ({
+    date,
+    venues: [
+      {
+        venueId: 'beach',
+        availability: {
+          status: 'live',
+          freeSlots: [{ start: '10:00', end: '11:00', freeCourts: 5 }],
+        },
+      },
+    ],
+  });
+  assert.deepEqual(slotStatuses(live('2026-11-25'), [beach], '10:00', '11:00'), [
+    { venueId: 'beach', state: 'closed' },
+  ]);
+  assert.deepEqual(slotStatuses(live('2026-06-03'), [beach], '10:00', '11:00'), [
+    { venueId: 'beach', state: 'free', freeCourts: 5 },
+  ]);
 });

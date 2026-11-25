@@ -6,6 +6,8 @@ import {
   formatTimeAgo,
   googleMapsUrl,
   matchesVenueQuery,
+  offeringFor,
+  offeringIssues,
 } from './venues.ts';
 import type { Venue } from './types.ts';
 
@@ -20,13 +22,15 @@ const venue = (
   address,
   location: { lat: 49.2, lng: 16.6 },
   sports: ['badminton'],
-  openingHours: {
-    approximate: true,
-    days: { mon: null, tue: null, wed: null, thu: null, fri: null, sat: null, sun: null },
-  },
-  bookingUrl: 'https://example.com',
-  availabilitySource: 'none',
-  multisport: { category: 'unknown' },
+  offerings: [
+    {
+      sport: 'badminton',
+      bookingUrl: 'https://example.com',
+      bookingSystem: 'unknown',
+      availabilitySource: 'none',
+      multisport: { category: 'unknown' },
+    },
+  ],
 });
 
 test('foldText lower-cases and strips Czech diacritics', () => {
@@ -74,4 +78,33 @@ test('formatTimeAgo: minutes, hours, days and edge cases', () => {
   assert.equal(formatTimeAgo('2026-11-24T14:00:00Z', now), '1 day ago');
   assert.equal(formatTimeAgo('2026-11-22T15:00:00Z', now), '3 days ago');
   assert.equal(formatTimeAgo('not a date', now), '');
+});
+
+test('offeringFor: the offering of the sport or undefined', () => {
+  const v = venue('Multi');
+  const squash = { ...v.offerings[0]!, sport: 'squash' as const, courts: 3 };
+  const multi = {
+    ...v,
+    sports: [...v.sports, 'squash' as const],
+    offerings: [...v.offerings, squash],
+  };
+  assert.equal(offeringFor(multi, 'squash')?.courts, 3);
+  assert.equal(offeringFor(multi, 'badminton')?.sport, 'badminton');
+  assert.equal(offeringFor(multi, 'padel'), undefined);
+});
+
+test('offeringIssues: non-empty, unique sports, sports list in offering order', () => {
+  const v = venue('Multi');
+  assert.deepEqual(offeringIssues(v), []);
+  assert.deepEqual(offeringIssues({ sports: [], offerings: [] }), ['venue has no offering']);
+  assert.deepEqual(
+    offeringIssues({
+      sports: ['badminton', 'badminton'],
+      offerings: [...v.offerings, ...v.offerings],
+    }),
+    ['a sport is offered twice'],
+  );
+  assert.deepEqual(offeringIssues({ sports: ['tennis'], offerings: v.offerings }), [
+    'sports must list the offering sports in order',
+  ]);
 });

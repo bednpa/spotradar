@@ -35,13 +35,31 @@ describe('getCalendar', () => {
       ['2026-11-24', '2026-11-25', '2026-11-26', '2026-11-27'],
     );
     const ids = response.venues.map((v) => v.venue.id);
-    assert.equal(ids.length, VENUE_RECORDS.length);
+    assert.equal(ids.length, 7); // the badminton venues
+    assert.ok(response.venues.every((v) => v.offering.sport === 'badminton'));
     for (const day of response.days) {
       assert.deepEqual(
         day.venues.map((v) => v.venueId),
         ids,
       );
     }
+  });
+
+  it('returns the venues of the queried sport with that sport offering', async () => {
+    const { response, connector } = await run(
+      { sport: 'padel', from: TOMORROW, to: TOMORROW },
+      () => Promise.resolve([]),
+    );
+    const ids = response.venues.map((v) => v.venue.id);
+    assert.ok(ids.includes('centrum-viktoria') && ids.includes('padel-powers-slatina'));
+    assert.ok(response.venues.every((v) => v.offering.sport === 'padel'));
+    // Only Viktoria's padel has a (ClubSpire) connector; it is read for padel only.
+    assert.deepEqual(
+      connector.calls.map((c) => [c.venueId, c.sport]),
+      [['centrum-viktoria', 'padel']],
+    );
+    const padelPowers = response.days[0]?.venues.find((v) => v.venueId === 'padel-powers-slatina');
+    assert.equal(padelPowers?.availability.status, 'unknown');
   });
 
   it('supports a single-day range and echoes the query', async () => {
@@ -78,7 +96,7 @@ describe('getCalendar', () => {
   it('filters by maxDistanceKm and does not fetch filtered-out venues', async () => {
     const { response, connector } = await run({ ...ORIGIN, maxDistanceKm: 3 }, noSlots);
     const ids = response.venues.map((v) => v.venue.id);
-    assert.ok(ids.length > 0 && ids.length < VENUE_RECORDS.length);
+    assert.ok(ids.length > 0 && ids.length < 7);
     assert.ok(!ids.includes('badminton-jehnice'));
     assert.ok(response.venues.every((v) => (v.distanceKm ?? Infinity) <= 3));
     assert.ok(connector.calls.every((c) => ids.includes(c.venueId)));
@@ -102,7 +120,7 @@ describe('getCalendar', () => {
 
   it('maps connector outcomes to live / unavailable / unknown for every day', async () => {
     const { response } = await run({}, (venue) =>
-      venue.id === 'kuklenska'
+      venue.venueId === 'kuklenska'
         ? Promise.resolve([slot('10:00', '11:00', 2)])
         : Promise.reject(new Error('down')),
     );
@@ -119,7 +137,7 @@ describe('getCalendar', () => {
   it("removes today's slots that already ended but keeps future days intact", async () => {
     const { response } = await run({}, (venue) =>
       Promise.resolve(
-        venue.id === 'kuklenska'
+        venue.venueId === 'kuklenska'
           ? [slot('07:00', '08:00', 1), slot('08:00', '09:00', 1), slot('10:00', '11:00', 4)]
           : [],
       ),

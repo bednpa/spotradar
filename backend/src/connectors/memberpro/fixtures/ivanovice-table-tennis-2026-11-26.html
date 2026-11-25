@@ -1,0 +1,430 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><link rel="stylesheet" type="text/css" href="/ivanovice/DXR.axd?r=1_73,1_67,1_68,1_69,1_72,1_207,0_4545-p31Oj" /><link rel="stylesheet" type="text/css" href="/ivanovice/DXR.axd?r=1_206,0_4550-p31Oj" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>
+	Webové rezervace - Member Pro
+</title><meta http-equiv="X-UA-Compatible" content="IE=edge" /><meta http-equiv="content-type" content="application/xhtml+xml; charset=utf-8" /><meta name="author" content="Konečný, Kocian - LUXART, s.r.o." />
+
+
+    <script type="text/javascript" src="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.9.1.min.js"></script>
+    <script type="text/javascript" src="https://cdn3.devexpress.com/jslib/13.1.6/js/dx.all.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="https://cdn3.devexpress.com/jslib/13.1.6/css/dx.common.css" /><link rel="stylesheet" type="text/css" href="https://cdn3.devexpress.com/jslib/13.1.6/css/dx.desktop.default.css" /><link rel="stylesheet" type="text/css" href="App_Themes/template.css" /><link href="App_Themes/Scroll.css" rel="stylesheet" type="text/css" /><link id="lnkStyleSheet" rel="stylesheet" type="text/css" href="css/user-login.css" />
+
+
+
+
+    
+    <script src="Scripts/gaugeSVG.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        function gauge_call(poceta, pocetb) {
+
+            var gauge1 = new GaugeSVG({
+                id: "Gauge1",
+                value: 0.0,
+                title: "Kapacita",
+                label: "",
+                gaugeWidthScale: 1.0,
+                min: 0.0,
+                max: 60.0, //MAXIMUM
+                lowerActionLimit: -1,
+                lowerWarningLimit: 0.0,
+                needleColor: "#880088",
+                optimumRangeColor: "#88ff88",
+                warningRangeColor: "#f4f444",
+                actionRangeColor: "#ff8888",
+                canvasBackColor: "transparent"
+            });
+
+            gauge1.refresh(0);
+            gauge1.refresh(poceta, true);
+
+            //     Pokud chci 2 grafy, musim mit i odpovidajici div , pokud chci jen jeden, tak tady odstranit a nedavat div Gauge2
+
+            var gauge2 = new GaugeSVG({
+                id: "Gauge2",
+                value: 0.0,
+                title: "Kapacita",
+                label: "",
+                gaugeWidthScale: 1.0,
+                min: 0.0,
+                max: 60.0, //MAXIMUM
+                lowerActionLimit: -1,
+                lowerWarningLimit: 0.0,
+                needleColor: "#880088",
+                optimumRangeColor: "#88ff88",
+                warningRangeColor: "#f4f444",
+                actionRangeColor: "#ff8888",
+                canvasBackColor: "transparent"
+            });
+
+            gauge2.refresh(0);
+            gauge2.refresh(pocetb, true);
+
+        };
+
+        function OnSubmit() {
+            lp.Show();
+        }
+        function OnControlsInitialized(s, e) {
+            //Hide
+            //lp.Hide();
+            //Hide After Timeout
+            setTimeout(function () {
+                lp.Hide();
+            }, 200);
+        }
+        javascript: window.history.forward(1);
+    </script>
+    <style>
+        #Gauge1 {
+            width: 125px;
+            height: 100px;
+            display: inline-block;
+            margin: 1em;
+            text-align: left;
+            position: absolute;
+            top: 10px;
+        }
+
+        #Gauge2 {
+            width: 125px;
+            height: 100px;
+            display: inline-block;
+            margin: 1em;
+            text-align: left;
+            position: absolute;
+            top: 10px;
+            left: 145px;
+        }
+    </style>
+
+    
+    
+<link href="/ivanovice/WebResource.axd?d=IPeluPODhuxgcsCane2vmNXg56JoM-_h1_pIYMRTMX2CXhDx1iAqep6cKjuhhDZT9_iqCBoyGCgfoRHKfiXT66NHGGNTU26Q60_rLxp3yr4tsf84K3RBAMQ7-qzbnVF0eHiOv-0bejxAiHt3clBgmA2&amp;t=633718879910000000" type="text/css" rel="stylesheet" /><link href="/ivanovice/WebResource.axd?d=wuf-4Bp6yObY1k8yTziKj-bNzDUk-YKNTcvcs38qwYedFi1Qyy4zp5Tq7czU_myOgmXXRhhuIJcSGwIc_d58XZsjWmXunXCtJ7oekuF8ARHipf_1QBrXdP9P2A5tfqUIjX8-60PAkPjzkZuF7XlrJF0kShg8hXWQ2iwU4qMvIuw1&amp;t=633718879910000000" type="text/css" rel="stylesheet" /></head>
+<body id="body" class="dx-theme-desktop dx-theme-desktop-typography dx-viewport">
+    <form name="form1" method="post" action="./" id="form1" class="mujfomrstyle">
+<input type="hidden" name="ToolkitScriptManager2_HiddenField" id="ToolkitScriptManager2_HiddenField" value="" />
+<input type="hidden" name="TAB_ROZPIS_ClientState" id="TAB_ROZPIS_ClientState" value="{&quot;ActiveTabIndex&quot;:0,&quot;TabState&quot;:[true]}" />
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="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" />
+
+
+<script src="/ivanovice/ScriptResource.axd?d=uHIkleVeDJf4xS50Krz-yI1LC-JYi-8pidI2YiaDnGAHEO6E9aGj5M0l2TYwU5U4Dsa4p95WSPe9zFV7AO0Amnp6qUFoXteocpTXHExKDfNM0K5__OjX21e6RvDiMr7JJ7nHpW_mcmhacjDdvNqyB0uXPat9ZlDqM1HqSc7H3YA1&amp;t=ffffffffbec1863d" type="text/javascript"></script>
+<script src="/ivanovice/default.aspx?_TSM_HiddenField_=ToolkitScriptManager2_HiddenField&amp;_TSM_CombinedScripts_=%3b%3bAjaxControlToolkit%2c+Version%3d3.0.20820.16598%2c+Culture%3dneutral%2c+PublicKeyToken%3d28f01b0e84b6d53e%3aen-US%3a707835dd-fa4b-41d1-89e7-6df5d518ffb5%3a865923e8%3a91bd373d%3aad1f21ce%3a596d588c%3aff62b0be" type="text/javascript"></script>
+<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="F6E0E557" />
+<input type="hidden" name="__VIEWSTATEENCRYPTED" id="__VIEWSTATEENCRYPTED" value="" />
+<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="YTbT9+tn4WtwVno5J2uYMVXBx35HVq6XTdclBP6XkcQes6KOghhVHYuqRvyY8gLRIki4dfm7xoZS2vnzj0ncLRyn2WyLqn0yAxUJDM0Jc2DGdufdppKGUpCLVORt+LpENySx0Ybmj5/ztaKTADyAyO8Y0IlBmFoRtkDE0WmYkaxdi1ZK0k3ACGj3ZIGwW1Pukp0GdDHWumqJwfidMqWH+tnyegSNV4mE0l/J8k3QefAn6N+O/tZy4FKehlMXYHlQ0jdoNPRTNJG/u+rSDt/S2ZaQyitNVX56vvLbfUioHNj+dztFnDuZsvVUxKMDNNSXKlL1TxD9d6vMGcYiBBgHHmGfFnVtNi6zrLV9Mvt1sA54WBnucDp/b1i2IJtYX26R/7prn/45dAPafajsRjKM3lW7/5GrMgMPm7v6JBNu8TC56vgACZNlsBEQLpKyHJs5lV1CRgTwTpDH0Q/Igzujo+mOdFTllo8AoFZf+jlxu9JHaAox9cYzaQ5AOwR0sXbqW483W3MgePUdPUYBCyRKvgTBjD8QauF8wCvyslSf66gOvhhwYn6nrENcbpH93E4VgJlswdeUQq2EBmrvSF48PO/76NThYxYmoZC+/IrKlJvArYUz0r1wpWub4Ba+S6P3EHTRvS2GTgfq7xYwu5/dv4Rc0Dl01s4yCcjVy3Nkx3xhXPR4xrWruDN+sXF4yAOXvya6DG5JCB+6yRySbBzs+bY/tkk/Nwoh+dO5/dvg6KEzOxAUhwyTJj7wM63QvsaMZMr+q8cOybjCpA2s8uaIoFuDGz/RkzKsu/rK3C5iu35+NDJefJ+KEUHDtIFgbA/WwVeizGKhNC4A8J3cM0bMRznVthSp2Opvv0btPnqkwc6IvcurwZwXfIPjCWm1H8L9LSSHfTc0MJ2J4gETrUd+Fk6FfmxEqAhSBTvdKRl2Kz24bmrkJFJr3Rar3qmoqKPufaCPCIsG6kMQYdBUpcUtAyhzGcDXrIp5d4hUT/IZbflXR4svYGSkkFpRRLRP3bvLgT8zd7ZrIIAxs+z5l+yT7ohG8q/wxiA7GvdH7vLJlZBIQiYnJZIb4NGe7fj/H9CpfowDMRXlSgCVA2OduXseUQq3hC9IT6kWJgMvhMpwOqpwXwSfIjOANpufLYxDIbwWDqgPl6NXQGk4RVl/gWLX1YmejpvC5em0K9D1ZZIiUOGAJUxH6tcbNGD7JTY/+GWZqHwuUkZCVAd8hhbJZOlhxk7T09D8T+A/suHt+rstFrkCvLtsjpy/876Xx4TT6gH37zrE7eqvpJYN2uggH9K39GZbBxB5cjwUaJkHzMwIxzmN9C+ujgyEIOHSj08kqZNnPb1ub9C4glPwImuWyv4MsKvNOp4Iy+ZHWbXRe51/rcEJXzDdJRw6m1oScati5f4sqHAH3dbpRZcAI8lE/MINASIkwDx1+MVlrHYQbUspO6IA9v3B26jRAWqjTTPjFGcbuij2R5KRmt7JEnpbwtvMMIAfOL0EevRPttsCjBDgGRoV2N50SNJQLyUSlNgTRpnf+THFMW0iTs7KNPH9D3rbAJgQP1d/NHdAay9JtleyjmoMInhlZ4g+hdzrKzkaucDHli/dF6CitkyEdzCjn+4rS62y338mGf7mre/PKGK51Q4TqeQmPgi1rjuDUwjlP+sz3mZOz3pMpxq/DjpmuYGE+Txkyvk8IOuLXdyXkaKp6mTK+POdMff6YFv9NVYKDM9rdkDc9pMMIajHoNBVSGBlaX7ErswaMxPem84JTbplcXdT/mEdJ0d8/fM8N2RvTBXC4B/WLhcz3YV291HBIyCOJtcR6VwbRbGErtLmG5hAzVlvuXdeuDr3FTMZhY5RNm4N" />
+        
+
+        <input type="hidden"/><script id="dxis_653759794" src="/ivanovice/DXR.axd?r=1_11,1_12,1_23,1_63,1_13,1_14,1_15,1_49,1_42,1_60,1_180,1_181,1_21,1_22,1_187,1_189,1_17,1_41,1_191-p31Oj" type="text/javascript"></script><table class="dxlpLoadingPanel dxlpControl" id="lp" style="position:absolute;left:0px;top:0px;z-index:30000;display:none;">
+	<tr>
+		<td class="dx" style="padding-right:0px;"><img class="dxlp-loadingImage dxlp-imgPosLeft" src="/ivanovice/DXR.axd?r=1_86-p31Oj" alt="" style="vertical-align:middle;" /></td><td class="dx" style="padding-left:0px;"><span id="lp_TL">Loading&hellip;</span></td>
+	</tr>
+</table><div id="lp_LD" class="dxlpLoadingDiv dxlpControl dx-ft" style="left:0px;top:0px;z-index:29999;display:none;position:absolute;">
+
+</div><script id="dxss_145677228" type="text/javascript">
+<!--
+ASPx.createControl(ASPxClientLoadingPanel,'lp','');
+
+//-->
+</script>
+        <script type="text/javascript">
+            lp.Show();
+        </script>
+        <script id="dxss_971798018" type="text/javascript">
+<!--
+var dxo = ASPx.GetGlobalEvents();
+dxo.SetEvents({'ControlsInitialized':OnControlsInitialized});
+
+//-->
+</script>
+
+        <input type="hidden" name="ID_KLIENT" id="ID_KLIENT" />
+        <input type="hidden" name="ID_TYP_SPORTOVISTE" id="ID_TYP_SPORTOVISTE" value="20" />
+        <input type="hidden" name="ID_PREDVOLBY" id="ID_PREDVOLBY" />
+        <input type="hidden" name="DATUM_HF" id="DATUM_HF" value="26.11.2026" />
+
+        <div id="fb-root">
+        </div>
+        
+        <input type="hidden" name="HF_ID_KL_G" id="HF_ID_KL_G" value="0" />
+
+        <div id="hlavni">
+            <div class="pruh tmave_pozadi">
+            </div>
+            <div id="Titulek_Under">
+            </div>
+            <div id="hlavni_stred">
+                <div id="Gauge1"></div>
+                <div id="Gauge2"></div>
+                <div class="ohraniceni">
+                    <div id="hlavicka">
+                        <div id="Titulek" class="je_odkaz" onclick="location.href=&#39;http://www.sportcentrum-ivanovice.cz/&#39;"><img src='images/logo/_transparent_logo_1.png' alt='' style="width: 100%;" /></div>
+                        <div>
+                        </div>
+                        <div>
+                        </div>
+                        <div id="volby" class="tmave_pozadi">
+                            <div id="Panel_login" style="padding-right: 12px;">
+	
+                                <span id="Label3">Přihlášení</span>
+                                <input name="TB_UserName" type="text" id="TB_UserName" class="tb" />
+                                <input type="hidden" name="TB_UserName_TextBoxWatermarkExtender_ClientState" id="TB_UserName_TextBoxWatermarkExtender_ClientState" />
+                                <input name="TB_password" type="password" id="TB_password" class="tb" />
+                                <input type="hidden" name="TB_password_TextBoxWatermarkExtender_ClientState" id="TB_password_TextBoxWatermarkExtender_ClientState" />
+                                <input type="submit" name="Button1" value="Přihlásit" id="Button1" title="Přihlásit" class="but" />
+                                <input type="submit" name="Button_registrace" value="Registrace" id="Button_registrace" title="Registrovat" class="but" />
+                                <input type="submit" name="Button_zapheslo" value="?" id="Button_zapheslo" title="Zaslání hesla" class="but" />
+                            
+</div>
+                            
+                            <div>
+                                <div class="dxflFormLayout" id="ASPxFormLayout2">
+	<div class="dxflGroupContainerSys dxflGroup dxflGroupSys dxflAGSys dxflElConSys dxflFloatedElConSys" data-groupID="group_" style="width:100%;">
+		<div id="ASPxFormLayout2_0" style="width:100%;">
+			<div class="dxflHARSys dxflGroupCell">
+				<div class="dxflCLLSys dxflItemSys dxflTextEditItemSys dxflItem dxflElConSys">
+					<div class="dxflHARSys dxflVATSys dxflCaptionCell dxflCaptionCellSys">
+						<label class="dxflCaption" for="ASPxFormLayout2_Datepicker2_I"></label>
+					</div><div class="dxflNestedControlCell">
+						
+                                                    <script id="dxss_394708317" type="text/javascript">
+<!--
+(function(){
+var a = {'currNegPattern':8,'currGroupSeparator':' ','abbrDayNames':['ne','po','út','st','čt','pá','so'],'monthNames':['leden','únor','březen','duben','květen','červen','červenec','srpen','září','říjen','listopad','prosinec',''],'numGroupSeparator':' ','shortTime':'H:mm','longTime':'H:mm:ss','currDecimalPoint':',','currPosPattern':3,'ds':'.','longDate':'dddd d. MMMM yyyy','abbrMonthNames':['led','úno','bře','dub','kvě','čvn','čvc','srp','zář','říj','lis','pro',''],'pm':'odp.','twoDigitYearMax':2049,'numPosInf':'∞','numNegInf':'-∞','am':'dop.','monthDay':'d. MMMM','currency':'Kč','numDecimalPoint':',','dayNames':['neděle','pondělí','úterý','středa','čtvrtek','pátek','sobota'],'genMonthNames':['ledna','února','března','dubna','května','června','července','srpna','září','října','listopadu','prosince',''],'shortDate':'dd.MM.yyyy'};
+for(var b in a) ASPx.CultureInfo[b] = a[b];
+})();
+
+
+//-->
+</script><table id="ASPxFormLayout2_Datepicker2_LP" class="dxeLoadingPanel_Office2010Silver dxlpLoadingPanel_Office2010Silver" style="left:0px;top:0px;z-index:30000;display:none;">
+							<tr>
+								<td class="dx" style="padding-right:0px;"><font size="2"><img class="dxlp-loadingImage dxlp-imgPosLeft" src="/ivanovice/DXR.axd?r=1_86-p31Oj" alt="" style="vertical-align:middle;" /></font></td><td class="dx" style="padding-left:0px;"><font size="2"><span id="ASPxFormLayout2_Datepicker2_TL">Loading&hellip;</span></font></td>
+							</tr>
+						</table><table class="dxeButtonEditSys dxeButtonEdit_Office2010Silver Form_layout_right" id="ASPxFormLayout2_Datepicker2" width="100%">
+							<tr>
+								<td class="dxic" onmousedown="return ASPx.DDMC_MD(&#39;ASPxFormLayout2_Datepicker2&#39;, event)" width="100%" style="padding-left:4px;padding-right:1px;padding-top:4px;padding-bottom:3px;"><font size="2"><input class="dxeEditArea_Office2010Silver dxeEditAreaSys" id="ASPxFormLayout2_Datepicker2_I" name="ASPxFormLayout2$Datepicker2" onfocus="ASPx.EGotFocus(&#39;ASPxFormLayout2_Datepicker2&#39;)" onblur="ASPx.ELostFocus(&#39;ASPxFormLayout2_Datepicker2&#39;)" onchange="ASPx.ETextChanged(&#39;ASPxFormLayout2_Datepicker2&#39;)" value="26.11.2026" type="text" /></font></td><td id="ASPxFormLayout2_Datepicker2_B-1" class="dxeButton dxeButtonEditButton_Office2010Silver" style="user-select:none;-khtml-user-select:none;-ms-user-select:none;"><font size="2"><img id="ASPxFormLayout2_Datepicker2_B-1Img" class="dxEditors_edtDropDown_Office2010Silver" src="/ivanovice/DXR.axd?r=1_86-p31Oj" alt="v" /></font></td>
+							</tr>
+						</table><div id="ASPxFormLayout2_Datepicker2_DDD_PW-1" class="dxpcDropDown_Office2010Silver dxpclW dxpc-ie dxpc-ddSys dxdd-root" style="z-index:10000;display:none;visibility:hidden;">
+							<div class="dxpc-mainDiv dxdd-cal dxpc-shadow"><font size="2">
+								<div class="dxpc-contentWrapper">
+									<div class="dxpc-content">
+										<table style="display:none;">
+											<tr>
+												<td id="ASPxFormLayout2_Datepicker2_DDD_C_EC_D" class="dxeCalendarDay_Office2010Silver"></td><td id="ASPxFormLayout2_Datepicker2_DDD_C_EC_DS" class="dxeCalendarSelected_Office2010Silver"></td><td id="ASPxFormLayout2_Datepicker2_DDD_C_EC_DH" class="dxeCalendarHover_Office2010Silver"></td><td id="ASPxFormLayout2_Datepicker2_DDD_C_EC_DA" class="dxeCalendarOtherMonth_Office2010Silver"></td><td id="ASPxFormLayout2_Datepicker2_DDD_C_EC_DO" class="dxeCalendarOutOfRange_Office2010Silver"></td><td id="ASPxFormLayout2_Datepicker2_DDD_C_EC_DDD" class="dxeCalendarDayDisabled_Office2010Silver"></td><td id="ASPxFormLayout2_Datepicker2_DDD_C_EC_DW" class="dxeCalendarWeekend_Office2010Silver"></td><td id="ASPxFormLayout2_Datepicker2_DDD_C_EC_DT" class="dxeCalendarToday_Office2010Silver"></td><td id="ASPxFormLayout2_Datepicker2_DDD_C_EC_DD" class="dxeDisabled_Office2010Silver"></td><td id="ASPxFormLayout2_Datepicker2_DDD_C_EC_FNI" class="dxeCalendarFastNavItem_Office2010Silver"></td><td id="ASPxFormLayout2_Datepicker2_DDD_C_EC_FNIS" class="dxeCalendarFastNavItemSelected_Office2010Silver"></td><td id="ASPxFormLayout2_Datepicker2_DDD_C_EC_FNIH" class="dxeCalendarFastNavItemHover_Office2010Silver"></td><td id="ASPxFormLayout2_Datepicker2_DDD_C_EC_FNIA" class="dxeCalendarFastNavItemOtherPeriod_Office2010Silver"></td>
+											</tr>
+										</table><table class="dxeCVC dxeCalendar_Office2010Silver" id="ASPxFormLayout2_Datepicker2_DDD_C">
+											<tr>
+												<td style="vertical-align:Top;"><font size="2"><table width="100%" style="border-collapse:collapse;">
+													<tr>
+														<td class="dxeCalendarHeader_Office2010Silver" style="border-top:0;"><font size="2"><table width="100%" style="border-collapse:collapse;">
+															<tr>
+																<td id="ASPxFormLayout2_Datepicker2_DDD_C_PTPC" class="dxe" style="display:none;"><font size="2"><img id="ASPxFormLayout2_Datepicker2_DDD_C_PTPCImg" class="dxEditors_edtCalendarFNPrevPeriod_Office2010Silver" src="/ivanovice/DXR.axd?r=1_86-p31Oj" alt="Back" /></font></td><td id="ASPxFormLayout2_Datepicker2_DDD_C_PYC" class="dxe"><font size="2"><img id="ASPxFormLayout2_Datepicker2_DDD_C_PYCImg" class="dxEditors_edtCalendarPrevYear_Office2010Silver" src="/ivanovice/DXR.axd?r=1_86-p31Oj" alt="Previous year" /></font></td><td class="dxeCHS"><font size="2"></font></td><td id="ASPxFormLayout2_Datepicker2_DDD_C_PMC" class="dxe"><font size="2"><img id="ASPxFormLayout2_Datepicker2_DDD_C_PMCImg" class="dxEditors_edtCalendarPrevMonth_Office2010Silver" src="/ivanovice/DXR.axd?r=1_86-p31Oj" alt="Previous month" /></font></td><td id="ASPxFormLayout2_Datepicker2_DDD_C_TC" class="dxe" width="100%" style="cursor:default;"><font size="2"><span id="ASPxFormLayout2_Datepicker2_DDD_C_T" style="cursor:pointer;">listopad 2026</span></font></td><td id="ASPxFormLayout2_Datepicker2_DDD_C_NMC" class="dxe"><font size="2"><img id="ASPxFormLayout2_Datepicker2_DDD_C_NMCImg" class="dxEditors_edtCalendarNextMonth_Office2010Silver" src="/ivanovice/DXR.axd?r=1_86-p31Oj" alt="Next month" /></font></td><td class="dxeCHS"><font size="2"></font></td><td id="ASPxFormLayout2_Datepicker2_DDD_C_NYC" class="dxe"><font size="2"><img id="ASPxFormLayout2_Datepicker2_DDD_C_NYCImg" class="dxEditors_edtCalendarNextYear_Office2010Silver" src="/ivanovice/DXR.axd?r=1_86-p31Oj" alt="Next year" /></font></td><td id="ASPxFormLayout2_Datepicker2_DDD_C_NTPC" class="dxe" style="display:none;"><font size="2"><img id="ASPxFormLayout2_Datepicker2_DDD_C_NTPCImg" class="dxEditors_edtCalendarFNNextPeriod_Office2010Silver" src="/ivanovice/DXR.axd?r=1_86-p31Oj" alt="Forward" /></font></td>
+															</tr>
+														</table></font></td>
+													</tr><tr>
+														<td id="ASPxFormLayout2_Datepicker2_DDD_C_mc" class="dxMonthGridWithWeekNumbers" style="user-select:none;-khtml-user-select:none;-ms-user-select:none;"><font size="2"><table id="ASPxFormLayout2_Datepicker2_DDD_C_mt" width="100%" style="border-collapse:separate;">
+															<tr class="dx-ac">
+																<td><font size="2"></font></td><td class="dxeCalendarDayHeader_Office2010Silver"><font size="2">po</font></td><td class="dxeCalendarDayHeader_Office2010Silver"><font size="2">út</font></td><td class="dxeCalendarDayHeader_Office2010Silver"><font size="2">st</font></td><td class="dxeCalendarDayHeader_Office2010Silver"><font size="2">čt</font></td><td class="dxeCalendarDayHeader_Office2010Silver"><font size="2">pá</font></td><td class="dxeCalendarDayHeader_Office2010Silver"><font size="2">so</font></td><td class="dxeCalendarDayHeader_Office2010Silver"><font size="2">ne</font></td>
+															</tr><tr>
+																<td class="dxeCalendarWeekNumber_Office2010Silver"><font size="2">44</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarOtherMonth_Office2010Silver"><font size="2">26</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarOtherMonth_Office2010Silver"><font size="2">27</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarOtherMonth_Office2010Silver"><font size="2">28</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarOtherMonth_Office2010Silver"><font size="2">29</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarOtherMonth_Office2010Silver"><font size="2">30</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarWeekend_Office2010Silver dxeCalendarOtherMonth_Office2010Silver"><font size="2">31</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarWeekend_Office2010Silver"><font size="2">1</font></td>
+															</tr><tr>
+																<td class="dxeCalendarWeekNumber_Office2010Silver"><font size="2">45</font></td><td class="dxeCalendarDay_Office2010Silver"><font size="2">2</font></td><td class="dxeCalendarDay_Office2010Silver"><font size="2">3</font></td><td class="dxeCalendarDay_Office2010Silver"><font size="2">4</font></td><td class="dxeCalendarDay_Office2010Silver"><font size="2">5</font></td><td class="dxeCalendarDay_Office2010Silver"><font size="2">6</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarWeekend_Office2010Silver"><font size="2">7</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarWeekend_Office2010Silver"><font size="2">8</font></td>
+															</tr><tr>
+																<td class="dxeCalendarWeekNumber_Office2010Silver"><font size="2">46</font></td><td class="dxeCalendarDay_Office2010Silver"><font size="2">9</font></td><td class="dxeCalendarDay_Office2010Silver"><font size="2">10</font></td><td class="dxeCalendarDay_Office2010Silver"><font size="2">11</font></td><td class="dxeCalendarDay_Office2010Silver"><font size="2">12</font></td><td class="dxeCalendarDay_Office2010Silver"><font size="2">13</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarWeekend_Office2010Silver"><font size="2">14</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarWeekend_Office2010Silver"><font size="2">15</font></td>
+															</tr><tr>
+																<td class="dxeCalendarWeekNumber_Office2010Silver"><font size="2">47</font></td><td class="dxeCalendarDay_Office2010Silver"><font size="2">16</font></td><td class="dxeCalendarDay_Office2010Silver"><font size="2">17</font></td><td class="dxeCalendarDay_Office2010Silver"><font size="2">18</font></td><td class="dxeCalendarDay_Office2010Silver"><font size="2">19</font></td><td class="dxeCalendarDay_Office2010Silver"><font size="2">20</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarWeekend_Office2010Silver"><font size="2">21</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarWeekend_Office2010Silver"><font size="2">22</font></td>
+															</tr><tr>
+																<td class="dxeCalendarWeekNumber_Office2010Silver"><font size="2">48</font></td><td class="dxeCalendarDay_Office2010Silver"><font size="2">23</font></td><td class="dxeCalendarDay_Office2010Silver"><font size="2">24</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarToday_Office2010Silver"><font size="2">25</font></td><td class="dxeCalendarDay_Office2010Silver"><font size="2">26</font></td><td class="dxeCalendarDay_Office2010Silver"><font size="2">27</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarWeekend_Office2010Silver"><font size="2">28</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarWeekend_Office2010Silver"><font size="2">29</font></td>
+															</tr><tr>
+																<td class="dxeCalendarWeekNumber_Office2010Silver"><font size="2">49</font></td><td class="dxeCalendarDay_Office2010Silver"><font size="2">30</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarOtherMonth_Office2010Silver"><font size="2">1</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarOtherMonth_Office2010Silver"><font size="2">2</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarOtherMonth_Office2010Silver"><font size="2">3</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarOtherMonth_Office2010Silver"><font size="2">4</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarWeekend_Office2010Silver dxeCalendarOtherMonth_Office2010Silver"><font size="2">5</font></td><td class="dxeCalendarDay_Office2010Silver dxeCalendarWeekend_Office2010Silver dxeCalendarOtherMonth_Office2010Silver"><font size="2">6</font></td>
+															</tr>
+														</table></font></td>
+													</tr><tr>
+														<td id="ASPxFormLayout2_Datepicker2_DDD_C_yc" class="dxFastNavGrid" style="display:none;"><font size="2"><table id="ASPxFormLayout2_Datepicker2_DDD_C_yt" class="dxeCalendarFastNav_Office2010Silver" height="100%" width="100%" style="border-collapse:separate;">
+															<tr>
+																<td class="dxeCalendarFastNavItemArea_Office2010Silver" height="100%" width="100%"><font size="2"><table id="ASPxFormLayout2_Datepicker2_DDD_C_yt_n" height="100%" width="100%" style="border-collapse:separate;">
+																	<tr>
+																		<td class="dxeCalendarFastNavItem_Office2010Silver dxeCalendarFastNavItemOtherPeriod_Office2010Silver"><font size="2">Led</font></td><td class="dxeCalendarFastNavItem_Office2010Silver dxeCalendarFastNavItemOtherPeriod_Office2010Silver"><font size="2">Úno</font></td><td class="dxeCalendarFastNavItem_Office2010Silver dxeCalendarFastNavItemOtherPeriod_Office2010Silver"><font size="2">Bře</font></td><td class="dxeCalendarFastNavItem_Office2010Silver dxeCalendarFastNavItemOtherPeriod_Office2010Silver"><font size="2">Dub</font></td>
+																	</tr><tr>
+																		<td class="dxeCalendarFastNavItem_Office2010Silver dxeCalendarFastNavItemOtherPeriod_Office2010Silver"><font size="2">Kvě</font></td><td class="dxeCalendarFastNavItem_Office2010Silver dxeCalendarFastNavItemOtherPeriod_Office2010Silver"><font size="2">Čvn</font></td><td class="dxeCalendarFastNavItem_Office2010Silver dxeCalendarFastNavItemOtherPeriod_Office2010Silver"><font size="2">Čvc</font></td><td class="dxeCalendarFastNavItem_Office2010Silver dxeCalendarFastNavItemOtherPeriod_Office2010Silver"><font size="2">Srp</font></td>
+																	</tr><tr>
+																		<td class="dxeCalendarFastNavItem_Office2010Silver dxeCalendarFastNavItemOtherPeriod_Office2010Silver"><font size="2">Zář</font></td><td class="dxeCalendarFastNavItem_Office2010Silver dxeCalendarFastNavItemOtherPeriod_Office2010Silver"><font size="2">Říj</font></td><td class="dxeCalendarFastNavItem_Office2010Silver"><font size="2">Lis</font></td><td class="dxeCalendarFastNavItem_Office2010Silver dxeCalendarFastNavItemOtherPeriod_Office2010Silver"><font size="2">Pro</font></td>
+																	</tr>
+																</table></font></td>
+															</tr>
+														</table></font></td>
+													</tr>
+												</table></font></td>
+											</tr><tr>
+												<td id="ASPxFormLayout2_Datepicker2_DDD_C_F" class="dxeCalendarFooter_Office2010Silver"><font size="2"><button id="ASPxFormLayout2_Datepicker2_DDD_C_BT" class="dxeCalendarButton_Office2010Silver" type="button">Today</button></font></td>
+											</tr>
+										</table><script id="dxss_61581553" type="text/javascript">
+<!--
+ASPx.AddHoverItems('ASPxFormLayout2_Datepicker2_DDD_C',[[['dxeCalendarButtonHover_Office2010Silver'],[''],['BT','BO','BCN','FNP_BO','FNP_BC']]]);
+ASPx.AddPressedItems('ASPxFormLayout2_Datepicker2_DDD_C',[[['dxeCalendarButtonPressed_Office2010Silver'],[''],['BT','BO','BCN','FNP_BO','FNP_BC']]]);
+ASPx.AddDisabledItems('ASPxFormLayout2_Datepicker2_DDD_C',[[['dxeDisabled_Office2010Silver'],[''],['']],[['dxeDisabled_Office2010Silver dxeButtonDisabled_Office2010Silver'],[''],['BT','BO','BCN','FNP_BO','FNP_BC']],[[''],[''],['PYC','PMC','NMC','NYC'],,[[{'spriteCssClass':'dxEditors_edtCalendarPrevYearDisabled_Office2010Silver'}],[{'spriteCssClass':'dxEditors_edtCalendarPrevMonthDisabled_Office2010Silver'}],[{'spriteCssClass':'dxEditors_edtCalendarNextMonthDisabled_Office2010Silver'}],[{'spriteCssClass':'dxEditors_edtCalendarNextYearDisabled_Office2010Silver'}]],['Img']]]);
+ASPx.createControl(ASPxClientCalendar,'ASPxFormLayout2_Datepicker2_DDD_C','',{'uniqueID':'ASPxFormLayout2$Datepicker2$DDD$C','scStates':2,'scPostfix':'Office2010Silver','serverCurrentDate':new Date(2026,10,25,0,0,0,0),'visibleDate':new Date(2026,10,26,0,0,0,0),'firstDayOfWeek':1,'fastNavRollbackTexts':['Back To Days', 'Back To Months', 'Back To Years'],'isDateEditCalendar':true},null,null,{'decorationStyles':[{'key':'F','className':'dxeFocused_Office2010Silver','cssText':''}],'selection':[new Date(2026,10,26,0,0,0,0)]});
+
+//-->
+</script>
+									</div>
+								</div>
+							</font></div>
+						</div><script id="dxss_1109309085" type="text/javascript">
+<!--
+ASPx.AddHoverItems('ASPxFormLayout2_Datepicker2_DDD',[[['dxpc-closeBtnHover'],[''],['HCB-1']]]);
+ASPx.createControl(ASPxClientPopupControl,'ASPxFormLayout2_Datepicker2_DDD','',{'uniqueID':'ASPxFormLayout2$Datepicker2$DDD','adjustInnerControlsSizeOnShow':false,'popupAnimationType':'slide','closeAction':'CloseButton','popupHorizontalAlign':'LeftSides','popupVerticalAlign':'Below'},{'Shown':function (s, e) { ASPx.DDBPCShown('ASPxFormLayout2_Datepicker2', e); }});
+
+//-->
+</script><script id="dxss_125188712" type="text/javascript">
+<!--
+ASPx.AddHoverItems('ASPxFormLayout2_Datepicker2',[[['dxeButtonEditButtonHover_Office2010Silver'],[''],['B-1']]]);
+ASPx.RemoveHoverItems('ASPxFormLayout2_Datepicker2',[[['B-100']]]);
+ASPx.AddPressedItems('ASPxFormLayout2_Datepicker2',[[['dxeButtonEditButtonPressed_Office2010Silver'],[''],['B-1']]]);
+ASPx.RemovePressedItems('ASPxFormLayout2_Datepicker2',[[['B-100']]]);
+ASPx.createControl(ASPxClientDateEdit,'ASPxFormLayout2_Datepicker2','',{'autoPostBack':true,'callBack':function(arg) { WebForm_DoCallback('ASPxFormLayout2$Datepicker2',arg,ASPx.Callback,'ASPxFormLayout2_Datepicker2',ASPx.CallbackError,true); },'uniqueID':'ASPxFormLayout2$Datepicker2','stateObject':{'rawValue':'1795651200000','useMinDateInsteadOfNull':false},'autoCompleteAttribute':{'name':'autocomplete','value':'off'},'outOfRangeWarningClassName':'dxeOutOfRWarn_Office2010Silver dxeOutOfRWarnRight_Office2010Silver','outOfRangeWarningMessages':['The date must be in the range {0}...{1}', 'The date must be greater than or equal to {0}', 'The date must be less than or equal to {0}'],'date':new Date(2026,10,26,0,0,0,0),'dateOnError':'t','allowNull':false,'dateFormatter':ASPx.DateFormatter.Create('dd.MM.yyyy')},null,null,{'decorationStyles':[{'key':'F','className':'dxeFocused_Office2010Silver','cssText':''}]});
+
+//-->
+</script>
+                                                
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div><script id="dxss_1726173339" type="text/javascript">
+<!--
+ASPx.createControl(ASPxClientFormLayout,'ASPxFormLayout2','',{'adaptivityMode':1});
+
+//-->
+</script>
+
+                            </div>
+                        </div>
+                        <div id="Button_A" class="Button_A">
+                        </div>
+                        <div id="Button_B" class="Button_B">
+                        </div>
+                        <div id="HT_HLAVICK" class="hlavicka">
+                        </div>
+                    </div>
+                    <div id="TL_PANEL1" class="TL_PANEL">
+	<input type="submit" name="BTN1" value="Aerobic" id="BTN1" title="Aerobic" class="button_hl" /><input type="submit" name="BTN5" value="Badminton" id="BTN5" title="Badminton" class="button_hl" /><input type="submit" name="BTN3" value="Ping-pong" id="BTN3" title="Ping-pong" class="button_hl aktivni" class="button_hl" /><input type="submit" name="BTN2" value="Schwinn" id="BTN2" title="Schwinn" class="button_hl" /><input type="submit" name="BTN4" value="Squash" id="BTN4" title="Squash" class="button_hl" />
+</div>
+                    
+                    <div id="zobrazovaci">
+                        <div id="NADPIS_PANEL">
+	
+                            <table>
+                                <tr>
+                                    <td>
+                                        <div id="Panel_lekce">
+		
+                                            
+                                            
+
+
+
+
+
+                                                                                        
+
+                                            <div class="ajax__tab_xp" id="TAB_ROZPIS">
+			<div id="TAB_ROZPIS_header">
+				<span id="__tab_TAB_ROZPIS_TabPanel_l_1">Ping-pong</span>
+			</div><div id="TAB_ROZPIS_body">
+				<div id="TAB_ROZPIS_TabPanel_l_1" style="display:none;">
+					
+                                                        <table id="TAB_ROZPIS_TabPanel_l_1_Table_lekce" class="ntabulka scrollbar1" cellspacing="0" cellpadding="0" border="0" width="100%">
+						<thead>
+							<tr id="TAB_ROZPIS_TabPanel_l_1_TableRow_hodiny" class="color_tmava_bcg hodiny" valign="middle">
+								<td id="TAB_ROZPIS_TabPanel_l_1_TH_1"></td><td id="TAB_ROZPIS_TabPanel_l_1_TH_6" colspan="4">6<sup> 00</sup></td><td id="TAB_ROZPIS_TabPanel_l_1_TH_7" colspan="4">7<sup> 00</sup></td><td id="TAB_ROZPIS_TabPanel_l_1_TH_8" colspan="4">8<sup> 00</sup></td><td id="TAB_ROZPIS_TabPanel_l_1_TH_9" colspan="4">9<sup> 00</sup></td><td id="TAB_ROZPIS_TabPanel_l_1_TH_10" colspan="4">10<sup> 00</sup></td><td id="TAB_ROZPIS_TabPanel_l_1_TH_11" colspan="4">11<sup> 00</sup></td><td id="TAB_ROZPIS_TabPanel_l_1_TH_12" colspan="4">12<sup> 00</sup></td><td id="TAB_ROZPIS_TabPanel_l_1_TH_13" colspan="4">13<sup> 00</sup></td><td id="TAB_ROZPIS_TabPanel_l_1_TH_14" colspan="4">14<sup> 00</sup></td><td id="TAB_ROZPIS_TabPanel_l_1_TH_15" colspan="4">15<sup> 00</sup></td><td id="TAB_ROZPIS_TabPanel_l_1_TH_16" colspan="4">16<sup> 00</sup></td><td id="TAB_ROZPIS_TabPanel_l_1_TH_17" colspan="4">17<sup> 00</sup></td><td id="TAB_ROZPIS_TabPanel_l_1_TH_18" colspan="4">18<sup> 00</sup></td><td id="TAB_ROZPIS_TabPanel_l_1_TH_19" colspan="4">19<sup> 00</sup></td><td id="TAB_ROZPIS_TabPanel_l_1_TH_20" colspan="4">20<sup> 00</sup></td><td id="TAB_ROZPIS_TabPanel_l_1_TH_21" colspan="4">21<sup> 00</sup></td>
+							</tr>
+						</thead><tbody>
+							<tr id="TAB_ROZPIS_TabPanel_l_1_TableRow_minuty" class="minuty">
+								<td id="TAB_ROZPIS_TabPanel_l_1_TC_1" class="sirka_hod"></td><td id="TAB_ROZPIS_TabPanel_l_1_TC_6" class="sirka_hod" colspan="4">   15   30   45   </td><td id="TAB_ROZPIS_TabPanel_l_1_TC_7" class="sirka_hod" colspan="4">   15   30   45   </td><td id="TAB_ROZPIS_TabPanel_l_1_TC_8" class="sirka_hod" colspan="4">   15   30   45   </td><td id="TAB_ROZPIS_TabPanel_l_1_TC_9" class="sirka_hod" colspan="4">   15   30   45   </td><td id="TAB_ROZPIS_TabPanel_l_1_TC_10" class="sirka_hod" colspan="4">   15   30   45   </td><td id="TAB_ROZPIS_TabPanel_l_1_TC_11" class="sirka_hod" colspan="4">   15   30   45   </td><td id="TAB_ROZPIS_TabPanel_l_1_TC_12" class="sirka_hod" colspan="4">   15   30   45   </td><td id="TAB_ROZPIS_TabPanel_l_1_TC_13" class="sirka_hod" colspan="4">   15   30   45   </td><td id="TAB_ROZPIS_TabPanel_l_1_TC_14" class="sirka_hod" colspan="4">   15   30   45   </td><td id="TAB_ROZPIS_TabPanel_l_1_TC_15" class="sirka_hod" colspan="4">   15   30   45   </td><td id="TAB_ROZPIS_TabPanel_l_1_TC_16" class="sirka_hod" colspan="4">   15   30   45   </td><td id="TAB_ROZPIS_TabPanel_l_1_TC_17" class="sirka_hod" colspan="4">   15   30   45   </td><td id="TAB_ROZPIS_TabPanel_l_1_TC_18" class="sirka_hod" colspan="4">   15   30   45   </td><td id="TAB_ROZPIS_TabPanel_l_1_TC_19" class="sirka_hod" colspan="4">   15   30   45   </td><td id="TAB_ROZPIS_TabPanel_l_1_TC_20" class="sirka_hod" colspan="4">   15   30   45   </td><td id="TAB_ROZPIS_TabPanel_l_1_TC_21" class="sirka_hod" colspan="4">   15   30   45   </td>
+							</tr><tr id="TAB_ROZPIS_TabPanel_l_1_RADEK_DAY_1" class="vyska50">
+								<td id="TAB_ROZPIS_TabPanel_l_1_DAY_1" class="color_tmava_bcg">Stůl 1</td><td id="TAB_ROZPIS_TabPanel_l_1_1190101" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1190101" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1190101" disabled="disabled" title="Blokováno" class="btnrezclose" class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1190103" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1190103" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1190103" disabled="disabled" title="Blokováno" class="btnrezclose" class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1190201" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1190201" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1190201" title="7:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1190203" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1190203" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1190203" title="7:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1190301" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1190301" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1190301" disabled="disabled" title="Blokováno" class="btnrezclose" class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1190303" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1190303" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1190303" disabled="disabled" title="Blokováno" class="btnrezclose" class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1190401" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1190401" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1190401" title="9:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1190403" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1190403" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1190403" title="9:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1190501" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1190501" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1190501" title="10:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1190503" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1190503" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1190503" title="10:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1190601" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1190601" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1190601" title="11:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1190603" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1190603" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1190603" title="11:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1190701" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1190701" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1190701" title="12:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1190703" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1190703" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1190703" title="12:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1190801" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1190801" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1190801" title="13:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1190803" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1190803" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1190803" title="13:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1190901" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1190901" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1190901" title="14:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1190903" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1190903" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1190903" title="14:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1191001" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1191001" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1191001" title="15:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1191003" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1191003" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1191003" title="15:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1191101" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1191101" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1191101" title="16:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1191103" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1191103" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1191103" title="16:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1191201" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1191201" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1191201" title="17:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1191203" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1191203" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1191203" title="17:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1191301" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1191301" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1191301" title="18:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1191303" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1191303" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1191303" title="18:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1191401" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1191401" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1191401" title="19:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1191403" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1191403" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1191403" title="19:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1191501" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1191501" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1191501" title="20:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1191503" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1191503" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1191503" title="20:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1191601" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1191601" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1191601" disabled="disabled" title="Blokováno" class="btnrezclose" class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1191603" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1191603" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1191603" disabled="disabled" title="Blokováno" class="btnrezclose" class="btnrez" /></DIV></td>
+							</tr><tr id="TAB_ROZPIS_TabPanel_l_1_RADEK_DAY_2" class="vyska50">
+								<td id="TAB_ROZPIS_TabPanel_l_1_DAY_2" class="color_tmava_bcg">Stůl 2</td><td id="TAB_ROZPIS_TabPanel_l_1_1200101" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1200101" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1200101" disabled="disabled" title="Blokováno" class="btnrezclose" class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1200103" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1200103" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1200103" disabled="disabled" title="Blokováno" class="btnrezclose" class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1200201" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1200201" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1200201" title="7:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1200203" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1200203" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1200203" title="7:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1200301" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1200301" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1200301" disabled="disabled" title="Blokováno" class="btnrezclose" class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1200303" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1200303" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1200303" disabled="disabled" title="Blokováno" class="btnrezclose" class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1200401" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1200401" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1200401" title="9:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1200403" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1200403" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1200403" title="9:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1200501" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1200501" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1200501" title="10:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1200503" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1200503" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1200503" title="10:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1200601" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1200601" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1200601" title="11:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1200603" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1200603" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1200603" title="11:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1200701" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1200701" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1200701" title="12:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1200703" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1200703" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1200703" title="12:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1200801" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1200801" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1200801" title="13:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1200803" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1200803" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1200803" title="13:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1200901" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1200901" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1200901" title="14:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1200903" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1200903" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1200903" title="14:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1201001" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1201001" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1201001" title="15:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1201003" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1201003" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1201003" title="15:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1201101" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1201101" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1201101" title="16:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1201103" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1201103" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1201103" title="16:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1201201" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1201201" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1201201" title="17:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1201203" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1201203" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1201203" title="17:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1201301" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1201301" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1201301" title="18:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1201303" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1201303" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1201303" title="18:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1201401" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1201401" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1201401" title="19:00 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1201403" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1201403" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1201403" disabled="disabled" title="Blokováno" class="btnrezclose" class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1201501" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1201501" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1201501" disabled="disabled" title="Blokováno" class="btnrezclose" class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1201503" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1201503" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1201503" title="20:30 26.11.2026 čtvrtek " class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1201601" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1201601" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1201601" disabled="disabled" title="Blokováno" class="btnrezclose" class="btnrez" /></DIV></td><td id="TAB_ROZPIS_TabPanel_l_1_1201603" colspan="2"><input type="submit" name="TAB_ROZPIS$TabPanel_l_1$BTN1201603" value=" " id="TAB_ROZPIS_TabPanel_l_1_BTN1201603" disabled="disabled" title="Blokováno" class="btnrezclose" class="btnrez" /></DIV></td>
+							</tr><tr id="TAB_ROZPIS_TabPanel_l_1_RADEK_DAY_99">
+								<td id="TAB_ROZPIS_TabPanel_l_1_DAY_99"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990101" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990102" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990103" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990104" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990201" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990202" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990203" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990204" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990301" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990302" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990303" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990304" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990401" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990402" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990403" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990404" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990501" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990502" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990503" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990504" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990601" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990602" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990603" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990604" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990701" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990702" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990703" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990704" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990801" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990802" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990803" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990804" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990901" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990902" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990903" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10990904" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991001" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991002" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991003" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991004" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991101" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991102" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991103" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991104" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991201" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991202" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991203" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991204" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991301" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991302" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991303" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991304" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991401" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991402" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991403" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991404" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991501" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991502" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991503" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991504" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991601" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991602" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991603" height="1"></td><td id="TAB_ROZPIS_TabPanel_l_1_10991604" height="1"></td>
+							</tr>
+						</tbody>
+					</table>
+                                                        
+                                                        
+                                                        
+
+                                                        
+                                                        
+                                                    
+				</div>
+			</div>
+		</div>
+                                        
+	</div>
+                                    </td>
+                                </tr>
+                            </table>
+                            <div id="Panel_legenda">
+		<div>
+			<h2>Legenda</h2>
+		</div>
+	</div>
+
+
+                            <div align="center">
+                                
+                            </div>
+                            <div align="center">
+                                
+                            </div>
+
+
+                        
+</div>
+  <div id="paticka">
+                        
+                        <div id="Agmo_logo">
+                            <a style="display: inline-block; margin: 15px; margin-left: 37px; border: 0;" href="http://www.comgate.cz" target="_blank" title="Online platby comgate">
+                                <img src="imgs/Comgate_svetle.png" alt="Online platby comgate" />
+                            </a>
+                        </div>
+
+                        <div id="Webmaster">
+                           Online rezervace systému Member Pro, verze 3.6, 2014 | <a href="Manual_WEB_3.pdf" target="_blank" title="Nápověda">Nápověda</a> 
+                        </div>
+                        <p>
+                            &nbsp;</p>
+                        <p>
+                            
+                        </p>
+                        
+                    </div>                    </div>
+                </div>
+            </div>
+        </div>
+    
+
+<script type="text/javascript">
+//<![CDATA[
+Sys.Application.add_init(function() {
+    $create(AjaxControlToolkit.TextBoxWatermarkBehavior, {"ClientStateFieldID":"TB_UserName_TextBoxWatermarkExtender_ClientState","WatermarkCssClass":"tb","WatermarkText":"login","id":"TB_UserName_TextBoxWatermarkExtender"}, null, null, $get("TB_UserName"));
+});
+Sys.Application.add_init(function() {
+    $create(AjaxControlToolkit.TextBoxWatermarkBehavior, {"ClientStateFieldID":"TB_password_TextBoxWatermarkExtender_ClientState","WatermarkCssClass":"tb","WatermarkText":"heslo","id":"TB_password_TextBoxWatermarkExtender"}, null, null, $get("TB_password"));
+});
+Sys.Application.add_init(function() {
+    $create(AjaxControlToolkit.TabPanel, {"headerTab":$get("__tab_TAB_ROZPIS_TabPanel_l_1")}, null, {"owner":"TAB_ROZPIS"}, $get("TAB_ROZPIS_TabPanel_l_1"));
+});
+Sys.Application.add_init(function() {
+    $create(AjaxControlToolkit.TabContainer, {"activeTabIndex":0,"clientStateField":$get("TAB_ROZPIS_ClientState")}, null, null, $get("TAB_ROZPIS"));
+});
+//]]>
+</script>
+</form>
+</body>
+</html>

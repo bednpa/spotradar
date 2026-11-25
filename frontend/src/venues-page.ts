@@ -1,15 +1,32 @@
 /** Venue directory page: URL state, view state and render-to-string functions. */
-import { SPORTS, VENUE_QUERY_MAX, courtPriceFrom, distanceKm, isSportId } from '@spotradar/shared';
+import {
+  VENUE_QUERY_MAX,
+  courtPriceFrom,
+  distanceKm,
+  isSportId,
+  offeringFor,
+  toLocalDateTime,
+} from '@spotradar/shared';
 import type {
+  CourtPrice,
   GeoPoint,
   MultisportCards,
+  OpeningHours,
   SportId,
+  SportOffering,
   VenueListItem,
   VenueQuery,
   VenuesResponse,
 } from '@spotradar/shared';
 import { ApiRequestError } from './api.ts';
-import { formatCourts, formatDistance, sportName } from './format.ts';
+import { formatCourts, formatDistance, sportName, sportNameLower } from './format.ts';
+import {
+  bookingSystemLabel,
+  formatSeason,
+  isOutOfSeason,
+  renderSportChipButtons,
+  renderSportLabel,
+} from './sports.ts';
 import {
   DEFAULT_CARDS,
   DEFAULT_SORT,
@@ -77,14 +94,27 @@ function venueDistance(
  */
 export function sortVenueItems(
   items: readonly VenueListItem[],
-  filter: Pick<VenuesFilter, 'sort' | 'cards'>,
+  filter: Pick<VenuesFilter, 'sort' | 'cards'> & { sport?: SportId | null },
   origin: GeoPoint | null | undefined,
 ): VenueListItem[] {
   return sortEntries(items, filter.sort, (item) => ({
     name: item.venue.name,
     distanceKm: venueDistance(item, origin),
-    price: courtPriceFrom(item.venue.pricing, item.venue.multisport, filter.cards),
+    price: cheapestPrice(shownOfferings(item, filter.sport ?? null), filter.cards),
   }));
+}
+
+/** The cheapest "from" price over the shown offerings (null when none is known). */
+function cheapestPrice(
+  offerings: readonly SportOffering[],
+  cards: MultisportCards,
+): CourtPrice | null {
+  let best: CourtPrice | null = null;
+  for (const o of offerings) {
+    const price = courtPriceFrom(o.pricing, o.multisport, cards);
+    if (price && (best === null || price.payable < best.payable)) best = price;
+  }
+  return best;
 }
 
 export function toVenueQuery(filter: VenuesFilter): VenueQuery {
@@ -115,10 +145,7 @@ export function venueCountText(count: number): string {
 export function renderVenuesControls(filter: VenuesFilter): string {
   const chips = [
     `<button type="button" class="chip" data-venue-sport="" aria-pressed="${filter.sport === null}">All sports</button>`,
-    ...SPORTS.map(
-      (sport) =>
-        `<button type="button" class="chip" data-venue-sport="${sport.id}" aria-pressed="${filter.sport === sport.id}">${escapeHtml(sport.name)}</button>`,
-    ),
+    renderSportChipButtons(filter.sport, 'venue-sport'),
   ].join('');
   return `
 <div class="filter-group filter-search">
@@ -145,6 +172,10 @@ export function renderVenuesError(message: string): string {
 
 export function renderVenuesEmpty(filter: VenuesFilter): string {
   const q = filter.q.trim();
+  if (q === '' && filter.sport !== null) {
+    const name = escapeHtml(sportNameLower(filter.sport));
+    return `<div class="state state-empty"><h3>No ${name} venues in SpotRadar yet</h3><p>Pick another sport or show all sports.</p><button type="button" class="btn btn-primary" data-action="clear-venue-filters">Show all sports</button></div>`;
+  }
   const what = q !== '' ? `“${escapeHtml(q)}”` : 'your filters';
   return `<div class="state state-empty"><h3>No venues match ${what}</h3><p>Try a different name, district or address.</p>${
     q !== '' || filter.sport !== null
@@ -157,46 +188,91 @@ function fact(label: string, valueHtml: string): string {
   return `<div class="fact-row"><dt>${label}</dt><dd>${valueHtml}</dd></div>`;
 }
 
-export function renderVenueCard(
-  item: VenueListItem,
-  cards: MultisportCards = DEFAULT_CARDS,
-  distance?: number,
-): string {
-  const { venue } = item;
-  const sports = venue.sports.map(
-    (id) => `<li class="tag tag-sport">${escapeHtml(sportName(id))}</li>`,
-  );
-  const others = (venue.otherActivities ?? []).map(
-    (name) => `<li class="tag">${escapeHtml(name)}</li>`,
-  );
+/** The offerings a card shows: the filtered sport's, or all of them. */
+export function shownOfferings(item: VenueListItem, sport: SportId | null): SportOffering[] {
+  if (sport === null) return item.venue.offerings;
+  const offering = offeringFor(item.venue, sport);
+  return offering ? [offering] : [];
+}
 
-  const hours = groupOpeningHours(venue.openingHours)
+function renderHours(hours: OpeningHours | undefined, today: string): string {
+  if (!hours) return fact('Opening hours', '<span class="muted">Opening hours unknown</span>');
+  const list = groupOpeningHours(hours)
     .map(
       (group) =>
         `<li><span class="hours-days">${escapeHtml(group.days)}</span> ${escapeHtml(group.text)}</li>`,
     )
     .join('');
-  const approximate = venue.openingHours.approximate
+  const approximate = hours.approximate
     ? ' <span class="badge badge-neutral">approximate</span>'
     : '';
+  const season = hours.season
+    ? `<p class="season">${escapeHtml(formatSeason(hours.season))}${
+        isOutOfSeason(hours, today)
+          ? ' · <span class="badge badge-neutral">Closed out of season</span>'
+          : ''
+      }</p>`
+    : '';
+  return fact(`Opening hours${approximate}`, `${season}<ul class="hours">${list}</ul>`);
+}
 
-  const price = renderPriceSummary(venue.pricing, venue.multisport, cards);
-  const multisport = renderMultisportBadge(venue.multisport);
-  const phoneHref = venue.phone ? telHref(venue.phone) : null;
-  const bookHref = safeHref(venue.bookingUrl);
-
+/** Details of one sport at the venue: courts, price, MultiSport, hours, booking system + link. */
+export function renderOffering(
+  offering: SportOffering,
+  live: boolean,
+  cards: MultisportCards,
+  today: string,
+  venueName = '',
+): string {
+  const bookHref = safeHref(offering.bookingUrl);
   const facts = [
-    venue.courts !== undefined ? fact('Courts', formatCourts(venue.courts)) : '',
-    fact('Price', price),
-    fact('MultiSport', multisport),
-    fact(`Opening hours${approximate}`, `<ul class="hours">${hours}</ul>`),
+    offering.courts !== undefined ? fact('Courts', formatCourts(offering.courts)) : '',
+    fact('Price', renderPriceSummary(offering.pricing, offering.multisport, cards)),
+    fact('MultiSport', renderMultisportBadge(offering.multisport)),
+    renderHours(offering.openingHours, today),
+    fact('Booking', escapeHtml(bookingSystemLabel(offering.bookingSystem))),
   ].join('');
+  // A group, not a <section>: named sections would add one landmark per sport and venue.
+  const at = venueName ? `<span class="visually-hidden"> at ${escapeHtml(venueName)}</span>` : '';
+  return `<div class="offering" role="group" data-sport="${offering.sport}" aria-label="${escapeHtml(sportName(offering.sport))}">
+  <div class="offering-head">
+    <h4>${renderSportLabel(offering.sport)}</h4>
+    ${renderLiveStatus({ status: live ? 'live' : 'unknown' })}
+  </div>
+  ${offering.note ? `<p class="muted offering-note">${escapeHtml(offering.note)}</p>` : ''}
+  <dl class="facts">${facts}</dl>
+  ${
+    bookHref
+      ? `<a class="btn btn-primary btn-sm" href="${escapeHtml(bookHref)}" target="_blank" rel="noopener noreferrer">Book ${escapeHtml(sportNameLower(offering.sport))}${at} on venue's website <span aria-hidden="true">↗</span></a>`
+      : ''
+  }
+</div>`;
+}
 
+export function renderVenueCard(
+  item: VenueListItem,
+  cards: MultisportCards = DEFAULT_CARDS,
+  distance?: number,
+  sport: SportId | null = null,
+  today: string = toLocalDateTime(new Date()).date,
+): string {
+  const { venue } = item;
+  const sports = venue.sports.map((id) => {
+    const live = item.liveSports.includes(id);
+    return `<li class="tag tag-sport${live ? ' tag-live' : ''}" data-sport="${id}">${renderSportLabel(id)}${
+      live ? ' <span class="visually-hidden">(live)</span><span aria-hidden="true">●</span>' : ''
+    }</li>`;
+  });
+  const others = (venue.otherActivities ?? []).map(
+    (name) => `<li class="tag">${escapeHtml(name)}</li>`,
+  );
+  const offerings = shownOfferings(item, sport)
+    .map((o) => renderOffering(o, item.liveSports.includes(o.sport), cards, today, venue.name))
+    .join('');
+
+  const phoneHref = venue.phone ? telHref(venue.phone) : null;
   const links = [
     externalLink(venue.website, 'Website'),
-    bookHref
-      ? `<a class="btn btn-primary btn-sm" href="${escapeHtml(bookHref)}" target="_blank" rel="noopener noreferrer">Book on venue's website <span aria-hidden="true">↗</span></a>`
-      : '',
     googleMapsLink(venue),
     phoneHref && venue.phone
       ? `<a class="link" href="${escapeHtml(phoneHref)}">${escapeHtml(venue.phone)}</a>`
@@ -214,7 +290,7 @@ export function renderVenueCard(
     distance !== undefined ? ` · ${escapeHtml(formatDistance(distance))} away` : ''
   }</p>
   <ul class="tags" aria-label="Sports and activities">${sports.join('')}${others.join('')}</ul>
-  <dl class="facts">${facts}</dl>
+  <div class="offerings">${offerings}</div>
   <div class="link-row">${links}</div>
 </li>`;
 }
@@ -233,7 +309,9 @@ export function renderVenuesBody(
     case 'success': {
       if (state.data.venues.length === 0) return renderVenuesEmpty(filter);
       const cards = sortVenueItems(state.data.venues, filter, origin)
-        .map((item) => renderVenueCard(item, filter.cards, venueDistance(item, origin)))
+        .map((item) =>
+          renderVenueCard(item, filter.cards, venueDistance(item, origin), filter.sport),
+        )
         .join('');
       return `<p class="result-count" role="status">${venueCountText(state.data.venues.length)}</p><ul class="venue-grid">${cards}</ul>`;
     }

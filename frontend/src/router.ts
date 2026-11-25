@@ -1,4 +1,6 @@
 /** Minimal client-side routing: two pages, History API. Pure helpers only. */
+import type { SportId } from '@spotradar/shared';
+import { sportNameLower } from './format.ts';
 
 export const ROUTES = ['calendar', 'venues'] as const;
 export type Route = (typeof ROUTES)[number];
@@ -9,6 +11,13 @@ export const ROUTE_TITLES: Record<Route, string> = {
   calendar: 'SpotRadar – free badminton courts in Brno',
   venues: 'Venues – SpotRadar',
 };
+
+/** Document title; the calendar names the selected sport ("free tennis courts in Brno"). */
+export function pageTitle(route: Route, sport: SportId): string {
+  if (route !== 'calendar') return ROUTE_TITLES[route];
+  const what = sport === 'table-tennis' ? 'table tennis tables' : `${sportNameLower(sport)} courts`;
+  return `SpotRadar – free ${what} in Brno`;
+}
 
 /** "/venues" and "/venues/" → venues; everything else is the calendar. */
 export function routeFromPath(pathname: string): Route {

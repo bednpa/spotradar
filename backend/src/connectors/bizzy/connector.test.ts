@@ -3,9 +3,9 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { addDays } from '@spotradar/shared';
 import { VENUE_RECORDS } from '../../data/venues.ts';
-import type { VenueRecord } from '../../repositories/venueRepository.ts';
-import { htmlResponse, recordingFetch } from '../../testHelpers.ts';
+import { htmlResponse, recordingFetch, targetOf } from '../../testHelpers.ts';
 import type { RecordedFetch } from '../../testHelpers.ts';
+import type { AvailabilityTarget } from '../types.ts';
 import { createBizzyConnector } from './connector.ts';
 import { BizzyParseError } from './parser.ts';
 import { bizzyPageStartingAt } from './stubPages.ts';
@@ -14,10 +14,11 @@ function fx(name: string): string {
   return readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8');
 }
 
-function venue(id: string): VenueRecord {
+/** The badminton offering of a real venue as a connector target. */
+function venue(id: string): AvailabilityTarget {
   const found = VENUE_RECORDS.find((v) => v.id === id);
   if (!found) throw new Error(id);
-  return found;
+  return targetOf(found, 'badminton');
 }
 
 const JEHNICE = venue('badminton-jehnice');
@@ -225,11 +226,11 @@ describe('Bizzy connector: cache and queue', () => {
     );
   });
 
-  it('rejects venues of another source type', async () => {
+  it('rejects targets of another source type', async () => {
     const connector = createBizzyConnector({ fetch: replay('', []) });
     await assert.rejects(
       connector.getFreeSlots(venue('kuklenska'), '2026-11-26'),
-      /not a Bizzy venue/,
+      /kuklenska\/badminton is not a Bizzy source/,
     );
   });
 });

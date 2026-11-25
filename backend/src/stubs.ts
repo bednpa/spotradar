@@ -43,6 +43,67 @@ const SPRINT_FIXTURE_START = '2026-11-26';
 const IVANOVICE_INITIAL_FIXTURE = 'memberpro/fixtures/initial-get.html';
 const IVANOVICE_GRID_FIXTURE = 'memberpro/fixtures/badminton-2026-11-26.html';
 const IVANOVICE_GRID_DATE = '26.11.2026';
+const IVANOVICE_SQUASH_FIXTURE = 'memberpro/fixtures/ivanovice-squash-2026-11-26.html';
+const IVANOVICE_TABLE_TENNIS_FIXTURE = 'memberpro/fixtures/ivanovice-table-tennis-2026-11-26.html';
+const SPRINT_TENNIS_FIXTURE = 'memberzone/fixtures/sprint-tennis-2026-11-25.html';
+const SPRINT_TENNIS_FIXTURE_START = '2026-11-25';
+const VIKTORIA_HOST = 'rezervace.centrumviktoria.cz:18443';
+const FITNESS_BOBY_HOST = 'rezervace.fitnessboby.cz:28080';
+const STAREZ_BEACH_HOST = 'beach.starez.cz';
+const STAREZ_BEACH_FIXTURE = 'starez/fixtures/beach-2026-11-25-today.html';
+const STAREZ_BEACH_DATE = '2026-11-25';
+
+/**
+ * ClubSpire timelines per host and tab. Viktoria's badminton tab (1) is deliberately missing,
+ * so E2E keeps one "unavailable" venue ("check on website").
+ */
+const CLUBSPIRE_TABS: Record<string, Record<string, string>> = {
+  [VIKTORIA_HOST]: {
+    '0': 'clubspire/fixtures/viktoria-squash-2026-11-26.html',
+    '2': 'clubspire/fixtures/viktoria-beach-volleyball-2026-11-26.html',
+    '3': 'clubspire/fixtures/viktoria-padel-tennis-2026-11-26.html',
+  },
+  [FITNESS_BOBY_HOST]: { '4': 'clubspire/fixtures/fitnessboby-squash-2026-11-26.html' },
+};
+
+function serveClubspireTab(url: URL): Response {
+  const path = CLUBSPIRE_TABS[url.host]?.[url.searchParams.get('tabIdx') ?? ''];
+  if (!path) throw new Error(`Stub mode: ${url.href} is unreachable`);
+  return htmlResponse(fixture(path));
+}
+
+/** The recorded Beach Riviéra grid of 2026-11-25 shown as `date`. */
+export function starezBeachPageFor(html: string, date: string): string {
+  return html
+    .replaceAll(`data-active-date="${STAREZ_BEACH_DATE}"`, `data-active-date="${date}"`)
+    .replaceAll(`data-active-date-raw="${STAREZ_BEACH_DATE}"`, `data-active-date-raw="${date}"`);
+}
+
+/**
+ * STAREZ (beach.starez.cz): a GET returns today's page with a session cookie; the AJAX date
+ * switch (`?date=DD.MM.YYYY&do=getDate`, XHR + cookie) returns JSON with the grid snippet.
+ * Every day shows the recorded 25.11. grid.
+ */
+function serveStarez(url: URL, init: RequestInit | undefined): Response {
+  const page = fixture(STAREZ_BEACH_FIXTURE);
+  const requested = pickerToIso(url.searchParams.get('date'));
+  if (url.searchParams.get('do') !== 'getDate' || requested === undefined) {
+    const res = htmlResponse(starezBeachPageFor(page, toLocalDateTime(new Date()).date));
+    res.headers.append('set-cookie', 'PHPSESSID=stub; path=/');
+    return res;
+  }
+  if (headerValue(init, 'x-requested-with') !== 'XMLHttpRequest') {
+    throw new Error('Stub mode: STAREZ date switch without X-Requested-With');
+  }
+  if (!headerValue(init, 'cookie')?.includes('PHPSESSID=stub')) {
+    throw new Error('Stub mode: STAREZ date switch without the session cookie');
+  }
+  const snippet = starezBeachPageFor(page, requested);
+  return new Response(JSON.stringify({ snippets: { 'snippet--reservation': snippet } }), {
+    status: 200,
+    headers: { 'content-type': 'application/json; charset=utf-8' },
+  });
+}
 const CZECH_WEEKDAYS = ['NEDĚLE', 'PONDĚLÍ', 'ÚTERÝ', 'STŘEDA', 'ČTVRTEK', 'PÁTEK', 'SOBOTA'];
 
 /** "2026-11-05" -> "5. 11. 2026" (how MemberZone writes dates in its hidden fields). */
@@ -56,10 +117,14 @@ function spacedDate(date: string): string {
  * date headers, the date of every window card and the date input are rewritten, so the
  * real parser accepts the page for any date. Free windows repeat day by day.
  */
-export function sprintWeekStartingAt(html: string, start: string): string {
+export function sprintWeekStartingAt(
+  html: string,
+  start: string,
+  recordedStart: string = SPRINT_FIXTURE_START,
+): string {
   const newDates = new Map<string, string>();
   for (let i = 0; i < 7; i++) {
-    newDates.set(spacedDate(addDays(SPRINT_FIXTURE_START, i)), addDays(start, i));
+    newDates.set(spacedDate(addDays(recordedStart, i)), addDays(start, i));
   }
   return html
     .replace(/<th id="DATUM(\d)"([^>]*)>[^<]*<\/th>/g, (_, n: string, attrs: string) => {
@@ -89,6 +154,18 @@ function serveMemberzone(url: URL, init: RequestInit | undefined): Response {
     // A plain GET shows the week from today, a date-switch postback the week from `myDate`.
     const start = isPost ? body.get('myDate') : toLocalDateTime(new Date()).date;
     if (!start || !isValidDate(start)) throw new Error('Stub mode: Sprint postback without a date');
+    // ID_Sportoviste=1 is the tennis hall (recorded as a GET of the week from 25.11. in the
+    // evening, when 25.11. had nothing left): the week is shifted one day back so the requested
+    // day shows the recorded 26.11. and stays inside the 7 shown days.
+    if (url.searchParams.get('ID_Sportoviste') === '1') {
+      return htmlResponse(
+        sprintWeekStartingAt(
+          fixture(SPRINT_TENNIS_FIXTURE),
+          addDays(start, -1),
+          SPRINT_TENNIS_FIXTURE_START,
+        ),
+      );
+    }
     return htmlResponse(sprintWeekStartingAt(fixture(SPRINT_FIXTURE), start));
   }
   if (url.pathname.startsWith('/ivanovice/')) {
@@ -96,7 +173,13 @@ function serveMemberzone(url: URL, init: RequestInit | undefined): Response {
     const [d, m, y] = (body.get('DATUM_HF') ?? '').split('.');
     const date = `${y}-${m}-${d}`;
     if (!isValidDate(date)) throw new Error('Stub mode: Ivanovice postback without a date');
-    return htmlResponse(ivanoviceGridFor(fixture(IVANOVICE_GRID_FIXTURE), date));
+    // The sport button decides the grid (all recorded for 26.11.2026).
+    const grid = body.has('BTN4')
+      ? IVANOVICE_SQUASH_FIXTURE
+      : body.has('BTN3')
+        ? IVANOVICE_TABLE_TENNIS_FIXTURE
+        : IVANOVICE_GRID_FIXTURE;
+    return htmlResponse(ivanoviceGridFor(fixture(grid), date));
   }
   throw new Error(`Stub mode: ${url.href} is unreachable`);
 }
@@ -158,11 +241,13 @@ function serveBizzy(url: URL, init: RequestInit | undefined): Response {
 }
 
 /**
- * Kuklenská (ClubSpire) returns the sanitized fixture for any date. Hala Sprint and Ivanovice
- * (memberzone.cz) serve their recorded pages with the dates rewritten to the requested date.
- * Badminton Jehnice, Badminton Líšeň and X-Arena (Bizzy) replay their recorded pages with every
- * day set to the same recorded weekday, so any date shows the same free hours (see `serveBizzy`).
- * Every other host (e.g. Centrum Viktoria) fails.
+ * Kuklenská (ClubSpire) returns the sanitized fixture for any date; Centrum Viktoria serves its
+ * squash, beach and padel tabs (not badminton) and Fitness Boby its squash tab. Hala Sprint
+ * (badminton + tennis) and Ivanovice (badminton, squash, table tennis) on memberzone.cz serve their
+ * recorded pages with the dates rewritten to the requested date. Badminton Jehnice, Badminton
+ * Líšeň and X-Arena (Bizzy) replay their recorded pages with every day set to the same recorded
+ * weekday, so any date shows the same free hours (see `serveBizzy`). Beach Riviéra (STAREZ) shows
+ * its recorded grid for any date. Every other host or tab fails.
  */
 export function createStubFetch(): FetchFn {
   return (input, init) => {
@@ -174,6 +259,8 @@ export function createStubFetch(): FetchFn {
         );
       }
       if (url.host === MEMBERZONE_HOST) return Promise.resolve(serveMemberzone(url, init));
+      if (Object.hasOwn(CLUBSPIRE_TABS, url.host)) return Promise.resolve(serveClubspireTab(url));
+      if (url.host === STAREZ_BEACH_HOST) return Promise.resolve(serveStarez(url, init));
       if (Object.hasOwn(BIZZY_FIXTURE_PREFIX, url.host))
         return Promise.resolve(serveBizzy(url, init));
     } catch (err) {

@@ -3,6 +3,7 @@ import { zonedMidnightEpochMs } from '@spotradar/shared';
 import { createHostLimiter } from '../hostLimiter.ts';
 import type { HostLimiter } from '../hostLimiter.ts';
 import { withTimeout } from '../timeout.ts';
+import { targetKey } from '../types.ts';
 import type { AvailabilityConnector, FetchFn } from '../types.ts';
 import { parseClubspireTimeline } from './parser.ts';
 
@@ -36,11 +37,12 @@ export function createClubspireConnector(
 
   return {
     type: 'clubspire',
-    async getFreeSlots(venue, date): Promise<FreeSlot[]> {
-      if (venue.source.type !== 'clubspire') {
-        throw new Error(`Venue ${venue.id} is not a ClubSpire venue`);
+    async getFreeSlots(target, date): Promise<FreeSlot[]> {
+      const source = target.source;
+      if (source.type !== 'clubspire') {
+        throw new Error(`${targetKey(target)} is not a ClubSpire source`);
       }
-      const url = buildClubspireUrl(venue.source, date);
+      const url = buildClubspireUrl(source, date);
       const html = await limiter.run(url.host, () =>
         withTimeout(timeoutMs, async (signal) => {
           const res = await fetchFn(url, { headers: { 'user-agent': USER_AGENT }, signal });
@@ -48,7 +50,10 @@ export function createClubspireConnector(
           return res.text();
         }),
       );
-      return parseClubspireTimeline(html);
+      return parseClubspireTimeline(
+        html,
+        source.courtNamePrefixes ? { courtNamePrefixes: source.courtNamePrefixes } : {},
+      );
     },
   };
 }

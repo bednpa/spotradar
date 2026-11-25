@@ -3,7 +3,14 @@
  * given time range across venues (used by the day/week/month views).
  */
 import { timeToMinutes, weekdayOf } from './dates.ts';
-import type { CalendarDay, CalendarVenue, FreeSlot, OpeningHours } from './types.ts';
+import type {
+  CalendarDay,
+  CalendarVenue,
+  DayOpeningHours,
+  FreeSlot,
+  OpeningHours,
+  Season,
+} from './types.ts';
 
 /**
  * Courts free for the WHOLE interval [start, end) ("HH:MM", end may be "24:00"):
@@ -27,17 +34,35 @@ export function freeCourtsBetween(slots: readonly FreeSlot[], start: string, end
   return 0;
 }
 
+/** True when `date` ("YYYY-MM-DD") lies in the season (inclusive; wraps the year end); no season = all year. */
+export function isInSeason(season: Season | undefined, date: string): boolean {
+  if (!season) return true;
+  const monthDay = date.slice(5);
+  return season.from <= season.to
+    ? season.from <= monthDay && monthDay <= season.to
+    : monthDay >= season.from || monthDay <= season.to;
+}
+
+/**
+ * Window in which a venue with unknown opening hours counts as possibly open. It only decides
+ * where the calendar shows "check on website" (such venues are never free, full or closed by
+ * hours); it is not shown as the venue's opening hours.
+ */
+export const UNKNOWN_HOURS_WINDOW: DayOpeningHours = { open: '07:00', close: '22:00' };
+
 /**
  * True when the venue is open for the whole interval [start, end) on `date`
- * according to its (possibly approximate) opening hours.
+ * according to its (possibly approximate) opening hours and season.
+ * Unknown hours (`undefined`) count as possibly open within UNKNOWN_HOURS_WINDOW.
  */
 export function isOpenDuring(
-  hours: OpeningHours,
+  hours: OpeningHours | undefined,
   date: string,
   start: string,
   end: string,
 ): boolean {
-  const day = hours.days[weekdayOf(date)];
+  if (hours && !isInSeason(hours.season, date)) return false;
+  const day = hours ? hours.days[weekdayOf(date)] : UNKNOWN_HOURS_WINDOW;
   if (!day) return false;
   return (
     timeToMinutes(day.open) <= timeToMinutes(start) &&
@@ -74,13 +99,18 @@ export function slotStatuses(
   end: string,
 ): SlotVenueStatus[] {
   const order = new Map(venues.map((v, i) => [v.venue.id, i]));
-  const byId = new Map(venues.map((v) => [v.venue.id, v.venue]));
+  const byId = new Map(venues.map((v) => [v.venue.id, v]));
   const statuses: SlotVenueStatus[] = [];
   for (const entry of day.venues) {
-    const venue = byId.get(entry.venueId);
-    if (!venue) continue;
-    const open = isOpenDuring(venue.openingHours, day.date, start, end);
-    if (entry.availability.status === 'live') {
+    const calendarVenue = byId.get(entry.venueId);
+    if (!calendarVenue) continue;
+    const venue = calendarVenue.venue;
+    const hours = calendarVenue.offering.openingHours;
+    const open = isOpenDuring(hours, day.date, start, end);
+    if (!isInSeason(hours?.season, day.date)) {
+      // Out of season wins over the booking system (some still list summer courts as bookable).
+      statuses.push({ venueId: venue.id, state: 'closed' });
+    } else if (entry.availability.status === 'live') {
       const free = freeCourtsBetween(entry.availability.freeSlots, start, end);
       if (free > 0) statuses.push({ venueId: venue.id, state: 'free', freeCourts: free });
       else statuses.push({ venueId: venue.id, state: open ? 'full' : 'closed' });

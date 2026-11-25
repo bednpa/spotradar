@@ -1,5 +1,10 @@
-import type { FreeSlot } from '@spotradar/shared';
-import type { AvailabilityConnector, FetchFn } from './connectors/types.ts';
+import type {
+  AvailabilitySourceConfig,
+  FreeSlot,
+  SportId,
+  SportOfferingConfig,
+} from '@spotradar/shared';
+import type { AvailabilityConnector, AvailabilityTarget, FetchFn } from './connectors/types.ts';
 import type { VenueRecord } from './repositories/venueRepository.ts';
 
 /** 2026-11-24 09:00 in Europe/Prague. */
@@ -13,21 +18,55 @@ export function slot(start: string, end: string, freeCourts: number): FreeSlot {
   return { start, end, freeCourts };
 }
 
-export type ConnectorImpl = (venue: VenueRecord, date: string) => Promise<FreeSlot[]>;
+export type ConnectorImpl = (target: AvailabilityTarget, date: string) => Promise<FreeSlot[]>;
 
 /** Connector with a replaceable implementation that records its calls. */
 export function fakeConnector(
   type: AvailabilityConnector['type'],
   impl: ConnectorImpl,
-): AvailabilityConnector & { calls: { venueId: string; date: string }[] } {
-  const calls: { venueId: string; date: string }[] = [];
+): AvailabilityConnector & { calls: { venueId: string; sport: SportId; date: string }[] } {
+  const calls: { venueId: string; sport: SportId; date: string }[] = [];
   return {
     type,
     calls,
-    getFreeSlots(venue, date) {
-      calls.push({ venueId: venue.id, date });
-      return impl(venue, date);
+    getFreeSlots(target, date) {
+      calls.push({ venueId: target.venueId, sport: target.sport, date });
+      return impl(target, date);
     },
+  };
+}
+
+/** The availability target of a venue's offering (first offering when no sport is given). */
+export function targetOf(venue: VenueRecord, sport?: SportId): AvailabilityTarget {
+  const offering =
+    sport === undefined ? venue.offerings[0] : venue.offerings.find((o) => o.sport === sport);
+  if (!offering) throw new Error(`${venue.id} has no ${sport ?? ''} offering`);
+  return { venueId: venue.id, sport: offering.sport, source: offering.source };
+}
+
+/** A minimal venue record with one badminton offering read from `source` (tests). */
+export function testVenue(
+  id: string,
+  source: AvailabilitySourceConfig,
+  extra: Partial<SportOfferingConfig> = {},
+): VenueRecord {
+  return {
+    id,
+    name: id,
+    district: 'Brno',
+    address: 'Test 1, Brno',
+    location: { lat: 49.2, lng: 16.6 },
+    offerings: [
+      {
+        sport: 'badminton',
+        bookingUrl: 'https://example.com',
+        bookingSystem: 'unknown',
+        multisport: { category: 'unknown' },
+        availabilitySource: source.type,
+        source,
+        ...extra,
+      },
+    ],
   };
 }
 

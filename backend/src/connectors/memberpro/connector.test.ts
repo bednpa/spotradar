@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { VENUE_RECORDS } from '../../data/venues.ts';
-import type { VenueRecord } from '../../repositories/venueRepository.ts';
-import { fakeClock, htmlResponse, recordingFetch, slot } from '../../testHelpers.ts';
+import type { SportId } from '@spotradar/shared';
+import { fakeClock, htmlResponse, recordingFetch, slot, targetOf } from '../../testHelpers.ts';
+import type { AvailabilityTarget } from '../types.ts';
 import { readHiddenFields } from '../aspnet.ts';
 import { createHostLimiter } from '../hostLimiter.ts';
 import { createMemberzoneConnector } from '../memberzone/connector.ts';
@@ -22,10 +23,11 @@ const GRIDS: Record<string, string> = {
   '24.12.2026': fixture('badminton-2026-12-24.html'),
 };
 
-function venue(id: string): VenueRecord {
+/** A real venue's offering (badminton by default) as a connector target. */
+function venue(id: string, sport: SportId = 'badminton'): AvailabilityTarget {
   const found = VENUE_RECORDS.find((v) => v.id === id);
   if (!found) throw new Error(`unknown venue ${id}`);
-  return found;
+  return targetOf(found, sport);
 }
 
 const IVANOVICE = venue('sportcentrum-ivanovice');
@@ -62,6 +64,7 @@ describe('buildMemberproBody', () => {
     const body = buildMemberproBody(
       new URLSearchParams({ __VIEWSTATE: 'vs', DATUM_HF: '01.01.2020' }),
       '2026-11-05',
+      { name: 'BTN5', value: 'Badminton' },
     );
     const raw = String(Date.UTC(2026, 10, 5));
     assert.equal(body.get('__VIEWSTATE'), 'vs');
@@ -115,6 +118,26 @@ describe('MemberPro connector', () => {
     assert.equal(body.get('ASPxFormLayout2$Datepicker2'), '25.11.2026');
     assert.equal(body.get('ASPxFormLayout2_Datepicker2_Raw'), String(Date.UTC(2026, 10, 25)));
     assert.equal(body.get('BTN5'), 'Badminton');
+  });
+
+  it('posts the sport button of the source and keeps one session per sport', async () => {
+    const fetchFn = ivanoviceSite();
+    const connector = createMemberproConnector({ fetch: fetchFn });
+    const squash = venue('sportcentrum-ivanovice', 'squash');
+    await connector.getFreeSlots(IVANOVICE, '2026-11-25');
+    await connector.getFreeSlots(squash, '2026-11-26');
+    // A badminton session is never reused for squash: GET + POST again.
+    assert.equal(fetchFn.calls.length, 4);
+    const squashPost = postBody(fetchFn.calls[3]);
+    assert.equal(squashPost.get('BTN4'), 'Squash');
+    assert.equal(squashPost.get('BTN5'), null);
+    // The squash session is reused for the next squash date (one POST).
+    await connector.getFreeSlots(squash, '2026-11-28');
+    assert.equal(fetchFn.calls.length, 5);
+    assert.equal(postBody(fetchFn.calls[4]).get('BTN4'), 'Squash');
+    const tableTennis = venue('sportcentrum-ivanovice', 'table-tennis');
+    await connector.getFreeSlots(tableTennis, '2026-11-28');
+    assert.equal(postBody(fetchFn.calls.at(-1)).get('BTN3'), 'Ping-pong');
   });
 
   it('a closed day gives []', async () => {

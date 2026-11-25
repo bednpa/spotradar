@@ -87,7 +87,28 @@ function cellIntervals(
  * Returns [] when the page has a schedule but no usable header/rows; throws
  * ClubspireParseError when the page contains no schedule table at all.
  */
-export function parseClubspireTimeline(html: string): FreeSlot[] {
+export interface ClubspireParseOptions {
+  /**
+   * Only rows whose court name (`#activities_halls li.hall` with the row's id) starts with
+   * one of these prefixes, case-insensitive. Absent = every row.
+   */
+  courtNamePrefixes?: readonly string[];
+}
+
+/** Court name per row id, from the left-hand list (`li.hall#<row id>`). */
+function readCourtNames($: cheerio.CheerioAPI): Map<string, string> {
+  const names = new Map<string, string>();
+  $('#activities_halls li.hall[id]').each((_, el) => {
+    const id = $(el).attr('id');
+    if (id) names.set(id, $(el).text().trim());
+  });
+  return names;
+}
+
+export function parseClubspireTimeline(
+  html: string,
+  options: ClubspireParseOptions = {},
+): FreeSlot[] {
   const $ = cheerio.load(html);
   if ($('table.schedule').length === 0) {
     throw new ClubspireParseError('No schedule table found in ClubSpire page');
@@ -96,8 +117,19 @@ export function parseClubspireTimeline(html: string): FreeSlot[] {
   const columns = readColumns($);
   if (columns.length === 0) return [];
 
+  const prefixes = options.courtNamePrefixes?.map((p) => p.toLocaleLowerCase('cs'));
+  const courtNames = prefixes ? readCourtNames($) : new Map<string, string>();
+  if (prefixes && courtNames.size === 0) {
+    // A filter without names would silently count nothing (or everything): markup changed.
+    throw new ClubspireParseError('No court names found for the court filter');
+  }
+
   const courts: Interval[][] = [];
   $('#hours_body table.schedule tr[data-row-id]').each((_, rowEl) => {
+    if (prefixes) {
+      const name = courtNames.get($(rowEl).attr('data-row-id') ?? '')?.toLocaleLowerCase('cs');
+      if (name === undefined || !prefixes.some((p) => name.startsWith(p))) return;
+    }
     const intervals: Interval[] = [];
     let position = 0;
     // Only direct cells: nested zoom tables are handled per cell. Disabled cells carry

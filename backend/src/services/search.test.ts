@@ -36,9 +36,13 @@ const noSlots: ConnectorImpl = () => Promise.resolve([]);
 describe('searchVenues', () => {
   it('returns all venues with public data only (no source) when no origin is given', async () => {
     const { results } = await run({}, noSlots);
-    assert.equal(results.length, VENUE_RECORDS.length);
+    assert.equal(
+      results.length,
+      VENUE_RECORDS.filter((v) => v.offerings.some((o) => o.sport === 'badminton')).length,
+    );
     for (const r of results) {
       assert.ok(!('source' in r.venue));
+      assert.ok(r.venue.offerings.every((o) => !('source' in o)));
       assert.equal(r.distanceKm, undefined);
     }
     // No free court anywhere -> sorted by name (Czech collation).
@@ -51,7 +55,7 @@ describe('searchVenues', () => {
 
   it('maps connector outcomes to live / unavailable / unknown', async () => {
     const { results } = await run({}, (venue) =>
-      venue.id === 'kuklenska'
+      venue.venueId === 'kuklenska'
         ? Promise.resolve([slot('10:00', '11:00', 2)])
         : Promise.reject(new Error('down')),
     );
@@ -101,8 +105,12 @@ describe('searchVenues', () => {
       now: () => FIXED_NOW,
       logger: silentLogger,
     });
+    const kuklenska = VENUE_RECORDS[0]!;
     const squashOnly = createVenueRepository([
-      { ...VENUE_RECORDS[0]!, sports: [] },
+      {
+        ...kuklenska,
+        offerings: kuklenska.offerings.map((o) => ({ ...o, sport: 'squash' as const })),
+      },
       VENUE_RECORDS[1]!,
     ]);
     const results = await searchVenues(
@@ -113,13 +121,29 @@ describe('searchVenues', () => {
       results.map((r) => r.venue.id),
       ['centrum-viktoria'],
     );
+    // Each result carries the offering of the searched sport.
+    assert.equal(results[0]?.offering.sport, 'badminton');
+    assert.equal(results[0]?.offering.courts, 3);
+
+    const squash = await searchVenues(
+      { sport: 'squash', date: TOMORROW },
+      { venues: squashOnly, availability, now: () => FIXED_NOW },
+    );
+    assert.deepEqual(
+      squash.map((r) => [r.venue.id, r.offering.sport, r.offering.courts]),
+      [
+        ['centrum-viktoria', 'squash', 6],
+        ['kuklenska', 'squash', 4],
+      ],
+    );
+    assert.ok(squash.every((r) => !('source' in r.offering)));
   });
 
   it('sets freeCourtsAtTime only for live venues when time is given', async () => {
     const { results } = await run({ time: '10:30' }, (venue) =>
-      venue.id === 'kuklenska'
+      venue.venueId === 'kuklenska'
         ? Promise.resolve([slot('10:00', '11:00', 3)])
-        : venue.id === 'centrum-viktoria'
+        : venue.venueId === 'centrum-viktoria'
           ? Promise.resolve([slot('15:00', '16:00', 1)])
           : Promise.reject(new Error('down')),
     );
@@ -135,9 +159,9 @@ describe('searchVenues', () => {
   it('sorts venues free at the requested time before those that are not', async () => {
     const { results } = await run({ time: '10:30', lat: 49.1951, lng: 16.6068 }, (venue) =>
       Promise.resolve(
-        venue.id === 'centrum-viktoria'
+        venue.venueId === 'centrum-viktoria'
           ? [slot('10:00', '11:00', 1)] // the only venue free at 10:30
-          : venue.id === 'kuklenska'
+          : venue.venueId === 'kuklenska'
             ? [slot('16:00', '17:00', 1)] // free later that day, not at 10:30
             : [],
       ),
@@ -152,7 +176,7 @@ describe('searchVenues', () => {
   it("removes today's slots that already ended (now = 09:00 Prague)", async () => {
     const { results } = await run({ date: TODAY, time: '09:30' }, (venue) =>
       Promise.resolve(
-        venue.id === 'kuklenska'
+        venue.venueId === 'kuklenska'
           ? [
               slot('07:00', '08:00', 1), // ended
               slot('08:00', '09:00', 1), // ended exactly now
@@ -172,7 +196,7 @@ describe('searchVenues', () => {
 
   it('keeps all slots for a future date', async () => {
     const { results } = await run({ date: TOMORROW }, (venue) =>
-      Promise.resolve(venue.id === 'kuklenska' ? [slot('07:00', '08:00', 1)] : []),
+      Promise.resolve(venue.venueId === 'kuklenska' ? [slot('07:00', '08:00', 1)] : []),
     );
     assert.deepEqual(results.find((r) => r.venue.id === 'kuklenska')?.availability.freeSlots, [
       slot('07:00', '08:00', 1),
@@ -185,9 +209,9 @@ describe('searchVenues', () => {
       { date: TODAY },
       (venue) =>
         Promise.resolve(
-          venue.id === 'kuklenska'
+          venue.venueId === 'kuklenska'
             ? [slot('07:00', '08:00', 1)]
-            : venue.id === 'centrum-viktoria'
+            : venue.venueId === 'centrum-viktoria'
               ? [slot('21:30', '22:00', 1)]
               : [],
         ),
@@ -237,11 +261,74 @@ describe('withoutTooSoonSlots (minimum booking lead time)', () => {
       now: clock.now,
       logger: silentLogger,
     });
-    const first = await getDayAvailability(service, xarena, TODAY, clock.now());
+    const offering = xarena.offerings[0]!;
+    const first = await getDayAvailability(service, xarena, offering, TODAY, clock.now());
     assert.equal(first.freeSlots[0]?.start, '11:00');
     clock.advance(10 * 60_000); // 09:10 – still a fresh cache hit, but 11:00 is now too soon
-    const later = await getDayAvailability(service, xarena, TODAY, clock.now());
+    const later = await getDayAvailability(service, xarena, offering, TODAY, clock.now());
     assert.equal(connector.calls.length, 1);
     assert.equal(later.freeSlots[0]?.start, '12:00');
+  });
+});
+
+describe('getDayAvailability per sport and season', () => {
+  const viktoria = VENUE_RECORDS.find((v) => v.id === 'centrum-viktoria')!;
+  const offering = (sport: string) => viktoria.offerings.find((o) => o.sport === sport)!;
+
+  it('reads the offering of the sport (own cache entry per sport)', async () => {
+    const connector = fakeConnector('clubspire', (target) =>
+      Promise.resolve([slot('10:00', '11:00', target.sport === 'squash' ? 6 : 3)]),
+    );
+    const service = createAvailabilityService({
+      connectors: [connector],
+      now: () => FIXED_NOW,
+      logger: silentLogger,
+    });
+    const squash = await getDayAvailability(
+      service,
+      viktoria,
+      offering('squash'),
+      TOMORROW,
+      FIXED_NOW,
+    );
+    const badminton = await getDayAvailability(
+      service,
+      viktoria,
+      offering('badminton'),
+      TOMORROW,
+      FIXED_NOW,
+    );
+    assert.equal(squash.freeSlots[0]?.freeCourts, 6);
+    assert.equal(badminton.freeSlots[0]?.freeCourts, 3);
+    assert.deepEqual(
+      connector.calls.map((c) => c.sport),
+      ['squash', 'badminton'],
+    );
+  });
+
+  it('does not read the booking system out of season (Viktoria beach in November)', async () => {
+    const connector = fakeConnector('clubspire', () =>
+      Promise.resolve([slot('10:00', '22:00', 5)]),
+    );
+    const service = createAvailabilityService({
+      connectors: [connector],
+      now: () => FIXED_NOW,
+      logger: silentLogger,
+    });
+    const beach = offering('beach-volleyball');
+    assert.deepEqual(await getDayAvailability(service, viktoria, beach, TOMORROW, FIXED_NOW), {
+      status: 'unknown',
+      freeSlots: [],
+    });
+    assert.equal(connector.calls.length, 0);
+    const summer = await getDayAvailability(
+      service,
+      viktoria,
+      beach,
+      '2027-06-02',
+      new Date('2027-06-01T08:00:00Z'),
+    );
+    assert.equal(summer.status, 'live');
+    assert.equal(connector.calls.length, 1);
   });
 });

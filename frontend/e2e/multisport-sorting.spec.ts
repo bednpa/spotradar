@@ -3,7 +3,9 @@ import type { Locator, Page } from '@playwright/test';
 import type {
   CalendarResponse,
   CalendarVenue,
+  OpeningHours,
   SportId,
+  SportOffering,
   Venue,
   VenueAvailability,
   VenuesResponse,
@@ -13,7 +15,7 @@ import { addDays, mainNav, openDay, tomorrow } from './helpers.ts';
 const SPORT: SportId = 'badminton';
 const WEEK_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 
-function pricing(price: number): Venue['pricing'] {
+function pricing(price: number): SportOffering['pricing'] {
   return {
     currency: 'CZK',
     unit: 'hour',
@@ -21,7 +23,23 @@ function pricing(price: number): Venue['pricing'] {
   };
 }
 
-function venue(id: string, name: string, overrides: Partial<Venue> = {}): Venue {
+/** A venue with one badminton offering; `overrides` are offering fields (pricing, MultiSport…). */
+function venue(id: string, name: string, overrides: Partial<SportOffering> = {}): Venue {
+  const offering: SportOffering = {
+    sport: SPORT,
+    courts: 2,
+    openingHours: {
+      approximate: false,
+      days: Object.fromEntries(
+        WEEK_DAYS.map((d) => [d, { open: '08:00', close: '22:00' }]),
+      ) as OpeningHours['days'],
+    },
+    bookingUrl: `https://example.com/${id}`,
+    bookingSystem: 'clubspire',
+    availabilitySource: 'clubspire',
+    multisport: { category: 'unknown' },
+    ...overrides,
+  };
   return {
     id,
     name,
@@ -29,18 +47,15 @@ function venue(id: string, name: string, overrides: Partial<Venue> = {}): Venue 
     address: `${name} street 1, Brno`,
     location: { lat: 49.2, lng: 16.6 },
     sports: [SPORT],
-    courts: 2,
-    openingHours: {
-      approximate: false,
-      days: Object.fromEntries(
-        WEEK_DAYS.map((d) => [d, { open: '08:00', close: '22:00' }]),
-      ) as Venue['openingHours']['days'],
-    },
-    bookingUrl: `https://example.com/${id}`,
-    availabilitySource: 'clubspire',
-    multisport: { category: 'unknown' },
-    ...overrides,
+    offerings: [offering],
   };
+}
+
+/** Calendar entry of a crafted venue (its only offering). */
+function cv(v: Venue, distanceKm?: number): CalendarVenue {
+  const entry: CalendarVenue = { venue: v, offering: v.offerings[0] as SportOffering };
+  if (distanceKm !== undefined) entry.distanceKm = distanceKm;
+  return entry;
 }
 
 /**
@@ -52,30 +67,27 @@ function venue(id: string, name: string, overrides: Partial<Venue> = {}): Venue 
  */
 const HALF = { category: 'half-per-card' } as const;
 const CRAFTED: CalendarVenue[] = [
-  { venue: venue('alfa', 'Alfa Hall', { pricing: pricing(400), multisport: HALF }), distanceKm: 1 },
-  {
-    venue: venue('beta', 'Beta Hall', {
+  cv(venue('alfa', 'Alfa Hall', { pricing: pricing(400), multisport: HALF }), 1),
+  cv(
+    venue('beta', 'Beta Hall', {
       pricing: pricing(300),
       multisport: { category: 'not-accepted' },
     }),
-    distanceKm: 2,
-  },
-  {
-    venue: venue('gama', 'Gama Hall', {
+    2,
+  ),
+  cv(
+    venue('gama', 'Gama Hall', {
       pricing: pricing(250),
       multisport: {
         category: 'half-per-card',
         limits: { maxPlayersPerCourt: 4, onlyBookingMinutes: 60 },
       },
     }),
-    distanceKm: 3,
-  },
-  { venue: venue('delta', 'Delta Hall'), distanceKm: 4 },
-  {
-    venue: venue('zeta', 'Zeta Check', { pricing: pricing(100), multisport: HALF }),
-    distanceKm: 0.4,
-  },
-  { venue: venue('eta', 'Eta Check', { pricing: pricing(50), multisport: HALF }), distanceKm: 5 },
+    3,
+  ),
+  cv(venue('delta', 'Delta Hall'), 4),
+  cv(venue('zeta', 'Zeta Check', { pricing: pricing(100), multisport: HALF }), 0.4),
+  cv(venue('eta', 'Eta Check', { pricing: pricing(50), multisport: HALF }), 5),
 ];
 const CHECK_IDS = new Set(['zeta', 'eta']);
 
@@ -127,6 +139,7 @@ async function routeVenues(page: Page, status = 200): Promise<void> {
       venues: CRAFTED.filter(({ venue: v }) => v.id in lat).map(({ venue: v }) => ({
         venue: { ...v, location: { lat: lat[v.id] ?? 49.2, lng: 16.6 } },
         liveAvailability: false,
+        liveSports: [],
       })),
     };
     return route.fulfill({
@@ -269,7 +282,7 @@ test.describe('slot panel: sort by and MultiSport cards', () => {
     const noLocation = order.map((id) => {
       const entry = CRAFTED.find((c) => c.venue.id === id);
       if (!entry) throw new Error(id);
-      return { venue: entry.venue };
+      return cv(entry.venue);
     });
     await routeCalendar(page, noLocation);
     await openDay(page);

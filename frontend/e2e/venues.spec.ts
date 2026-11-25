@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { mainNav } from './helpers.ts';
 
+/** Venues in the data (backend/src/data/venues.ts): all sports. */
+const ALL_VENUES = 24;
+/** Venues with a badminton offering. */
+const BADMINTON_VENUES = 7;
+
 test.describe('venues page', () => {
   test('lists every venue as a card with its details', async ({ page }) => {
     await page.goto('/venues');
@@ -10,8 +15,8 @@ test.describe('venues page', () => {
       'page',
     );
     const cards = page.locator('.vcard');
-    await expect(cards).toHaveCount(7);
-    await expect(page.locator('.result-count')).toHaveText('7 venues');
+    await expect(cards).toHaveCount(ALL_VENUES);
+    await expect(page.locator('.result-count')).toHaveText(`${ALL_VENUES} venues`);
 
     const kuklenska = page.locator('.vcard[data-venue-id="kuklenska"]');
     await expect(kuklenska.getByRole('heading', { level: 3 })).toHaveText('Sportcentrum Kuklenská');
@@ -22,34 +27,40 @@ test.describe('venues page', () => {
     await expect(kuklenska.locator('.hours')).toContainText(/\d\d:\d\d–\d\d:\d\d/);
     await expect(kuklenska).toContainText(/from \d+ Kč \/ h/);
     await expect(kuklenska.getByTestId('multisport')).toHaveText('1 card = 50 % off');
-    await expect(kuklenska.getByTestId('live-status')).toHaveAttribute('data-status', 'live');
+    await expect(kuklenska.locator('.vcard-head').getByTestId('live-status')).toHaveAttribute(
+      'data-status',
+      'live',
+    );
     await expect(kuklenska.getByRole('link', { name: /^Website/ })).toHaveAttribute(
       'href',
       /^https?:\/\//,
     );
-    await expect(kuklenska.getByRole('link', { name: /Book on venue's website/ })).toHaveAttribute(
-      'target',
-      '_blank',
-    );
+    await expect(
+      kuklenska.getByRole('link', {
+        name: /Book badminton at Sportcentrum Kuklenská on venue's website/,
+      }),
+    ).toHaveAttribute('target', '_blank');
     await expect(
       kuklenska.getByRole('link', { name: /Rating & reviews on Google Maps/ }),
     ).toHaveAttribute('href', /google\.com\/maps\/search/);
 
     // Bizzy venues (Jehnice, Líšeň, X-Arena) have a connector now and show live data too.
     await expect(
-      page.locator('.vcard[data-venue-id="badminton-jehnice"]').getByTestId('live-status'),
+      page
+        .locator('.vcard[data-venue-id="badminton-jehnice"] .vcard-head')
+        .getByTestId('live-status'),
     ).toHaveAttribute('data-status', 'live');
-    // Other activities are listed as extra tags.
-    await expect(page.locator('.vcard[data-venue-id="centrum-viktoria"] .tags')).toContainText(
-      'Squash',
-    );
+    // Sports and other activities are listed as tags.
+    const viktoriaTags = page.locator('.vcard[data-venue-id="centrum-viktoria"] .tags');
+    await expect(viktoriaTags).toContainText('Squash');
+    await expect(viktoriaTags).toContainText('Bowling');
   });
 
   test('search filters the list (diacritics-insensitive) and is kept in the URL', async ({
     page,
   }) => {
     await page.goto('/venues');
-    await expect(page.locator('.vcard')).toHaveCount(7);
+    await expect(page.locator('.vcard')).toHaveCount(ALL_VENUES);
     await page.getByLabel('Search venues').fill('lisen');
     await expect(page.locator('.vcard')).toHaveCount(1);
     await expect(page.locator('.vcard')).toContainText('Badminton Líšeň');
@@ -57,7 +68,7 @@ test.describe('venues page', () => {
     await expect(page).toHaveURL(/\/venues\?q=lisen/);
 
     await page.getByLabel('Search venues').fill('');
-    await expect(page.locator('.vcard')).toHaveCount(7);
+    await expect(page.locator('.vcard')).toHaveCount(ALL_VENUES);
   });
 
   test('a shared search link restores the query and the results', async ({ page }) => {
@@ -76,7 +87,7 @@ test.describe('venues page', () => {
       .getByRole('button', { name: 'Badminton' })
       .click();
     await expect(page).toHaveURL(/sport=badminton/);
-    await expect(page.locator('.vcard')).toHaveCount(7);
+    await expect(page.locator('.vcard')).toHaveCount(BADMINTON_VENUES);
     await page.getByRole('button', { name: 'All sports' }).click();
     await expect(page).not.toHaveURL(/sport=/);
   });
@@ -87,7 +98,7 @@ test.describe('venues page', () => {
     await expect(page.getByRole('heading', { name: 'No venues match “zzzzqq”' })).toBeVisible();
     await expect(page.locator('.vcard')).toHaveCount(0);
     await page.getByRole('button', { name: 'Clear search' }).click();
-    await expect(page.locator('.vcard')).toHaveCount(7);
+    await expect(page.locator('.vcard')).toHaveCount(ALL_VENUES);
     await expect(page.getByLabel('Search venues')).toHaveValue('');
   });
 
@@ -115,7 +126,7 @@ test.describe('venues page', () => {
     await expect(page.getByRole('alert')).toContainText('Internal error');
     fail = false;
     await page.getByRole('button', { name: 'Try again' }).click();
-    await expect(page.locator('.vcard')).toHaveCount(7);
+    await expect(page.locator('.vcard')).toHaveCount(ALL_VENUES);
     await expect(page.getByRole('alert')).toHaveCount(0);
   });
 
@@ -125,7 +136,7 @@ test.describe('venues page', () => {
       if (request.url().includes('/api/venues')) requests.push(new URL(request.url()).search);
     });
     await page.goto('/venues');
-    await expect(page.locator('.vcard')).toHaveCount(7);
+    await expect(page.locator('.vcard')).toHaveCount(ALL_VENUES);
     await page.getByLabel('Search venues').fill('jehnice');
     await expect(page.locator('.vcard')).toHaveCount(1);
     expect(requests).toContain('?q=jehnice');
