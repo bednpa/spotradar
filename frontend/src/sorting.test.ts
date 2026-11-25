@@ -130,3 +130,9 @@ test('the controls are two labelled segmented groups with aria-pressed buttons',
   assert.match(html, /data-cards-count="2"[^>]*aria-pressed="true">2<\/button>/);
   assert.equal((html.match(/data-cards-count="\d"[^>]*aria-pressed="true"/g) ?? []).length, 1);
 });
+
+test('renderListControls: one row of two groups, the cards group marked for the flexible width', () => {
+  const html = renderListControls('distance', 0, 'venues');
+  assert.equal((html.match(/class="list-control[ "]/g) ?? []).length, 2);
+  assert.match(html, /class="list-control list-control-cards"><span class="label" id="venues-cards-label">/);
+});
