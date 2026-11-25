@@ -1,6 +1,6 @@
 /**
- * Structured court prices and MultiSport terms (part of the API contract)
- * plus pure helpers shared by backend (data validation) and frontend (labels).
+ * Structured court prices (part of the API contract) plus pure helpers shared by
+ * backend (data validation) and frontend (labels). MultiSport terms live in multisport.ts.
  */
 import { isValidTime, timeToMinutes, weekdayOf } from './dates.ts';
 import { WEEKDAYS } from './types.ts';
@@ -27,27 +27,8 @@ export interface Pricing {
   note?: string;
 }
 
-export type MultisportCoverage =
-  /** The card takes `percent` % off the court price (per card, per hour). */
-  | { kind: 'percentOff'; percent: number }
-  /** One card covers `minutes` of play. */
-  | { kind: 'minutesPerCard'; minutes: number }
-  /** One card takes a fixed amount (CZK) off the court price. */
-  | { kind: 'fixedDiscount'; amountCzk: number };
-
-/** Whether the venue accepts the MultiSport card (for the sport) and on what terms. */
-export interface MultisportInfo {
-  accepted: boolean;
-  /** Only when accepted; absent when the exact terms are not known. */
-  coverage?: MultisportCoverage;
-  /** Short extra terms, e.g. "max 4 players per court". */
-  note?: string;
-}
-
 /** Text shown everywhere when the price is not known. */
 export const PRICE_UNKNOWN_LABEL = 'Price on website';
-export const MULTISPORT_UNKNOWN_LABEL = 'MultiSport: unknown';
-export const MULTISPORT_NOT_ACCEPTED_LABEL = 'No MultiSport';
 
 /** Matches the rule containing the start time. `time` is a whole hour (14) or "HH:MM". */
 export function priceRuleFor(
@@ -160,54 +141,4 @@ export function validatePricing(pricing: Pricing): string[] {
     }
   }
   return issues;
-}
-
-/**
- * One short label used everywhere: "MultiSport · 50 % off", "MultiSport · 30 min / card",
- * "MultiSport · −100 Kč", "MultiSport accepted" (terms unknown), "No MultiSport",
- * "MultiSport: unknown".
- */
-export function formatMultisport(info: MultisportInfo | undefined): string {
-  if (!info) return MULTISPORT_UNKNOWN_LABEL;
-  if (!info.accepted) return MULTISPORT_NOT_ACCEPTED_LABEL;
-  const c = info.coverage;
-  if (!c) return 'MultiSport accepted';
-  switch (c.kind) {
-    case 'percentOff':
-      return `MultiSport · ${c.percent} % off`;
-    case 'minutesPerCard':
-      return `MultiSport · ${c.minutes} min / card`;
-    case 'fixedDiscount':
-      return `MultiSport · −${formatCzk(c.amountCzk)}`;
-  }
-}
-
-/**
- * What the player pays for one hour with one MultiSport card, when computable
- * (percentOff / fixedDiscount); null otherwise (unknown/not accepted/minutesPerCard).
- */
-export function priceWithMultisport(
-  price: number | null,
-  info: MultisportInfo | undefined,
-): number | null {
-  if (price === null || !info?.accepted || !info.coverage) return null;
-  const c = info.coverage;
-  switch (c.kind) {
-    case 'percentOff':
-      return Math.max(0, Math.round((price * (100 - c.percent)) / 100));
-    case 'fixedDiscount':
-      return Math.max(0, price - c.amountCzk);
-    case 'minutesPerCard':
-      return null;
-  }
-}
-
-/** "380 Kč → 190 Kč with MultiSport", or null when it cannot be computed. */
-export function formatMultisportPrice(
-  price: number | null,
-  info: MultisportInfo | undefined,
-): string | null {
-  const withCard = priceWithMultisport(price, info);
-  if (price === null || withCard === null) return null;
-  return `${formatCzk(price)} → ${formatCzk(withCard)} with MultiSport`;
 }

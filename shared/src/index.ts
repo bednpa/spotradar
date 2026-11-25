@@ -2,6 +2,7 @@ export * from './calendar.ts';
 export * from './catalog.ts';
 export * from './dates.ts';
 export * from './errors.ts';
+export * from './multisport.ts';
 export * from './pricing.ts';
 export * from './search.ts';
 export * from './validation.ts';

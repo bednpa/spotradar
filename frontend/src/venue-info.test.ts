@@ -32,21 +32,27 @@ test('groupOpeningHours merges identical consecutive days', () => {
   assert.deepEqual(groupOpeningHours(hours(null)), [{ days: 'Mon–Sun', text: 'Closed' }]);
 });
 
-test('multisport badge uses the shared label and shows the note', () => {
+test('multisport badge uses the shared label, limits in the tooltip and visible text', () => {
   assert.match(renderMultisportBadge(undefined), /badge-neutral[^>]*>MultiSport: unknown</);
-  assert.match(renderMultisportBadge({ accepted: false }), />No MultiSport</);
-  assert.match(
-    renderMultisportBadge({ accepted: true }),
-    /badge-multisport[^>]*>MultiSport accepted</,
-  );
+  assert.match(renderMultisportBadge({ category: 'unknown' }), />MultiSport: unknown</);
+  const none = renderMultisportBadge({ category: 'not-accepted' });
+  assert.match(none, />No MultiSport</);
+  assert.doesNotMatch(none, /multisport-limits/);
+  const half = renderMultisportBadge({ category: 'half-per-card' });
+  assert.match(half, /badge-multisport[^>]*>1 card = 50 % off</);
+  assert.doesNotMatch(half, /multisport-limits|title=/);
   const html = renderMultisportBadge({
-    accepted: true,
-    coverage: { kind: 'minutesPerCard', minutes: 30 },
+    category: 'minutes-per-card',
+    minutesPerCard: 30,
+    limits: { maxPlayersPerCourt: 4, onlyBookingMinutes: 60 },
     note: 'a & b',
   });
-  assert.match(html, /title="a &amp; b"/);
-  assert.match(html, />MultiSport · 30 min \/ card<\/span>/);
-  assert.match(html, /fact-terms">a &amp; b</);
+  assert.match(html, /title="max 4 players per court · 60-min bookings only · a &amp; b"/);
+  assert.match(html, />1 card = 30 min<\/span>/);
+  assert.match(
+    html,
+    /data-testid="multisport-limits">max 4 players per court · 60-min bookings only · a &amp; b</,
+  );
 });
 
 test('price summary: short form, expandable table, note and unknown', () => {
@@ -56,9 +62,19 @@ test('price summary: short form, expandable table, note and unknown', () => {
     rules: [{ days: ['mon', 'tue', 'wed', 'thu', 'fri'], from: '07:00', to: '15:00', price: 280 }],
     note: 'x <y>',
   });
-  assert.match(html, /<details[^>]*><summary>from 280 Kč \/ h<\/summary>/);
+  assert.match(html, /<details[^>]*><summary[^>]*>from 280 Kč \/ h<\/summary>/);
   assert.match(html, /<li>Mon–Fri 07:00–15:00: 280 Kč \/ h<\/li>/);
   assert.match(html, /x &lt;y&gt;/);
+  const pricing = {
+    currency: 'CZK' as const,
+    unit: 'hour' as const,
+    rules: [{ days: ['mon' as const], from: '07:00', to: '15:00', price: 280 }],
+  };
+  assert.match(
+    renderPriceSummary(pricing, { category: 'half-per-card' }, 1),
+    />from 280 Kč → 140 Kč \/ h</,
+  );
+  assert.match(renderPriceSummary(pricing, { category: 'not-accepted' }, 2), />from 280 Kč \/ h</);
   assert.match(renderPriceSummary(undefined), />Price on website</);
   assert.doesNotMatch(renderPriceSummary(undefined), /<details/);
 });

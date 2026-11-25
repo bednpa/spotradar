@@ -32,6 +32,7 @@ import {
 } from './render.ts';
 import { ROUTE_TITLES, isPlainLeftClick, isRoute, routeFromPath, routeUrl } from './router.ts';
 import type { Route } from './router.ts';
+import { parseCards, parseSort } from './sorting.ts';
 import {
   calendarData,
   calendarErrorState,
@@ -301,7 +302,24 @@ function setBackgroundInert(inert: boolean): void {
 function renderPanelContent(focus: boolean): void {
   const data = currentData();
   if (!panel || !data) return;
-  panelRoot.innerHTML = renderPanel({ date: panel.date, hour: panel.hour, data, now: new Date() });
+  // Re-rendering in place keeps the scroll position and an opened "check on website" section.
+  const checkOpen =
+    panelRoot.querySelector<HTMLDetailsElement>('details.check-venues')?.open ?? false;
+  const scrollTop = panelRoot.querySelector<HTMLElement>('.detail-body')?.scrollTop ?? 0;
+  replaceKeepingFocus(
+    panelRoot,
+    renderPanel({
+      date: panel.date,
+      hour: panel.hour,
+      data,
+      now: new Date(),
+      sort: state.sort,
+      cards: state.cards,
+      checkOpen,
+    }),
+  );
+  const body = panelRoot.querySelector<HTMLElement>('.detail-body');
+  if (body) body.scrollTop = scrollTop;
   panelRoot.hidden = false;
   setBackgroundInert(true);
   if (focus) panelRoot.querySelector<HTMLElement>('.detail')?.focus();
@@ -503,10 +521,21 @@ function onAddressKeydown(event: KeyboardEvent): void {
 
 function renderVenuesArea(): void {
   venuesBodyRoot.setAttribute('aria-busy', venues.status === 'loading' ? 'true' : 'false');
-  venuesBodyRoot.innerHTML = renderVenuesBody(venues, venuesFilter);
+  venuesBodyRoot.innerHTML = renderVenuesBody(venues, venuesFilter, state.origin);
 }
 
 function syncVenueControls(): void {
+  for (const button of venuesFiltersRoot.querySelectorAll<HTMLButtonElement>('[data-sort-mode]')) {
+    button.setAttribute('aria-pressed', String(button.dataset.sortMode === venuesFilter.sort));
+  }
+  for (const button of venuesFiltersRoot.querySelectorAll<HTMLButtonElement>(
+    '[data-cards-count]',
+  )) {
+    button.setAttribute(
+      'aria-pressed',
+      String(button.dataset.cardsCount === String(venuesFilter.cards)),
+    );
+  }
   byId<HTMLInputElement>('venue-search').value = venuesFilter.q;
   for (const chip of venuesFiltersRoot.querySelectorAll<HTMLButtonElement>('[data-venue-sport]')) {
     const sport = chip.dataset.venueSport ?? '';
@@ -539,6 +568,31 @@ function setVenuesFilter(patch: Partial<VenuesFilter>, immediate: boolean): void
     venuesDebounce.cancel();
     void loadVenues();
   } else venuesDebounce.schedule(() => void loadVenues());
+}
+
+/**
+ * "Sort by" and "MultiSport cards" are one shared value for both pages: changing them anywhere
+ * updates both states and the URL of the current page, and re-renders the visible list in place
+ * (no reload of the data).
+ */
+function setListControls(patch: Partial<Pick<AppState, 'sort' | 'cards'>>): void {
+  state = { ...state, ...patch };
+  venuesFilter = { ...venuesFilter, ...patch };
+  if (route === 'calendar') {
+    syncUrl();
+    renderPanelContent(false);
+  } else {
+    window.history.replaceState(null, '', routeUrl('venues', venuesFilterToSearch(venuesFilter)));
+    syncVenueControls();
+    renderVenuesArea();
+  }
+}
+
+/** Copies the controls of the page that was parsed from the URL into the other page's state. */
+function shareListControls(from: 'calendar' | 'venues'): void {
+  const source = from === 'calendar' ? state : venuesFilter;
+  state = { ...state, sort: source.sort, cards: source.cards };
+  venuesFilter = { ...venuesFilter, sort: source.sort, cards: source.cards };
 }
 
 // ---------- routing ----------
@@ -577,8 +631,10 @@ window.addEventListener('popstate', () => {
     locationState = state.origin ? { status: 'set', origin: state.origin } : { status: 'idle' };
     ++locationToken;
     if (!state.origin) addressInput().value = '';
+    shareListControls('calendar');
   } else {
     venuesFilter = venuesFilterFromSearch(window.location.search);
+    shareListControls('venues');
   }
   applyRoute(false);
 });
@@ -586,6 +642,7 @@ window.addEventListener('popstate', () => {
 // ---------- events ----------
 
 // The static filter controls are rendered once, before any listener looks them up.
+shareListControls(route);
 filtersRoot.innerHTML = renderFilters(state, locationState);
 venuesFiltersRoot.innerHTML = renderVenuesControls(venuesFilter);
 
@@ -657,6 +714,16 @@ document.addEventListener('click', (event) => {
   const option = target.closest<HTMLElement>('[role="option"][data-index]');
   if (option) {
     selectSuggestion(Number(option.dataset.index));
+    return;
+  }
+  const sortButton = target.closest<HTMLElement>('[data-sort-mode]');
+  if (sortButton) {
+    setListControls({ sort: parseSort(sortButton.dataset.sortMode) });
+    return;
+  }
+  const cardsButton = target.closest<HTMLElement>('[data-cards-count]');
+  if (cardsButton) {
+    setListControls({ cards: parseCards(cardsButton.dataset.cardsCount) });
     return;
   }
   const sportId = target.closest<HTMLElement>('[data-sport]')?.dataset.sport;

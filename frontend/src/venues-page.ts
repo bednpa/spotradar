@@ -1,8 +1,24 @@
 /** Venue directory page: URL state, view state and render-to-string functions. */
-import { SPORTS, VENUE_QUERY_MAX, isSportId } from '@spotradar/shared';
-import type { SportId, VenueListItem, VenueQuery, VenuesResponse } from '@spotradar/shared';
+import { SPORTS, VENUE_QUERY_MAX, courtPriceFrom, distanceKm, isSportId } from '@spotradar/shared';
+import type {
+  GeoPoint,
+  MultisportCards,
+  SportId,
+  VenueListItem,
+  VenueQuery,
+  VenuesResponse,
+} from '@spotradar/shared';
 import { ApiRequestError } from './api.ts';
-import { formatCourts, sportName } from './format.ts';
+import { formatCourts, formatDistance, sportName } from './format.ts';
+import {
+  DEFAULT_CARDS,
+  DEFAULT_SORT,
+  parseCards,
+  parseSort,
+  renderListControls,
+  sortEntries,
+} from './sorting.ts';
+import type { SortMode } from './sorting.ts';
 import { escapeHtml, externalLink, safeHref, telHref } from './html.ts';
 import { renderLiveStatus } from './live-status.ts';
 import {
@@ -16,6 +32,10 @@ import {
 export interface VenuesFilter {
   q: string;
   sport: SportId | null;
+  /** Client-side order of the list; shared with the calendar page. */
+  sort: SortMode;
+  /** MultiSport cards used for the "from" price; shared with the calendar page. */
+  cards: MultisportCards;
 }
 
 export type VenuesState =
@@ -29,6 +49,8 @@ export function venuesFilterFromSearch(search: string): VenuesFilter {
   return {
     q: (params.get('q') ?? '').trim().slice(0, VENUE_QUERY_MAX),
     sport: isSportId(sport) ? sport : null,
+    sort: parseSort(params.get('sort')),
+    cards: parseCards(params.get('cards')),
   };
 }
 
@@ -36,7 +58,33 @@ export function venuesFilterToSearch(filter: VenuesFilter): string {
   const params = new URLSearchParams();
   if (filter.q.trim() !== '') params.set('q', filter.q.trim());
   if (filter.sport !== null) params.set('sport', filter.sport);
+  if (filter.sort !== DEFAULT_SORT) params.set('sort', filter.sort);
+  if (filter.cards !== DEFAULT_CARDS) params.set('cards', String(filter.cards));
   return params.toString();
+}
+
+/** Distance of a venue from the calendar page's location; undefined without a location. */
+function venueDistance(
+  item: VenueListItem,
+  origin: GeoPoint | null | undefined,
+): number | undefined {
+  return origin ? distanceKm(origin, item.venue.location) : undefined;
+}
+
+/**
+ * The list in the selected order. Distance without a location keeps the API order (by name);
+ * price uses the "from" price with the selected cards.
+ */
+export function sortVenueItems(
+  items: readonly VenueListItem[],
+  filter: Pick<VenuesFilter, 'sort' | 'cards'>,
+  origin: GeoPoint | null | undefined,
+): VenueListItem[] {
+  return sortEntries(items, filter.sort, (item) => ({
+    name: item.venue.name,
+    distanceKm: venueDistance(item, origin),
+    price: courtPriceFrom(item.venue.pricing, item.venue.multisport, filter.cards),
+  }));
 }
 
 export function toVenueQuery(filter: VenuesFilter): VenueQuery {
@@ -80,7 +128,8 @@ export function renderVenuesControls(filter: VenuesFilter): string {
 <div class="filter-group">
   <span id="venue-sport-label" class="label">Sport</span>
   <div class="chips" role="group" aria-labelledby="venue-sport-label">${chips}</div>
-</div>`;
+</div>
+${renderListControls(filter.sort, filter.cards, 'venues')}`;
 }
 
 export function renderVenuesSkeleton(): string {
@@ -108,7 +157,11 @@ function fact(label: string, valueHtml: string): string {
   return `<div class="fact-row"><dt>${label}</dt><dd>${valueHtml}</dd></div>`;
 }
 
-export function renderVenueCard(item: VenueListItem): string {
+export function renderVenueCard(
+  item: VenueListItem,
+  cards: MultisportCards = DEFAULT_CARDS,
+  distance?: number,
+): string {
   const { venue } = item;
   const sports = venue.sports.map(
     (id) => `<li class="tag tag-sport">${escapeHtml(sportName(id))}</li>`,
@@ -127,7 +180,7 @@ export function renderVenueCard(item: VenueListItem): string {
     ? ' <span class="badge badge-neutral">approximate</span>'
     : '';
 
-  const price = renderPriceSummary(venue.pricing);
+  const price = renderPriceSummary(venue.pricing, venue.multisport, cards);
   const multisport = renderMultisportBadge(venue.multisport);
   const phoneHref = venue.phone ? telHref(venue.phone) : null;
   const bookHref = safeHref(venue.bookingUrl);
@@ -157,7 +210,9 @@ export function renderVenueCard(item: VenueListItem): string {
     <h3>${escapeHtml(venue.name)}</h3>
     ${renderLiveStatus({ status: item.liveAvailability ? 'live' : 'unknown' })}
   </div>
-  <p class="muted">${escapeHtml(venue.district)} · ${escapeHtml(venue.address)}</p>
+  <p class="muted">${escapeHtml(venue.district)} · ${escapeHtml(venue.address)}${
+    distance !== undefined ? ` · ${escapeHtml(formatDistance(distance))} away` : ''
+  }</p>
   <ul class="tags" aria-label="Sports and activities">${sports.join('')}${others.join('')}</ul>
   <dl class="facts">${facts}</dl>
   <div class="link-row">${links}</div>
@@ -165,7 +220,11 @@ export function renderVenueCard(item: VenueListItem): string {
 }
 
 /** Page body for the current state (loading / error / empty / list with count). */
-export function renderVenuesBody(state: VenuesState, filter: VenuesFilter): string {
+export function renderVenuesBody(
+  state: VenuesState,
+  filter: VenuesFilter,
+  origin?: GeoPoint | null,
+): string {
   switch (state.status) {
     case 'loading':
       return renderVenuesSkeleton();
@@ -173,7 +232,10 @@ export function renderVenuesBody(state: VenuesState, filter: VenuesFilter): stri
       return renderVenuesError(state.message);
     case 'success': {
       if (state.data.venues.length === 0) return renderVenuesEmpty(filter);
-      return `<p class="result-count" role="status">${venueCountText(state.data.venues.length)}</p><ul class="venue-grid">${state.data.venues.map(renderVenueCard).join('')}</ul>`;
+      const cards = sortVenueItems(state.data.venues, filter, origin)
+        .map((item) => renderVenueCard(item, filter.cards, venueDistance(item, origin)))
+        .join('');
+      return `<p class="result-count" role="status">${venueCountText(state.data.venues.length)}</p><ul class="venue-grid">${cards}</ul>`;
     }
   }
 }

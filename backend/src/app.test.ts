@@ -289,6 +289,14 @@ describe('GET /api/calendar', () => {
     assert.equal(kuklenska(TOMORROW)?.availability.freeSlots.length, 2);
     const viktoria = body.days[0]?.venues.find((v) => v.venueId === 'centrum-viktoria');
     assert.equal(viktoria?.availability.status, 'unavailable');
+    const venueOf = (id: string) => body.venues.find((v) => v.venue.id === id)?.venue;
+    assert.deepEqual(venueOf('kuklenska')?.multisport, { category: 'half-per-card' });
+    assert.deepEqual(venueOf('badminton-jehnice')?.multisport, { category: 'unknown' });
+    assert.deepEqual(venueOf('sportcentrum-ivanovice')?.multisport, {
+      category: 'full-two-cards',
+      limits: { maxCardsPerCourt: 2, onlyBookingMinutes: 60, requiresNotice: true },
+      note: 'One sports activity per card per day',
+    });
   });
 
   it('applies lat/lng and maxDistanceKm', async () => {
@@ -488,8 +496,21 @@ describe('GET /api/venues', () => {
     assert.equal(live.get('hala-sprint'), false);
     const kuklenska = body.venues.find((v) => v.venue.id === 'kuklenska')?.venue;
     assert.equal(kuklenska?.website, 'https://www.sportkuklenska.cz/');
-    assert.equal(kuklenska?.multisport?.accepted, true);
-    assert.deepEqual(kuklenska?.multisport?.coverage, { kind: 'percentOff', percent: 50 });
+    assert.deepEqual(kuklenska?.multisport, { category: 'half-per-card' });
+    const multisportOf = (id: string) =>
+      body.venues.find((v) => v.venue.id === id)?.venue.multisport;
+    assert.deepEqual(multisportOf('badminton-jehnice'), { category: 'unknown' });
+    assert.deepEqual(multisportOf('centrum-viktoria'), {
+      category: 'minutes-per-card',
+      minutesPerCard: 30,
+    });
+    assert.deepEqual(multisportOf('sportcentrum-ivanovice'), {
+      category: 'full-two-cards',
+      limits: { maxCardsPerCourt: 2, onlyBookingMinutes: 60, requiresNotice: true },
+      note: 'One sports activity per card per day',
+    });
+    // multisport is required: every venue has it
+    assert.ok(body.venues.every((v) => typeof v.venue.multisport.category === 'string'));
     assert.equal(kuklenska?.pricing?.currency, 'CZK');
     assert.equal(kuklenska?.pricing?.rules[0]?.price, 280);
     assert.ok(!('priceInfo' in (kuklenska ?? {})));

@@ -264,7 +264,7 @@ test.describe('hour slot details', () => {
     const item = dialog.locator('li[data-venue-id="kuklenska"]');
     await expect(item).toContainText('Sportcentrum Kuklenská');
     await expect(item.getByTestId('slot-price')).toHaveText(/^\d+ Kč \/ h$/);
-    await expect(item.getByTestId('multisport')).toContainText('MultiSport');
+    await expect(item.getByTestId('multisport')).toHaveText('1 card = 50 % off');
     await expect(item.getByRole('link', { name: /^Website/ })).toHaveAttribute(
       'href',
       /^https?:\/\//,

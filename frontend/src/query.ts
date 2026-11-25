@@ -7,8 +7,10 @@ import {
   isSportId,
   isValidDate,
 } from '@spotradar/shared';
-import type { CalendarQuery, CalendarView, SportId } from '@spotradar/shared';
+import type { CalendarQuery, CalendarView, MultisportCards, SportId } from '@spotradar/shared';
 import type { DateRange } from './calendar-range.ts';
+import { DEFAULT_CARDS, DEFAULT_SORT, parseCards, parseSort } from './sorting.ts';
+import type { SortMode } from './sorting.ts';
 
 /** Where the location filter came from. */
 export interface Origin {
@@ -26,6 +28,10 @@ export interface AppState {
   origin: Origin | null;
   /** Only with an origin. */
   maxDistanceKm: number | null;
+  /** Order of the venue lists (slot panel); shared with the venues page. */
+  sort: SortMode;
+  /** MultiSport cards used for one court (0–4); shared with the venues page. */
+  cards: MultisportCards;
 }
 
 export function isCalendarView(value: unknown): value is CalendarView {
@@ -44,6 +50,8 @@ export function getDefaultState(now: Date, wide: boolean): AppState {
     date: getSearchWindow(now).from,
     origin: null,
     maxDistanceKm: null,
+    sort: DEFAULT_SORT,
+    cards: DEFAULT_CARDS,
   };
 }
 
@@ -76,6 +84,8 @@ export function stateFromSearch(search: string, now: Date, wide: boolean): AppSt
     date: date !== null && isValidDate(date) ? date : defaults.date,
     origin,
     maxDistanceKm: origin && km !== null && km > 0 && km <= MAX_DISTANCE_KM ? km : null,
+    sort: parseSort(params.get('sort')),
+    cards: parseCards(params.get('cards')),
   };
 }
 
@@ -90,6 +100,8 @@ export function stateToSearch(state: AppState): string {
     params.set('lng', String(state.origin.lng));
     if (state.maxDistanceKm !== null) params.set('maxDistanceKm', String(state.maxDistanceKm));
   }
+  if (state.sort !== DEFAULT_SORT) params.set('sort', state.sort);
+  if (state.cards !== DEFAULT_CARDS) params.set('cards', String(state.cards));
   return params.toString();
 }
 

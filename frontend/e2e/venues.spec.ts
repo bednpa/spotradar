@@ -21,7 +21,7 @@ test.describe('venues page', () => {
     await expect(kuklenska).toContainText('Opening hours');
     await expect(kuklenska.locator('.hours')).toContainText(/\d\d:\d\d–\d\d:\d\d/);
     await expect(kuklenska).toContainText(/from \d+ Kč \/ h/);
-    await expect(kuklenska.getByTestId('multisport')).toContainText('MultiSport');
+    await expect(kuklenska.getByTestId('multisport')).toHaveText('1 card = 50 % off');
     await expect(kuklenska.getByTestId('live-status')).toHaveAttribute('data-status', 'live');
     await expect(kuklenska.getByRole('link', { name: /^Website/ })).toHaveAttribute(
       'href',

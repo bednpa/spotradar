@@ -41,6 +41,7 @@ export function makeVenue(id: string, name: string, overrides: Partial<Venue> = 
     openingHours: hours('07:00'),
     bookingUrl: `https://example.com/${id}`,
     availabilitySource: 'clubspire',
+    multisport: { category: 'unknown' },
     ...overrides,
   };
 }
@@ -72,7 +73,7 @@ export function makeVenues(): CalendarVenue[] {
           ],
           note: 'Students <20 % off',
         },
-        multisport: { accepted: true, coverage: { kind: 'percentOff', percent: 50 } },
+        multisport: { category: 'half-per-card' },
       }),
       distanceKm: 1.5,
     },
