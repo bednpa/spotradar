@@ -136,6 +136,8 @@ jobs:
           PROMPT="Act as the team-lead agent (see .claude/agents/team-lead.md). Implement the task below following the rules in CLAUDE.md,
           delegating to the backend-dev, frontend-dev and qa-reviewer subagents as described there.
           You are running in non-interactive CI: do not wait for plan approval and do not commit or push.
+          Do not create or modify files in .github/workflows/: the workflow token cannot push them.
+          If the task needs a workflow change, describe it in docs/ instead and say so in your final summary.
           run_e2e: true
 
           Task:
@@ -186,6 +188,15 @@ jobs:
             echo "- E2E: \`$E2E_EXIT\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # Safety net: if the push below fails, the agent's work can still be
+      # recovered from the artifact with `git apply agent-changes.patch`.
+      - name: Save agent changes as a patch
+        if: always()
+        run: |
+          mkdir -p .test-reports
+          git add -A -N
+          git diff --binary -- . ':(exclude).test-reports' > .test-reports/agent-changes.patch || true
+
       - name: Upload agent reports as artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -228,6 +239,27 @@ jobs:
           CLOSES=""
           [ -n "$ISSUE_NUMBER" ] && CLOSES="Closes #$ISSUE_NUMBER"
 
+          # GITHUB_TOKEN cannot push files under .github/workflows/ (needs the
+          # "workflows" permission), so leave them out of the commit and list them
+          # in the PR body for a human to add.
+          WORKFLOW_CHANGES="$(git status --porcelain -- .github/workflows || true)"
+          WORKFLOW_NOTE=""
+          if [ -n "$WORKFLOW_CHANGES" ]; then
+            echo "::warning::Agent changed workflow files; they are left out of the PR: $WORKFLOW_CHANGES"
+            WORKFLOW_NOTE="### ⚠️ Workflow changes left out
+          The agent changed these files, but the Actions token cannot push workflows. They are in the
+          \`agent-changes.patch\` file of the run artifact; add them by hand if wanted:
+          \`\`\`text
+          $WORKFLOW_CHANGES
+          \`\`\`"
+            git restore --staged --worktree -- .github/workflows 2>/dev/null || true
+            git clean -fdq -- .github/workflows
+          fi
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Only workflow files changed – no pull request will be opened."
+            exit 0
+          fi
+
           git add -A
           git commit -m "feat(agent): $SUMMARY" -m "$TASK"
           git push -u origin "$BRANCH"
@@ -251,6 +283,8 @@ jobs:
           \`\`\`text
           $ADDED_TESTS
           \`\`\`
+
+          $WORKFLOW_NOTE
 
           Independent verification runs in \`pr-checks.yml\` (see **Checks** and **Actions**).
           EOF
