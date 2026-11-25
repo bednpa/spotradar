@@ -4,9 +4,18 @@ import {
   formatCheckedAgo,
   formatCourts,
   formatDateLabel,
+  formatClockTime,
   formatDistance,
+  formatLongDate,
   formatShortDate,
   formatSlotRange,
+  formatVenues,
+  hourLabel,
+  hourRangeLabel,
+  monthName,
+  sportName,
+  sportNameLower,
+  windowDescription,
 } from './format.ts';
 
 test('formatDistance uses one decimal', () => {
@@ -35,6 +44,26 @@ test('formatCheckedAgo formats minutes, hours and edge cases', () => {
 test('formatCourts pluralises', () => {
   assert.equal(formatCourts(1), '1 court');
   assert.equal(formatCourts(3), '3 courts');
+});
+
+test('long labels', () => {
+  assert.equal(formatLongDate('2026-11-25'), 'Wednesday 25 November');
+  assert.equal(formatLongDate('x'), 'x');
+  assert.equal(monthName(1), 'January');
+  assert.equal(hourLabel(6), '06:00');
+  assert.equal(hourRangeLabel(18), '18:00–19:00');
+  assert.equal(hourRangeLabel(23), '23:00–24:00');
+  assert.equal(formatClockTime('2026-11-25T11:57:00Z'), '12:57');
+  assert.equal(formatClockTime(undefined), '');
+  assert.equal(formatClockTime('junk'), '');
+  assert.equal(formatVenues(1), '1 venue');
+  assert.equal(formatVenues(2), '2 venues');
+});
+
+test('sport and window descriptions come from the shared catalogue', () => {
+  assert.equal(sportName('badminton'), 'Badminton');
+  assert.equal(sportNameLower('badminton'), 'badminton');
+  assert.equal(windowDescription(), 'today and the next 14 days');
 });
 
 test('formatSlotRange', () => {

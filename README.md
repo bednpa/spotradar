@@ -10,10 +10,15 @@ _(on the free plan the first request after 15 minutes of inactivity takes about 
 
 ## What it does
 
-SpotRadar is a **badminton court finder for Brno**. Pick a **sport** (badminton for now), a **date** (today … +14 days),
-optionally a **time**, and optionally a **max distance** from your location or an address. SpotRadar lists real Brno venues
-with the **free courts read from their own public booking pages** (where a connector exists) and a button that opens the
-venue's booking page. **SpotRadar never books anything itself** – booking always happens on the venue's website.
+SpotRadar is a **badminton court finder for Brno** with a **calendar-based UI** ("Court & Shuttle" design, light and dark).
+Pick a **sport** in the top menu (badminton for now) and browse availability in a **Day / Week / Month / Year** calendar
+(today … +14 days). Every hour cell shows how many venues have a free court (or "check" when only venues without live data
+are open). Click an hour to open a panel that lists **every venue's status** (free, check on website, full, closed) with a
+**"Book on venue's website"** link. Filters: jump to a date, narrow the visible hours, set a location (browser geolocation
+or an address) with a max distance, and "Only show free". **"Next free court"** jumps to the earliest free hour, and a legend
+shows which venues have live data. The view and filters are kept in the URL, so links are shareable. Free courts are
+**read from the venues' own public booking pages** (where a connector exists) via `GET /api/calendar`.
+**SpotRadar never books anything itself** – booking always happens on the venue's website.
 
 Availability is read live (cached for 15 minutes per venue and date) and may be a few minutes old.
 
@@ -34,7 +39,10 @@ Venues are a static data file in the backend (`backend/src/data/venues.ts`). Eac
 | Sportcentrum Ivanovice | Brno-Ivanovice    | ?      | MemberPro      | ⏳ not yet – status `unknown` |
 
 Availability status per venue: `live` (read from the booking page), `unavailable` (a connector exists but reading failed –
-the search still succeeds), `unknown` (no connector yet). Opening hours marked `approximate` are estimates.
+the search still succeeds), `unknown` (no connector yet). Opening hours marked `approximate` are estimates. In the calendar,
+venues without live data are shown as **"check on website"** during their opening hours – a free court is never guessed.
+The plan for bringing the remaining 5 venues live (one Bizzy connector covers 3 of them) is in
+[`docs/live-data-connectors.md`](docs/live-data-connectors.md).
 
 **ClubSpire connector:** fetches the server-rendered day timeline
 `{base}/timeline/day?tabIdx={tabIdx}&criteriaTimestamp={local midnight Europe/Prague in epoch ms}&resetFilter=true`
@@ -51,15 +59,18 @@ the real pages – never the live sites. Refresh a raw page with
 
 ### API (contract in `shared/src`)
 
-| Method | Path           | Success                | Errors                                                                       |
-| ------ | -------------- | ---------------------- | ---------------------------------------------------------------------------- |
-| GET    | `/api/health`  | 200 `{ status: 'ok' }` | –                                                                            |
-| GET    | `/api/search`  | 200 `SearchResponse`   | 400 `VALIDATION_ERROR`, 422 `DATE_OUT_OF_RANGE`                              |
-| GET    | `/api/geocode` | 200 `GeocodeResponse`  | 400 `VALIDATION_ERROR`, 404 `LOCATION_NOT_FOUND`, 502 `GEOCODER_UNAVAILABLE` |
+| Method | Path            | Success                | Errors                                                                       |
+| ------ | --------------- | ---------------------- | ---------------------------------------------------------------------------- |
+| GET    | `/api/health`   | 200 `{ status: 'ok' }` | –                                                                            |
+| GET    | `/api/search`   | 200 `SearchResponse`   | 400 `VALIDATION_ERROR`, 422 `DATE_OUT_OF_RANGE`                              |
+| GET    | `/api/calendar` | 200 `CalendarResponse` | 400 `VALIDATION_ERROR`, 422 `DATE_OUT_OF_RANGE`                              |
+| GET    | `/api/geocode`  | 200 `GeocodeResponse`  | 400 `VALIDATION_ERROR`, 404 `LOCATION_NOT_FOUND`, 502 `GEOCODER_UNAVAILABLE` |
 
 `/api/search` query: `sport`, `date` (YYYY-MM-DD, today … today + 14 days, Europe/Prague), optional `time` (HH:MM),
 optional `lat` + `lng` (together), optional `maxDistanceKm` (requires `lat`/`lng`). Results list venues with a free court
-(at `time`, or anytime that day) first, then sort by distance (or name). `/api/geocode` query: `q` (2–200 characters).
+(at `time`, or anytime that day) first, then sort by distance (or name). `/api/calendar` query: `sport`, `from` + `to`
+(YYYY-MM-DD, both inside the search window, `from` ≤ `to`, at most 15 days), optional `lat` + `lng`, optional `maxDistanceKm`;
+returns the matching venues plus per-day availability for each. `/api/geocode` query: `q` (2–200 characters).
 
 ### Toolchain
 

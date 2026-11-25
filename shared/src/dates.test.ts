@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   addDays,
+  dateRange,
+  daysBetween,
   getSearchWindow,
   isDateInSearchWindow,
   isValidDate,
@@ -44,6 +46,20 @@ test('addDays crosses month and year boundaries', () => {
   assert.equal(addDays('2026-11-30', 1), '2026-12-01');
   assert.equal(addDays('2026-12-31', 1), '2027-01-01');
   assert.equal(addDays('2026-03-01', -1), '2026-02-28');
+});
+
+test('daysBetween and dateRange', () => {
+  assert.equal(daysBetween('2026-11-25', '2026-11-25'), 0);
+  assert.equal(daysBetween('2026-11-25', '2026-12-02'), 7);
+  assert.equal(daysBetween('2026-03-28', '2026-03-30'), 2); // across DST change
+  assert.equal(daysBetween('2026-11-25', '2026-11-24'), -1);
+  assert.deepEqual(dateRange('2026-12-30', '2027-01-02'), [
+    '2026-12-30',
+    '2026-12-31',
+    '2027-01-01',
+    '2027-01-02',
+  ]);
+  assert.deepEqual(dateRange('2026-11-25', '2026-11-24'), []);
 });
 
 test('weekdayOf returns Monday-based weekday ids', () => {

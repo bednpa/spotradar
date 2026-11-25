@@ -5,11 +5,14 @@ import path from 'node:path';
 import {
   ERROR_STATUS,
   isDateInSearchWindow,
+  parseCalendarQuery,
   parseGeocodeQuery,
   parseSearchQuery,
 } from '@spotradar/shared';
 import type {
   ApiError,
+  CalendarQueryParams,
+  CalendarResponse,
   ErrorCode,
   GeocodeQueryParams,
   HealthResponse,
@@ -20,6 +23,7 @@ import type { AvailabilityService } from './connectors/availabilityService.ts';
 import { HttpError, validationError } from './errors.ts';
 import type { VenueRepository } from './repositories/venueRepository.ts';
 import type { Geocoder } from './services/geocode.ts';
+import { getCalendar } from './services/calendar.ts';
 import { searchVenues } from './services/search.ts';
 
 export interface AppOptions {
@@ -46,6 +50,7 @@ const MIME_TYPES: Record<string, string> = {
 };
 
 const SEARCH_QUERY_KEYS = ['sport', 'date', 'time', 'lat', 'lng', 'maxDistanceKm'] as const;
+const CALENDAR_QUERY_KEYS = ['sport', 'from', 'to', 'lat', 'lng', 'maxDistanceKm'] as const;
 
 function sendJson(
   res: ServerResponse,
@@ -121,6 +126,31 @@ async function handleApi(
         now: options.now,
       }),
     };
+    sendJson(res, 200, body);
+    return;
+  }
+
+  if (segments.length === 2 && resource === 'calendar') {
+    if (method !== 'GET') return methodNotAllowed('GET');
+    const params: CalendarQueryParams = {};
+    for (const key of CALENDAR_QUERY_KEYS) {
+      const value = url.searchParams.get(key); // first value of repeated params
+      if (value !== null) params[key] = value;
+    }
+    const parsed = parseCalendarQuery(params);
+    if (!parsed.ok) throw validationError(parsed.issues);
+    const now = options.now();
+    if (
+      !isDateInSearchWindow(parsed.value.from, now) ||
+      !isDateInSearchWindow(parsed.value.to, now)
+    ) {
+      throw new HttpError('DATE_OUT_OF_RANGE', 'Date is outside the searchable window');
+    }
+    const body: CalendarResponse = await getCalendar(parsed.value, {
+      venues: options.venues,
+      availability: options.availability,
+      now: options.now,
+    });
     sendJson(res, 200, body);
     return;
   }
