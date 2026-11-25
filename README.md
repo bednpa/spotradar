@@ -33,15 +33,15 @@ Venues are a static data file in the backend (`backend/src/data/venues.ts`). Eac
 (`availabilitySource`) and a backend-only connector configuration. Connectors implement a pluggable
 `AvailabilityConnector` interface, so new booking systems can be added without touching the search logic.
 
-| Venue                  | District          | Courts | Booking system | Connector status                                   |
-| ---------------------- | ----------------- | ------ | -------------- | -------------------------------------------------- |
-| Sportcentrum Kuklenská | Brno-Židenice     | 4      | ClubSpire      | ✅ live                                            |
-| Centrum Viktoria       | Brno-Komárov      | 3      | ClubSpire      | ✅ live                                            |
-| Hala Sprint            | Brno-Královo Pole | 6      | MemberZone     | ✅ live                                            |
-| Sportcentrum Ivanovice | Brno-Ivanovice    | 3      | MemberPro      | ✅ live                                            |
-| Badminton Jehnice      | Brno-Jehnice      | 5      | Bizzy          | ⛔ blocked (server unreachable) – status `unknown` |
-| Badminton Líšeň        | Brno-Líšeň        | 6      | Bizzy          | ⛔ blocked (server unreachable) – status `unknown` |
-| X-Arena Slatina        | Brno-Slatina      | 6      | Bizzy          | ⛔ blocked (server unreachable) – status `unknown` |
+| Venue                  | District          | Courts | Booking system | Connector status                                         |
+| ---------------------- | ----------------- | ------ | -------------- | -------------------------------------------------------- |
+| Sportcentrum Kuklenská | Brno-Židenice     | 4      | ClubSpire      | ✅ live                                                  |
+| Centrum Viktoria       | Brno-Komárov      | 3      | ClubSpire      | ✅ live                                                  |
+| Hala Sprint            | Brno-Královo Pole | 6      | MemberZone     | ✅ live                                                  |
+| Sportcentrum Ivanovice | Brno-Ivanovice    | 3      | MemberPro      | ✅ live                                                  |
+| Badminton Jehnice      | Brno-Jehnice      | 5      | Bizzy          | ⏳ fixtures recorded, connector to do – status `unknown` |
+| Badminton Líšeň        | Brno-Líšeň        | 6      | Bizzy          | ⏳ fixtures recorded, connector to do – status `unknown` |
+| X-Arena Slatina        | Brno-Slatina      | 6      | Bizzy          | ⏳ fixtures recorded, connector to do – status `unknown` |
 
 Availability status per venue: `live` (read from the booking page), `unavailable` (a connector exists but reading failed –
 the search still succeeds), `unknown` (no connector yet). Opening hours marked `approximate` are estimates. Venues without
