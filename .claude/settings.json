@@ -15,7 +15,9 @@
       "Bash(git status)",
       "Bash(git diff *)",
       "Bash(git log *)",
-      "Bash(git branch *)"
+      "Bash(git branch *)",
+      "Bash(curl *)",
+      "WebFetch"
     ],
     "deny": ["Read(.env*)", "Edit(.env*)"]
   },
