@@ -6,10 +6,96 @@ import {
   hourStatuses,
   indexDays,
   isCellSelectable,
+  slotHourRange,
   summarizeDay,
   venueCoverage,
 } from './cells.ts';
-import { NOW, makeCalendar } from './test-fixtures.test.ts';
+import { NOW, hours, live, makeCalendar, makeVenue } from './test-fixtures.test.ts';
+
+test('slotHourRange: Day starts at the first hour with a slot and ends after the last', () => {
+  const calendar = makeCalendar('2026-11-25', '2026-11-27', [
+    { venue: makeVenue('viktoria', 'Afternoon Hall', { openingHours: hours('14:00', '18:00') }) },
+  ]);
+  const idx = indexDays(calendar);
+  assert.deepEqual(slotHourRange(idx, calendar.venues, ['2026-11-26']), {
+    fromHour: 14,
+    toHour: 18,
+  });
+});
+
+test('slotHourRange: Week uses one shared range and keeps empty hours in between', () => {
+  const calendar = makeCalendar('2026-11-23', '2026-11-29', [
+    { venue: makeVenue('viktoria', 'Early Hall', { openingHours: hours('07:00', '09:00') }) },
+    { venue: makeVenue('unknown', 'Late Hall', { openingHours: hours('20:00', '22:00') }) },
+  ]);
+  const idx = indexDays(calendar);
+  const week = ['2026-11-26', '2026-11-27'];
+  assert.deepEqual(slotHourRange(idx, calendar.venues, week), { fromHour: 7, toHour: 22 });
+  // A single day of the same data has the same range (both venues open every day).
+  assert.deepEqual(slotHourRange(idx, calendar.venues, ['2026-11-26']), {
+    fromHour: 7,
+    toHour: 22,
+  });
+});
+
+test('slotHourRange: a week is widened by the day with the earliest / latest slot', () => {
+  const base = makeCalendar('2026-11-25', '2026-11-27', [
+    {
+      venue: makeVenue('viktoria', 'Weekend Hall', {
+        openingHours: {
+          approximate: false,
+          days: {
+            ...hours(null).days,
+            thu: { open: '10:00', close: '12:00' },
+            fri: { open: '16:00', close: '18:00' },
+          },
+        },
+      }),
+    },
+  ]);
+  const idx = indexDays(base);
+  assert.deepEqual(slotHourRange(idx, base.venues, ['2026-11-26']), { fromHour: 10, toHour: 12 });
+  assert.deepEqual(slotHourRange(idx, base.venues, ['2026-11-27']), { fromHour: 16, toHour: 18 });
+  assert.deepEqual(slotHourRange(idx, base.venues, ['2026-11-26', '2026-11-27']), {
+    fromHour: 10,
+    toHour: 18,
+  });
+});
+
+test('slotHourRange: free slots of a live venue count, full hours do not', () => {
+  const calendar = makeCalendar('2026-11-25', '2026-11-27', [
+    { venue: makeVenue('kuklenska', 'Live Hall') },
+  ]);
+  calendar.days = calendar.days.map((day) => ({
+    ...day,
+    venues: [
+      {
+        venueId: 'kuklenska',
+        availability: live([{ start: '10:00', end: '12:00', freeCourts: 2 }]),
+      },
+    ],
+  }));
+  assert.deepEqual(slotHourRange(indexDays(calendar), calendar.venues, ['2026-11-26']), {
+    fromHour: 10,
+    toHour: 12,
+  });
+});
+
+test('slotHourRange: null without data, when all venues are closed or fully booked', () => {
+  const calendar = makeCalendar('2026-11-25', '2026-11-27');
+  const idx = indexDays(calendar);
+  assert.equal(slotHourRange(idx, calendar.venues, ['2026-12-20']), null);
+  assert.equal(slotHourRange(idx, calendar.venues, []), null);
+  const closed = makeCalendar('2026-11-25', '2026-11-27', [
+    { venue: makeVenue('closed', 'Closed Hall', { openingHours: hours(null) }) },
+  ]);
+  assert.equal(slotHourRange(indexDays(closed), closed.venues, ['2026-11-26']), null);
+  const full = makeCalendar('2026-11-25', '2026-11-27', [
+    { venue: makeVenue('full', 'Full Hall') },
+  ]);
+  assert.equal(slotHourRange(indexDays(full), full.venues, ['2026-11-26']), null);
+  assert.equal(slotHourRange(indexDays(null), [], ['2026-11-26']), null);
+});
 
 const data = makeCalendar('2026-11-25', '2026-12-09');
 const days = indexDays(data);

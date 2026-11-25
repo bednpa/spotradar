@@ -43,8 +43,16 @@ export function toPublicVenue(record: VenueRecord): Venue {
   if (record.courts !== undefined) venue.courts = record.courts;
   if (record.phone !== undefined) venue.phone = record.phone;
   if (record.website !== undefined) venue.website = record.website;
-  if (record.priceInfo !== undefined) venue.priceInfo = record.priceInfo;
-  if (record.multisport !== undefined) venue.multisport = { ...record.multisport };
+  if (record.pricing !== undefined) {
+    venue.pricing = {
+      ...record.pricing,
+      rules: record.pricing.rules.map((r) => ({ ...r, days: [...r.days] })),
+    };
+  }
+  if (record.multisport !== undefined) {
+    const { coverage, ...rest } = record.multisport;
+    venue.multisport = coverage ? { ...rest, coverage: { ...coverage } } : { ...rest };
+  }
   if (record.otherActivities !== undefined) venue.otherActivities = [...record.otherActivities];
   return venue;
 }

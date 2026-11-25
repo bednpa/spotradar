@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { WEEKDAYS, isValidTime } from '@spotradar/shared';
+import { WEEKDAYS, isValidTime, priceFor, timeToMinutes, validatePricing } from '@spotradar/shared';
 import { createVenueRepository, toPublicVenue } from '../repositories/venueRepository.ts';
 import { VENUE_RECORDS } from './venues.ts';
 
@@ -51,11 +51,11 @@ describe('venue data', () => {
       assert.ok(v.website, `${v.id} website`);
       assert.match(v.website, /^https?:\/\//, v.id);
       assert.doesNotThrow(() => new URL(v.website ?? ''));
-      assert.ok(v.priceInfo && v.priceInfo.includes('Kč'), `${v.id} priceInfo`);
+      assert.ok(v.pricing, `${v.id} pricing`);
       if (v.multisport) {
         assert.equal(typeof v.multisport.accepted, 'boolean');
-        if (!v.multisport.accepted) assert.equal(v.multisport.terms, undefined, v.id);
-        else assert.ok(v.multisport.terms, `${v.id} terms`);
+        if (!v.multisport.accepted) assert.equal(v.multisport.coverage, undefined, v.id);
+        else assert.ok(v.multisport.coverage, `${v.id} coverage`);
       }
       if (v.otherActivities) {
         assert.ok(v.otherActivities.length > 0, v.id);
@@ -65,6 +65,63 @@ describe('venue data', () => {
         );
       }
     }
+  });
+
+  it('has valid, non-overlapping pricing that covers every open hour', () => {
+    for (const v of VENUE_RECORDS) {
+      assert.ok(v.pricing, v.id);
+      assert.deepEqual(validatePricing(v.pricing), [], v.id);
+      for (const r of v.pricing.rules) {
+        for (const day of r.days) {
+          const hours = v.openingHours.days[day];
+          assert.ok(hours, `${v.id} ${day} open`);
+          assert.ok(timeToMinutes(r.from) >= timeToMinutes(hours.open), `${v.id} ${day} from`);
+          assert.ok(timeToMinutes(r.to) <= timeToMinutes(hours.close), `${v.id} ${day} to`);
+        }
+      }
+      // 2026-11-23 is a Monday.
+      WEEKDAYS.forEach((day, i) => {
+        const date = `2026-11-${String(23 + i).padStart(2, '0')}`;
+        const hours = v.openingHours.days[day];
+        assert.ok(hours, `${v.id} ${day}`);
+        const first = timeToMinutes(hours.open) / 60;
+        const last = timeToMinutes(hours.close) / 60;
+        for (let h = first; h < last; h++) {
+          assert.notEqual(priceFor(v.pricing, date, h), null, `${v.id} ${day} ${h}:00`);
+        }
+        assert.equal(priceFor(v.pricing, date, last), null, `${v.id} ${day} after close`);
+      });
+    }
+  });
+
+  it('spot-checks concrete prices', () => {
+    const byId = new Map(VENUE_RECORDS.map((v) => [v.id, v]));
+    const price = (id: string, date: string, time: number | string) =>
+      priceFor(byId.get(id)?.pricing, date, time);
+    assert.equal(price('kuklenska', '2026-11-25', 14), 280); // Wed
+    assert.equal(price('kuklenska', '2026-11-25', '15:00'), 380);
+    assert.equal(price('kuklenska', '2026-11-28', 10), 380); // Sat
+    assert.equal(price('badminton-jehnice', '2026-11-25', 16), 240);
+    assert.equal(price('badminton-jehnice', '2026-11-25', 17), 290);
+    assert.equal(price('badminton-jehnice', '2026-11-28', 7), 290);
+    assert.equal(price('badminton-jehnice', '2026-11-25', 10), null); // closed
+    assert.equal(price('sportcentrum-ivanovice', '2026-11-26', 21), 440); // Thu
+    assert.equal(price('sportcentrum-ivanovice', '2026-11-27', 20), 440); // Fri
+    assert.equal(price('sportcentrum-ivanovice', '2026-11-27', 21), null); // Fri closed
+  });
+
+  it('describes MultiSport coverage', () => {
+    const byId = new Map(VENUE_RECORDS.map((v) => [v.id, v]));
+    assert.deepEqual(byId.get('kuklenska')?.multisport, {
+      accepted: true,
+      coverage: { kind: 'percentOff', percent: 50 },
+    });
+    assert.deepEqual(byId.get('centrum-viktoria')?.multisport?.coverage, {
+      kind: 'minutesPerCard',
+      minutes: 30,
+    });
+    assert.equal(byId.get('x-arena-slatina')?.multisport?.note, 'max 4 players per court');
+    assert.ok(byId.get('sportcentrum-ivanovice')?.multisport?.note);
   });
 
   it('has HH:MM opening hours with open before close for every day', () => {
@@ -134,7 +191,13 @@ describe('venue repository', () => {
       assert.equal('courts' in venue, record.courts !== undefined);
       assert.equal('phone' in venue, record.phone !== undefined);
       assert.equal('website' in venue, record.website !== undefined);
-      assert.equal('priceInfo' in venue, record.priceInfo !== undefined);
+      assert.equal('pricing' in venue, record.pricing !== undefined);
+      assert.ok(!('priceInfo' in venue));
+      assert.deepEqual(venue.pricing, record.pricing);
+      assert.deepEqual(venue.multisport, record.multisport);
+      if (venue.pricing && record.pricing) {
+        assert.notEqual(venue.pricing.rules[0], record.pricing.rules[0]);
+      }
       assert.equal('multisport' in venue, record.multisport !== undefined);
       assert.equal('otherActivities' in venue, record.otherActivities !== undefined);
     }

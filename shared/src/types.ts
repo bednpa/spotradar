@@ -4,6 +4,7 @@
  */
 import type { AvailabilitySource, GeoPoint, SportId } from './catalog.ts';
 import type { ErrorCode } from './errors.ts';
+import type { MultisportInfo, Pricing } from './pricing.ts';
 
 /** GET /api/health → 200 */
 export interface HealthResponse {
@@ -45,8 +46,8 @@ export interface Venue {
   availabilitySource: AvailabilitySource;
   /** The venue's own website (not the booking page); absent when unknown. */
   website?: string;
-  /** Short, human-readable court price, e.g. "from 250 Kč / hour"; absent when unknown. */
-  priceInfo?: string;
+  /** Structured court price list (see `priceFor`); absent when unknown. */
+  pricing?: Pricing;
   /** MultiSport card acceptance; absent when unknown. */
   multisport?: MultisportInfo;
   /**
@@ -54,13 +55,6 @@ export interface Venue {
    * (display only, e.g. ["Squash", "Table tennis"]); absent or empty when none.
    */
   otherActivities?: string[];
-}
-
-/** Whether the venue accepts the MultiSport card (for the sport) and on what terms. */
-export interface MultisportInfo {
-  accepted: boolean;
-  /** Short terms, e.g. "1 card = 60 min, book the court in advance". */
-  terms?: string;
 }
 
 /**

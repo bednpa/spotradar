@@ -63,8 +63,16 @@ export function makeVenues(): CalendarVenue[] {
     {
       venue: makeVenue('kuklenska', 'Sportcentrum Kuklenská', {
         website: 'https://www.example.com/kuklenska',
-        priceInfo: '280–380 Kč / hour',
-        multisport: { accepted: true, terms: '50 % off the court price' },
+        pricing: {
+          currency: 'CZK',
+          unit: 'hour',
+          rules: [
+            { days: ['mon', 'tue', 'wed', 'thu', 'fri'], from: '07:00', to: '15:00', price: 280 },
+            { days: ['mon', 'tue', 'wed', 'thu', 'fri'], from: '15:00', to: '22:00', price: 380 },
+          ],
+          note: 'Students <20 % off',
+        },
+        multisport: { accepted: true, coverage: { kind: 'percentOff', percent: 50 } },
       }),
       distanceKm: 1.5,
     },

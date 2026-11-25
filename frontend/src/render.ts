@@ -3,8 +3,6 @@ import { CALENDAR_VIEWS, DISTANCE_OPTIONS_KM, SPORTS, getSearchWindow } from '@s
 import type { CalendarResponse, CalendarView, SportId } from '@spotradar/shared';
 import { LISTBOX_ID } from './address-suggest.ts';
 import {
-  DEFAULT_FROM_HOUR,
-  DEFAULT_TO_HOUR,
   anchorFor,
   isInRange,
   monthGrid,
@@ -20,6 +18,7 @@ import {
   computeCell,
   indexDays,
   isCellSelectable,
+  slotHourRange,
   summarizeDay,
   venueCoverage,
 } from './cells.ts';
@@ -215,11 +214,21 @@ function cellOptions(ctx: GridContext): CellOptions {
   return { now: ctx.now };
 }
 
-/** The calendar always shows the full fixed hour range (06:00–23:00). */
-const HOURS = visibleHours(DEFAULT_FROM_HOUR, DEFAULT_TO_HOUR);
+/** Empty state of Day/Week when no venue has any slot in the shown period. */
+export function renderNoSlots(view: 'day' | 'week'): string {
+  return `<div class="state state-empty" data-testid="no-slots"><h3>No slots this ${view}</h3><p>No venue is open or free in this period. Try another ${view}.</p></div>`;
+}
+
+/** Hour rows for the dates shown (shared by all days of a week); null = nothing to show. */
+function gridHours(ctx: GridContext, dates: readonly string[]): number[] | null {
+  const range = slotHourRange(ctx.days, ctx.data.venues, dates);
+  return range ? visibleHours(range.fromHour, range.toHour) : null;
+}
 
 export function renderWeek(ctx: GridContext): string {
   const dates = weekDates(ctx.state.date);
+  const hours = gridHours(ctx, dates);
+  if (!hours) return renderNoSlots('week');
   const today = getSearchWindow(ctx.now).from;
   const header = dates
     .map((date, i) => {
@@ -228,28 +237,34 @@ export function renderWeek(ctx: GridContext): string {
       return `<div role="columnheader" class="ch${date === today ? ' is-today' : ''}"${current}><span class="ch-day">${WEEKDAY_SHORT[i]}</span><span class="ch-num">${day}</span></div>`;
     })
     .join('');
-  const rows = HOURS.map((hour, r) => {
-    const cells = dates
-      .map((date, c) =>
-        renderCell(
-          computeCell(ctx.days, ctx.data.venues, date, hour, cellOptions(ctx)),
-          'week',
-          c,
-          r,
-        ),
-      )
-      .join('');
-    return `<div role="row" class="gr gr-week"><div role="rowheader" class="rh">${hourLabel(hour)}</div>${cells}</div>`;
-  }).join('');
+  const rows = hours
+    .map((hour, r) => {
+      const cells = dates
+        .map((date, c) =>
+          renderCell(
+            computeCell(ctx.days, ctx.data.venues, date, hour, cellOptions(ctx)),
+            'week',
+            c,
+            r,
+          ),
+        )
+        .join('');
+      return `<div role="row" class="gr gr-week"><div role="rowheader" class="rh">${hourLabel(hour)}</div>${cells}</div>`;
+    })
+    .join('');
   return `<div class="grid-scroll"><div role="grid" class="grid grid-week" aria-label="Week calendar, hours by day" data-grid><div role="row" class="gr gr-week gr-head"><div role="columnheader" class="ch ch-corner"><span class="visually-hidden">Hour</span></div>${header}</div>${rows}</div></div>`;
 }
 
 export function renderDay(ctx: GridContext): string {
   const { date } = ctx.state;
-  const rows = HOURS.map(
-    (hour, r) =>
-      `<div role="row" class="gr gr-day"><div role="rowheader" class="rh">${hourLabel(hour)}</div>${renderCell(computeCell(ctx.days, ctx.data.venues, date, hour, cellOptions(ctx)), 'day', 0, r)}</div>`,
-  ).join('');
+  const hours = gridHours(ctx, [date]);
+  if (!hours) return renderNoSlots('day');
+  const rows = hours
+    .map(
+      (hour, r) =>
+        `<div role="row" class="gr gr-day"><div role="rowheader" class="rh">${hourLabel(hour)}</div>${renderCell(computeCell(ctx.days, ctx.data.venues, date, hour, cellOptions(ctx)), 'day', 0, r)}</div>`,
+    )
+    .join('');
   return `<div class="grid-scroll"><div role="grid" class="grid grid-day" aria-label="${escapeHtml(formatLongDate(date))}, hours" data-grid>${rows}</div></div>`;
 }
 

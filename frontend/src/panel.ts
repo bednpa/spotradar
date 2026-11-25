@@ -2,16 +2,16 @@
  * Detail panel for one hour slot: venues with free courts (with details and
  * booking links) and, collapsed, venues that are open but have no live data.
  */
-import { formatTimeAgo } from '@spotradar/shared';
+import { formatHourlyPrice, formatMultisportPrice, priceFor } from '@spotradar/shared';
 import type {
   CalendarResponse,
   CalendarVenue,
   SlotVenueStatus,
+  Venue,
   VenueAvailability,
 } from '@spotradar/shared';
 import { hourStatuses, indexDays } from './cells.ts';
 import {
-  formatClockTime,
   formatCourts,
   formatDistance,
   formatLongDate,
@@ -19,6 +19,7 @@ import {
   sportNameLower,
 } from './format.ts';
 import { escapeHtml, externalLink, safeHref } from './html.ts';
+import { renderLiveStatus } from './live-status.ts';
 import { googleMapsLink, renderMultisportBadge } from './venue-info.ts';
 
 export interface PanelProps {
@@ -52,17 +53,24 @@ function addressLine(entry: CalendarVenue): string {
   return notes.join(' · ');
 }
 
-/** "Live · Checked 5 min ago" – the absolute time stays available in the title. */
+/** "● Live · 5 min ago" – the shared one-line status; the absolute time is in its title. */
 function liveNote(availability: VenueAvailability | undefined, now: Date): string {
-  if (availability?.status !== 'live' || availability.checkedAt === undefined) {
-    return availability?.status === 'live'
-      ? '<p class="live-note"><span class="badge badge-live">Live</span></p>'
-      : '';
-  }
-  const ago = formatTimeAgo(availability.checkedAt, now);
-  const clock = formatClockTime(availability.checkedAt);
-  const title = clock ? ` title="Checked at ${clock}"` : '';
-  return `<p class="live-note"><span class="badge badge-live">Live</span> <span class="muted">Checked <time datetime="${escapeHtml(availability.checkedAt)}"${title}>${escapeHtml(ago)}</time></span></p>`;
+  return `<p class="live-note">${renderLiveStatus({
+    status: availability?.status ?? 'unknown',
+    checkedAt: availability?.checkedAt,
+    now,
+  })}</p>`;
+}
+
+/** Exactly one price for the clicked slot, plus the MultiSport price when computable. */
+function renderSlotPrice(venue: Venue, date: string, hour: number): string {
+  const price = priceFor(venue.pricing, date, hour);
+  const withCard = formatMultisportPrice(price, venue.multisport);
+  return `<p class="fact"><span class="fact-label">Price</span> <span data-testid="slot-price">${escapeHtml(formatHourlyPrice(price))}</span></p>${
+    withCard
+      ? `<p class="fact"><span class="fact-label">With card</span> <span data-testid="slot-price-multisport">${escapeHtml(withCard)}</span></p>`
+      : ''
+  }`;
 }
 
 function renderFreeItem(
@@ -70,16 +78,13 @@ function renderFreeItem(
   entry: CalendarVenue,
   availability: VenueAvailability | undefined,
   now: Date,
+  date: string,
+  hour: number,
 ): string {
   const { venue } = entry;
-  const multisport = renderMultisportBadge(venue.multisport);
   const facts = [
-    venue.priceInfo
-      ? `<p class="fact"><span class="fact-label">Price</span> ${escapeHtml(venue.priceInfo)}</p>`
-      : '',
-    multisport
-      ? `<p class="fact"><span class="fact-label">MultiSport</span> ${multisport}</p>`
-      : '',
+    renderSlotPrice(venue, date, hour),
+    `<p class="fact"><span class="fact-label">MultiSport</span> ${renderMultisportBadge(venue.multisport)}</p>`,
   ].join('');
   const links = [externalLink(venue.website, 'Website'), googleMapsLink(venue)]
     .filter((link) => link !== '')
@@ -97,16 +102,17 @@ function renderFreeItem(
 function renderCheckItem(
   entry: CalendarVenue,
   availability: VenueAvailability | undefined,
+  now: Date,
 ): string {
   const { venue } = entry;
-  const note =
-    availability?.status === 'unavailable'
-      ? "Couldn't read availability right now – check on website."
-      : 'No live data for this venue – check on website.';
+  const note = liveNote(
+    availability?.status === 'unavailable' ? availability : { status: 'unknown', freeSlots: [] },
+    now,
+  );
   return `<li class="venue-item" data-state="check" data-venue-id="${escapeHtml(venue.id)}">
   <div class="venue-item-head"><h3>${escapeHtml(venue.name)}</h3><span class="pill pill-check">Check on website</span></div>
   <p class="muted">${addressLine(entry)}</p>
-  <p class="muted">${note}</p>
+  ${note}
   ${bookLink(venue.bookingUrl)}
 </li>`;
 }
@@ -124,14 +130,14 @@ export function renderPanel({ date, hour, data, now = new Date() }: PanelProps):
     .map((status) => {
       const entry = byId.get(status.venueId);
       return entry
-        ? renderFreeItem(status, entry, availabilityOf(data, date, status.venueId), now)
+        ? renderFreeItem(status, entry, availabilityOf(data, date, status.venueId), now, date, hour)
         : '';
     })
     .join('');
   const checkItems = check
     .map((status) => {
       const entry = byId.get(status.venueId);
-      return entry ? renderCheckItem(entry, availabilityOf(data, date, status.venueId)) : '';
+      return entry ? renderCheckItem(entry, availabilityOf(data, date, status.venueId), now) : '';
     })
     .join('');
 

@@ -471,6 +471,10 @@ describe('GET /api/venues', () => {
     const kuklenska = body.venues.find((v) => v.venue.id === 'kuklenska')?.venue;
     assert.equal(kuklenska?.website, 'https://www.sportkuklenska.cz/');
     assert.equal(kuklenska?.multisport?.accepted, true);
+    assert.deepEqual(kuklenska?.multisport?.coverage, { kind: 'percentOff', percent: 50 });
+    assert.equal(kuklenska?.pricing?.currency, 'CZK');
+    assert.equal(kuklenska?.pricing?.rules[0]?.price, 280);
+    assert.ok(!('priceInfo' in (kuklenska ?? {})));
   });
 
   it('filters by sport', async () => {

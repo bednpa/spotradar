@@ -23,8 +23,8 @@ test('lists free venues first, check venues in a collapsed section; full and clo
   assert.doesNotMatch(html, /data-venue-id="full"|data-venue-id="closed"/);
   assert.match(html, /<details class="check-venues">/);
   assert.match(html, /2 venues without live data – check on website/);
-  assert.match(html, /Couldn(&#39;|')t read availability right now/);
-  assert.match(html, /No live data for this venue/);
+  assert.match(html, /live-status-unavailable[^>]*>.*Unavailable/);
+  assert.match(html, /live-status-unknown[^>]*>.*Check on website/);
   assert.match(html, /aria-label="Close details"/);
   assert.doesNotMatch(html, /No badminton venue is free/);
 
@@ -44,41 +44,58 @@ test('lists free venues first, check venues in a collapsed section; full and clo
   assert.match(html, /Book on venue's website/);
 });
 
-test('live check is shown as "x minutes ago" with the absolute time in the title', () => {
+test('live status is one "Live · x min ago" line with the absolute time in the title', () => {
   // data was checked at 11:57Z, NOW is 11:00Z -> in the future -> "just now"
-  assert.match(
-    renderPanel({ date: '2026-11-26', hour: 18, data, now: NOW }),
-    /Checked <time datetime="2026-11-25T11:57:00Z" title="Checked at 12:57">just now<\/time>/,
-  );
+  const html0 = renderPanel({ date: '2026-11-26', hour: 18, data, now: NOW });
+  assert.match(html0, /title="Live availability, checked at 12:57"/);
+  assert.match(html0, />Live · just now</);
   const later = new Date('2026-11-25T12:02:00Z');
   const html = renderPanel({ date: '2026-11-26', hour: 18, data, now: later });
-  assert.match(html, />5 min ago<\/time>/);
-  assert.doesNotMatch(html, /checked 12:57/i);
+  assert.match(html, />Live · 5 min ago</);
   const hours = renderPanel({
     date: '2026-11-26',
     hour: 18,
     data,
     now: new Date('2026-11-25T14:00:00Z'),
   });
-  assert.match(hours, />2 h ago<\/time>/);
+  assert.match(hours, />Live · 2 h ago</);
 });
 
-test('free venues show price, MultiSport, website and Google Maps links', () => {
+test('free venues show exactly one slot price and the MultiSport price', () => {
+  const evening = renderPanel({ date: '2026-11-26', hour: 18, data, now: NOW });
+  assert.equal((evening.match(/data-testid="slot-price"/g) ?? []).length, 1);
+  assert.match(evening, /data-testid="slot-price">380 Kč \/ h</);
+  assert.match(evening, /380 Kč → 190 Kč with MultiSport/);
+  // Morning slot (08:00) falls into the first price rule.
+  const morning = renderPanel({ date: '2026-11-26', hour: 8, data, now: NOW });
+  assert.match(morning, /data-testid="slot-price">280 Kč \/ h</);
+  assert.match(morning, /280 Kč → 140 Kč with MultiSport/);
+});
+
+test('unknown price and MultiSport are labelled, not hidden', () => {
+  const plain = makeCalendar('2026-11-25', '2026-11-27', [
+    { venue: makeVenue('kuklenska', 'Plain Hall') },
+  ]);
+  const html = renderPanel({ date: '2026-11-26', hour: 18, data: plain, now: NOW });
+  assert.match(html, /data-testid="slot-price">Price on website</);
+  assert.match(html, />MultiSport: unknown</);
+  assert.doesNotMatch(html, /with MultiSport/);
+});
+
+test('free venues show MultiSport, website and Google Maps links', () => {
   const html = renderPanel({ date: '2026-11-26', hour: 18, data, now: NOW });
-  assert.match(html, /280–380 Kč \/ hour/);
-  assert.match(html, /MultiSport accepted/);
-  assert.match(html, /50 % off the court price/);
+  assert.match(html, />MultiSport · 50 % off</);
   assert.match(html, /href="https:\/\/www\.example\.com\/kuklenska"[^>]*>Website/);
   assert.match(html, /href="https:\/\/www\.google\.com\/maps\/search\/\?api=1&amp;query=/);
   assert.match(html, /Rating &amp; reviews on Google Maps/);
 });
 
-test('a venue without extra details just omits them', () => {
+test('a venue without a website omits the link', () => {
   const plain = makeCalendar('2026-11-25', '2026-11-27', [
     { venue: makeVenue('kuklenska', 'Plain Hall') },
   ]);
   const html = renderPanel({ date: '2026-11-26', hour: 18, data: plain, now: NOW });
-  assert.doesNotMatch(html, /MultiSport|Price|>Website/);
+  assert.doesNotMatch(html, />Website/);
   assert.match(html, /Rating &amp; reviews on Google Maps/);
 });
 

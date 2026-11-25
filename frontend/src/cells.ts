@@ -45,6 +45,37 @@ export function hourStatuses(
   return slotStatuses(day, venues, hourLabel(hour), hourLabel(hour + 1));
 }
 
+export interface HourRange {
+  /** First hour row shown. */
+  fromHour: number;
+  /** Exclusive end: the last shown row is `toHour - 1`. */
+  toHour: number;
+}
+
+/**
+ * Hour rows the Day/Week grid needs: from the first to the last hour in which any venue has
+ * a slot (free, or "check on website") on any of `dates`. Empty hours in between are kept.
+ * Null when nothing at all is shown (no data, everything closed or full).
+ */
+export function slotHourRange(
+  days: DayIndex,
+  venues: readonly CalendarVenue[],
+  dates: readonly string[],
+): HourRange | null {
+  let first = -1;
+  let last = -1;
+  for (let hour = 0; hour < 24; hour++) {
+    const hasSlot = dates.some((date) =>
+      hourStatuses(days, venues, date, hour).some((s) => s.state === 'free' || s.state === 'check'),
+    );
+    if (hasSlot) {
+      if (first < 0) first = hour;
+      last = hour;
+    }
+  }
+  return first < 0 ? null : { fromHour: first, toHour: last + 1 };
+}
+
 export interface CellOptions {
   now: Date;
 }
