@@ -1,13 +1,12 @@
 /** API client for the SpotRadar REST API (relative URLs, injectable fetch). */
 import { ERROR_STATUS } from '@spotradar/shared';
 import type {
+  CalendarQuery,
+  CalendarResponse,
   ErrorCode,
   GeocodeResponse,
-  SearchQuery,
-  SearchResponse,
   ValidationIssue,
 } from '@spotradar/shared';
-import { queryToSearchParams } from './query.ts';
 
 export type FetchFn = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -101,8 +100,24 @@ async function requestJson<T>(
   return body;
 }
 
-function isSearchResponse(body: unknown): body is SearchResponse {
-  return isRecord(body) && isRecord(body.query) && Array.isArray(body.results);
+function isCalendarResponse(body: unknown): body is CalendarResponse {
+  return (
+    isRecord(body) && isRecord(body.query) && Array.isArray(body.venues) && Array.isArray(body.days)
+  );
+}
+
+/** CalendarQuery → URLSearchParams (optional location params only when set). */
+export function calendarQueryToParams(query: CalendarQuery): URLSearchParams {
+  const params = new URLSearchParams();
+  params.set('sport', query.sport);
+  params.set('from', query.from);
+  params.set('to', query.to);
+  if (query.lat !== undefined && query.lng !== undefined) {
+    params.set('lat', String(query.lat));
+    params.set('lng', String(query.lng));
+  }
+  if (query.maxDistanceKm !== undefined) params.set('maxDistanceKm', String(query.maxDistanceKm));
+  return params;
 }
 
 function isGeocodeResponse(body: unknown): body is GeocodeResponse {
@@ -114,14 +129,14 @@ function isGeocodeResponse(body: unknown): body is GeocodeResponse {
   );
 }
 
-/** GET /api/search */
-export function searchCourts(
-  query: SearchQuery,
+/** GET /api/calendar */
+export function fetchCalendar(
+  query: CalendarQuery,
   fetchFn: FetchFn = defaultFetch,
-): Promise<SearchResponse> {
+): Promise<CalendarResponse> {
   return requestJson(
-    `/api/search?${queryToSearchParams(query).toString()}`,
-    isSearchResponse,
+    `/api/calendar?${calendarQueryToParams(query).toString()}`,
+    isCalendarResponse,
     fetchFn,
   );
 }

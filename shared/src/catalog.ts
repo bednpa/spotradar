@@ -43,6 +43,13 @@ export type AvailabilitySource = (typeof AVAILABILITY_SOURCES)[number];
 /** Searchable dates: today (Europe/Prague) up to and including today + SEARCH_WINDOW_DAYS. */
 export const SEARCH_WINDOW_DAYS = 14;
 
+/** Max number of days (inclusive range) one GET /api/calendar request may cover = whole search window. */
+export const CALENDAR_MAX_DAYS = SEARCH_WINDOW_DAYS + 1;
+
+/** Calendar views offered by the UI. */
+export const CALENDAR_VIEWS = ['day', 'week', 'month', 'year'] as const;
+export type CalendarView = (typeof CALENDAR_VIEWS)[number];
+
 /** All dates/times in the API are local wall-clock values in this zone. */
 export const TIME_ZONE = 'Europe/Prague';
 

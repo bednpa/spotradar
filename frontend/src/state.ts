@@ -1,12 +1,16 @@
 /** UI state types and pure state transitions / messages. */
-import type { SearchResponse, ValidationIssue } from '@spotradar/shared';
+import type { CalendarResponse, ValidationIssue } from '@spotradar/shared';
 import { ApiRequestError } from './api.ts';
 import type { Origin } from './query.ts';
 
-export type SearchState =
-  | { status: 'idle' }
+/**
+ * - outside: the shown period lies completely outside the searchable window (nothing to fetch),
+ * - success: data loaded (it may still contain zero venues → empty state).
+ */
+export type CalendarState =
   | { status: 'loading' }
-  | { status: 'success'; response: SearchResponse }
+  | { status: 'outside' }
+  | { status: 'success'; data: CalendarResponse }
   | { status: 'error'; message: string; issues: ValidationIssue[] };
 
 export type LocationState =
@@ -45,20 +49,21 @@ export function geocodeErrorMessage(error: unknown): string {
   return 'Something went wrong while looking up the address.';
 }
 
-/** Converts a failed /api/search call into the error state. */
-export function searchErrorState(error: unknown): SearchState {
+/** Converts a failed /api/calendar call into the error state. */
+export function calendarErrorState(error: unknown): CalendarState {
   if (error instanceof ApiRequestError) {
     switch (error.code) {
       case 'DATE_OUT_OF_RANGE':
         return {
           status: 'error',
-          message: 'That date is outside the searchable range. Pick a day within the next 14 days.',
+          message:
+            'Those dates are outside the searchable range. Pick a day within the next 14 days.',
           issues: [],
         };
       case 'VALIDATION_ERROR':
         return {
           status: 'error',
-          message: 'Some search options are not valid. Please check them and try again.',
+          message: 'Some options are not valid. Please check them and try again.',
           issues: error.details,
         };
       default:
@@ -66,15 +71,6 @@ export function searchErrorState(error: unknown): SearchState {
     }
   }
   return { status: 'error', message: 'Something went wrong. Please try again.', issues: [] };
-}
-
-/** Client-side validation failure → error state. */
-export function searchInvalidState(issues: ValidationIssue[]): SearchState {
-  return {
-    status: 'error',
-    message: 'Please fix the search options and try again.',
-    issues,
-  };
 }
 
 /** Text shown under the location controls. */

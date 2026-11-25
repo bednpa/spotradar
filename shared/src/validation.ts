@@ -2,9 +2,17 @@
  * Validation "schemas" for API input. Dependency-free on purpose: they run in
  * Node (backend) and in the browser (frontend) without a bundler.
  */
-import { GEOCODE_QUERY_MAX, GEOCODE_QUERY_MIN, MAX_DISTANCE_KM, isSportId } from './catalog.ts';
-import { isValidDate, isValidTime } from './dates.ts';
+import {
+  CALENDAR_MAX_DAYS,
+  GEOCODE_QUERY_MAX,
+  GEOCODE_QUERY_MIN,
+  MAX_DISTANCE_KM,
+  isSportId,
+} from './catalog.ts';
+import { daysBetween, isValidDate, isValidTime } from './dates.ts';
 import type {
+  CalendarQuery,
+  CalendarQueryParams,
   GeocodeQuery,
   GeocodeQueryParams,
   SearchQuery,
@@ -25,30 +33,45 @@ function isBlank(raw: string | undefined): raw is undefined {
   return raw === undefined || raw.trim() === '';
 }
 
-/**
- * Validates the raw query string of GET /api/search.
- * Empty strings are treated as "not provided". The date window (today …
- * today + SEARCH_WINDOW_DAYS) is checked separately with isDateInSearchWindow.
- */
-export function parseSearchQuery(params: SearchQueryParams): ValidationResult<SearchQuery> {
-  const issues: ValidationIssue[] = [];
-
-  const sport = params.sport?.trim();
+function parseSport(raw: string | undefined, issues: ValidationIssue[]): string | undefined {
+  const sport = raw?.trim();
   if (isBlank(sport)) issues.push({ field: 'sport', message: 'sport is required' });
   else if (!isSportId(sport)) issues.push({ field: 'sport', message: 'unknown sport' });
+  return sport;
+}
 
-  const date = params.date?.trim();
-  if (isBlank(date)) issues.push({ field: 'date', message: 'date is required' });
-  else if (!isValidDate(date))
-    issues.push({
-      field: 'date',
-      message: 'date must be a valid YYYY-MM-DD date',
-    });
+/** Validates a required "YYYY-MM-DD" field; returns the trimmed value when valid. */
+function parseRequiredDate(
+  field: string,
+  raw: string | undefined,
+  issues: ValidationIssue[],
+): string | undefined {
+  const date = raw?.trim();
+  if (isBlank(date)) {
+    issues.push({ field, message: `${field} is required` });
+    return undefined;
+  }
+  if (!isValidDate(date)) {
+    issues.push({ field, message: `${field} must be a valid YYYY-MM-DD date` });
+    return undefined;
+  }
+  return date;
+}
 
-  const time = params.time?.trim();
-  if (!isBlank(time) && !isValidTime(time))
-    issues.push({ field: 'time', message: 'time must be HH:MM (00:00–23:59)' });
+interface LocationParams {
+  lat?: string;
+  lng?: string;
+  maxDistanceKm?: string;
+}
 
+interface ParsedLocation {
+  lat?: number;
+  lng?: number;
+  maxDistanceKm?: number;
+}
+
+/** Validates lat/lng (both or neither) and maxDistanceKm (requires lat/lng); pushes issues. */
+function parseLocation(params: LocationParams, issues: ValidationIssue[]): ParsedLocation {
   const hasLat = !isBlank(params.lat);
   const hasLng = !isBlank(params.lng);
   let lat: number | undefined;
@@ -62,17 +85,11 @@ export function parseSearchQuery(params: SearchQueryParams): ValidationResult<Se
     lat = parseNumber(params.lat ?? '');
     lng = parseNumber(params.lng ?? '');
     if (lat === undefined || lat < -90 || lat > 90) {
-      issues.push({
-        field: 'lat',
-        message: 'lat must be a number between -90 and 90',
-      });
+      issues.push({ field: 'lat', message: 'lat must be a number between -90 and 90' });
       lat = undefined;
     }
     if (lng === undefined || lng < -180 || lng > 180) {
-      issues.push({
-        field: 'lng',
-        message: 'lng must be a number between -180 and 180',
-      });
+      issues.push({ field: 'lng', message: 'lng must be a number between -180 and 180' });
       lng = undefined;
     }
   }
@@ -86,15 +103,36 @@ export function parseSearchQuery(params: SearchQueryParams): ValidationResult<Se
         message: `maxDistanceKm must be a number greater than 0 and at most ${MAX_DISTANCE_KM}`,
       });
     } else if (!hasLat || !hasLng) {
-      issues.push({
-        field: 'maxDistanceKm',
-        message: 'maxDistanceKm requires lat and lng',
-      });
+      issues.push({ field: 'maxDistanceKm', message: 'maxDistanceKm requires lat and lng' });
     } else {
       maxDistanceKm = parsed;
     }
   }
 
+  const result: ParsedLocation = {};
+  if (lat !== undefined && lng !== undefined) {
+    result.lat = lat;
+    result.lng = lng;
+  }
+  if (maxDistanceKm !== undefined) result.maxDistanceKm = maxDistanceKm;
+  return result;
+}
+
+/**
+ * Validates the raw query string of GET /api/search.
+ * Empty strings are treated as "not provided". The date window (today …
+ * today + SEARCH_WINDOW_DAYS) is checked separately with isDateInSearchWindow.
+ */
+export function parseSearchQuery(params: SearchQueryParams): ValidationResult<SearchQuery> {
+  const issues: ValidationIssue[] = [];
+  const sport = parseSport(params.sport, issues);
+  const date = parseRequiredDate('date', params.date, issues);
+
+  const time = params.time?.trim();
+  if (!isBlank(time) && !isValidTime(time))
+    issues.push({ field: 'time', message: 'time must be HH:MM (00:00–23:59)' });
+
+  const location = parseLocation(params, issues);
   if (issues.length > 0) return { ok: false, issues };
 
   const value: SearchQuery = {
@@ -102,12 +140,38 @@ export function parseSearchQuery(params: SearchQueryParams): ValidationResult<Se
     date: date as string,
   };
   if (!isBlank(time)) value.time = time;
-  if (lat !== undefined && lng !== undefined) {
-    value.lat = lat;
-    value.lng = lng;
+  return { ok: true, value: { ...value, ...location } };
+}
+
+/**
+ * Validates the raw query string of GET /api/calendar: sport, from, to
+ * (from ≤ to, at most CALENDAR_MAX_DAYS days inclusive) and the optional
+ * location filter. The search window is checked separately with
+ * isDateInSearchWindow (both from and to must lie inside it).
+ */
+export function parseCalendarQuery(params: CalendarQueryParams): ValidationResult<CalendarQuery> {
+  const issues: ValidationIssue[] = [];
+  const sport = parseSport(params.sport, issues);
+  const from = parseRequiredDate('from', params.from, issues);
+  const to = parseRequiredDate('to', params.to, issues);
+  if (from !== undefined && to !== undefined) {
+    const span = daysBetween(from, to);
+    if (span < 0) issues.push({ field: 'to', message: 'to must not be before from' });
+    else if (span + 1 > CALENDAR_MAX_DAYS)
+      issues.push({
+        field: 'to',
+        message: `the range may cover at most ${CALENDAR_MAX_DAYS} days`,
+      });
   }
-  if (maxDistanceKm !== undefined) value.maxDistanceKm = maxDistanceKm;
-  return { ok: true, value };
+  const location = parseLocation(params, issues);
+  if (issues.length > 0) return { ok: false, issues };
+
+  const value: CalendarQuery = {
+    sport: sport as CalendarQuery['sport'],
+    from: from as string,
+    to: to as string,
+  };
+  return { ok: true, value: { ...value, ...location } };
 }
 
 /** Validates the raw query string of GET /api/geocode. `q` is trimmed. */

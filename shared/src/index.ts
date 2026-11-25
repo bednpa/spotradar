@@ -1,3 +1,4 @@
+export * from './calendar.ts';
 export * from './catalog.ts';
 export * from './dates.ts';
 export * from './errors.ts';
@@ -8,6 +9,12 @@ export type {
   ApiError,
   AvailabilitySourceConfig,
   AvailabilityStatus,
+  CalendarDay,
+  CalendarDayVenue,
+  CalendarQuery,
+  CalendarQueryParams,
+  CalendarResponse,
+  CalendarVenue,
   DayOpeningHours,
   FreeSlot,
   GeocodeQuery,

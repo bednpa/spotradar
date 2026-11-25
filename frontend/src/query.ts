@@ -1,9 +1,19 @@
-/** Form values ↔ SearchQuery ↔ URL query string. Pure functions. */
-import { DEFAULT_SPORT_ID, addDays, getSearchWindow, parseSearchQuery } from '@spotradar/shared';
-import type { SearchQuery, SearchQueryParams, ValidationResult } from '@spotradar/shared';
-import { formatShortDate } from './format.ts';
+/** App state ↔ URL query string ↔ CalendarQuery. Pure functions. */
+import {
+  CALENDAR_VIEWS,
+  DEFAULT_SPORT_ID,
+  MAX_DISTANCE_KM,
+  getSearchWindow,
+  isDateInSearchWindow,
+  isSportId,
+  isValidDate,
+} from '@spotradar/shared';
+import type { CalendarQuery, CalendarView, SportId } from '@spotradar/shared';
+import { DEFAULT_FROM_HOUR, DEFAULT_TO_HOUR } from './calendar-range.ts';
+import type { DateRange } from './calendar-range.ts';
+import { hourLabel } from './format.ts';
 
-/** Where the search origin came from. */
+/** Where the location filter came from. */
 export interface Origin {
   lat: number;
   lng: number;
@@ -11,97 +21,123 @@ export interface Origin {
   source: 'geolocation' | 'address' | 'url';
 }
 
-/** Raw (string) values of the search form. */
-export interface FormValues {
-  sport: string;
+export interface AppState {
+  sport: SportId;
+  view: CalendarView;
+  /** Anchor date "YYYY-MM-DD" of the shown period (may lie outside the searchable window). */
   date: string;
-  /** "" = any time */
-  time: string;
-  /** "" = any distance; only meaningful together with an origin. */
-  maxDistanceKm: string;
+  /** First visible hour row (0-23). */
+  fromHour: number;
+  /** End (exclusive) of the last visible hour row (1-24). */
+  toHour: number;
   origin: Origin | null;
+  /** Only with an origin. */
+  maxDistanceKm: number | null;
+  /** Hide "check on website" hours in the grid. */
+  onlyFree: boolean;
 }
 
-export function getDefaultFormValues(now: Date): FormValues {
+export function isCalendarView(value: unknown): value is CalendarView {
+  return typeof value === 'string' && (CALENDAR_VIEWS as readonly string[]).includes(value);
+}
+
+/** Week on wide screens, Day on narrow ones. */
+export function defaultView(wide: boolean): CalendarView {
+  return wide ? 'week' : 'day';
+}
+
+export function getDefaultState(now: Date, wide: boolean): AppState {
   return {
     sport: DEFAULT_SPORT_ID,
+    view: defaultView(wide),
     date: getSearchWindow(now).from,
-    time: '',
-    maxDistanceKm: '',
+    fromHour: DEFAULT_FROM_HOUR,
+    toHour: DEFAULT_TO_HOUR,
     origin: null,
+    maxDistanceKm: null,
+    onlyFree: false,
   };
 }
 
-export interface DateChip {
-  date: string;
-  label: string;
+function parseHour(value: string | null, round: 'floor' | 'ceil'): number | null {
+  if (value === null) return null;
+  const match = /^(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return null;
+  const minutes = Number(match[1]) * 60 + Number(match[2]);
+  if (minutes > 24 * 60) return null;
+  return round === 'floor' ? Math.floor(minutes / 60) : Math.ceil(minutes / 60);
 }
 
-/** "Today", "Tomorrow" and the following 5 days labelled e.g. "Thu 27 Nov". */
-export function getDateChips(now: Date): DateChip[] {
-  const today = getSearchWindow(now).from;
-  const chips: DateChip[] = [
-    { date: today, label: 'Today' },
-    { date: addDays(today, 1), label: 'Tomorrow' },
-  ];
-  for (let offset = 2; offset <= 6; offset++) {
-    const date = addDays(today, offset);
-    chips.push({ date, label: formatShortDate(date) });
-  }
-  return chips;
+function parseNumber(value: string | null): number | null {
+  if (value === null || value.trim() === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
 }
 
-/** Raw API params for the form values; blank values are omitted. */
-export function formToParams(values: FormValues): SearchQueryParams {
-  const params: SearchQueryParams = { sport: values.sport, date: values.date };
-  if (values.time !== '') params.time = values.time;
-  if (values.origin) {
-    params.lat = String(values.origin.lat);
-    params.lng = String(values.origin.lng);
-  }
-  if (values.maxDistanceKm !== '') params.maxDistanceKm = values.maxDistanceKm;
-  return params;
-}
-
-/** Validates the form with the shared contract schema. A distance without an origin is invalid. */
-export function buildSearchQuery(values: FormValues): ValidationResult<SearchQuery> {
-  return parseSearchQuery(formToParams(values));
-}
-
-/** SearchQuery → URLSearchParams (used for both the API call and the page URL). */
-export function queryToSearchParams(query: SearchQuery): URLSearchParams {
-  const params = new URLSearchParams();
-  params.set('sport', query.sport);
-  params.set('date', query.date);
-  if (query.time !== undefined) params.set('time', query.time);
-  if (query.lat !== undefined && query.lng !== undefined) {
-    params.set('lat', String(query.lat));
-    params.set('lng', String(query.lng));
-  }
-  if (query.maxDistanceKm !== undefined) params.set('maxDistanceKm', String(query.maxDistanceKm));
-  return params;
-}
-
-/**
- * Restores form values from a page query string. Returns null when the URL holds
- * no search (no `date` parameter). An origin from the URL is labelled generically.
- */
-export function formFromQueryString(search: string, now: Date): FormValues | null {
+/** Restores the state from a page query string; invalid or missing values fall back to defaults. */
+export function stateFromSearch(search: string, now: Date, wide: boolean): AppState {
+  const defaults = getDefaultState(now, wide);
   const params = new URLSearchParams(search);
-  if (!params.has('date')) return null;
-  const defaults = getDefaultFormValues(now);
-  const lat = Number(params.get('lat'));
-  const lng = Number(params.get('lng'));
-  const hasOrigin =
-    params.get('lat') !== null &&
-    params.get('lng') !== null &&
-    Number.isFinite(lat) &&
-    Number.isFinite(lng);
+
+  const view = params.get('view');
+  const date = params.get('date');
+  const sport = params.get('sport');
+  let fromHour = parseHour(params.get('timeFrom'), 'floor') ?? defaults.fromHour;
+  let toHour = parseHour(params.get('timeTo'), 'ceil') ?? defaults.toHour;
+  if (fromHour > 23 || toHour < 1 || fromHour >= toHour) {
+    fromHour = defaults.fromHour;
+    toHour = defaults.toHour;
+  }
+
+  const lat = parseNumber(params.get('lat'));
+  const lng = parseNumber(params.get('lng'));
+  const origin: Origin | null =
+    lat !== null && lng !== null && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
+      ? { lat, lng, label: 'Selected location', source: 'url' }
+      : null;
+  const km = parseNumber(params.get('maxDistanceKm'));
+
   return {
-    sport: params.get('sport') ?? defaults.sport,
-    date: params.get('date') ?? defaults.date,
-    time: params.get('time') ?? '',
-    maxDistanceKm: hasOrigin ? (params.get('maxDistanceKm') ?? '') : '',
-    origin: hasOrigin ? { lat, lng, label: 'Selected location', source: 'url' } : null,
+    sport: isSportId(sport) ? sport : defaults.sport,
+    view: isCalendarView(view) ? view : defaults.view,
+    date: date !== null && isValidDate(date) ? date : defaults.date,
+    fromHour,
+    toHour,
+    origin,
+    maxDistanceKm: origin && km !== null && km > 0 && km <= MAX_DISTANCE_KM ? km : null,
+    onlyFree: params.get('free') === '1',
   };
+}
+
+/** Date typed into "Go to date": must be a real date inside the searchable window, else null. */
+export function parseGotoDate(value: string, now: Date): string | null {
+  return isValidDate(value) && isDateInSearchWindow(value, now) ? value : null;
+}
+
+/** State → query string without the leading "?". Defaults are omitted (view and date always present). */
+export function stateToSearch(state: AppState): string {
+  const params = new URLSearchParams();
+  params.set('view', state.view);
+  params.set('date', state.date);
+  if (state.sport !== DEFAULT_SPORT_ID) params.set('sport', state.sport);
+  if (state.fromHour !== DEFAULT_FROM_HOUR) params.set('timeFrom', hourLabel(state.fromHour));
+  if (state.toHour !== DEFAULT_TO_HOUR) params.set('timeTo', hourLabel(state.toHour));
+  if (state.origin) {
+    params.set('lat', String(state.origin.lat));
+    params.set('lng', String(state.origin.lng));
+    if (state.maxDistanceKm !== null) params.set('maxDistanceKm', String(state.maxDistanceKm));
+  }
+  if (state.onlyFree) params.set('free', '1');
+  return params.toString();
+}
+
+/** CalendarQuery for the given (already window-clamped) range. */
+export function toCalendarQuery(state: AppState, range: DateRange): CalendarQuery {
+  const query: CalendarQuery = { sport: state.sport, from: range.from, to: range.to };
+  if (state.origin) {
+    query.lat = state.origin.lat;
+    query.lng = state.origin.lng;
+    if (state.maxDistanceKm !== null) query.maxDistanceKm = state.maxDistanceKm;
+  }
+  return query;
 }

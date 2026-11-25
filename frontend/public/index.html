@@ -4,10 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#0e3b2e" />
     <title>SpotRadar – free badminton courts in Brno</title>
     <meta
       name="description"
-      content="Find free badminton courts in Brno in seconds. Live availability from venues' own booking pages, then book on their website."
+      content="Find free badminton courts in Brno in a calendar. Live availability from venues' own booking pages, then book on their website."
     />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/styles.css" />
@@ -17,26 +18,39 @@
     <script type="module" src="/app/main.js"></script>
   </head>
   <body>
-    <a class="skip-link" href="#results-heading">Skip to results</a>
+    <a class="skip-link" href="#calendar-heading">Skip to calendar</a>
 
-    <header class="site-header">
-      <div class="container">
-        <h1>SpotRadar</h1>
-        <p class="tagline">Free badminton courts in Brno, without checking ten websites.</p>
+    <header class="topbar">
+      <div class="container topbar-inner">
+        <a class="brand" href="/" aria-label="SpotRadar home">
+          <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+            <circle cx="16" cy="16" r="14" fill="#c6f432" />
+            <path d="M9 21l7-12 7 12z" fill="#0e3b2e" />
+            <circle cx="16" cy="23" r="2.4" fill="#0e3b2e" />
+          </svg>
+          <h1>SpotRadar</h1>
+        </a>
+        <nav class="sport-nav" aria-label="Sport">
+          <div id="sport-nav" class="sport-pills"></div>
+        </nav>
       </div>
     </header>
 
     <main class="container layout">
-      <section class="panel search-panel" aria-labelledby="search-heading">
-        <h2 id="search-heading" class="visually-hidden">Search courts</h2>
-        <div id="search-root"></div>
+      <p class="tagline">Free badminton courts in Brno, without checking ten websites.</p>
+
+      <section id="filters" class="panel filters" aria-label="Filters"></section>
+
+      <section class="panel calendar-card" aria-labelledby="calendar-heading">
+        <h2 id="calendar-heading" class="visually-hidden">Availability calendar</h2>
+        <div id="toolbar" class="toolbar"></div>
+        <div id="calendar" class="calendar-body"></div>
       </section>
 
-      <section class="results-panel" aria-labelledby="results-heading">
-        <h2 id="results-heading">Results</h2>
-        <div id="results" aria-live="polite"></div>
-      </section>
+      <section id="legend" class="panel legend" aria-labelledby="legend-title"></section>
     </main>
+
+    <div id="panel-root" hidden></div>
 
     <footer class="site-footer">
       <div class="container">

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseGeocodeQuery, parseSearchQuery } from './validation.ts';
+import { parseCalendarQuery, parseGeocodeQuery, parseSearchQuery } from './validation.ts';
 import type { ValidationIssue } from './types.ts';
 
 function fields(issues: ValidationIssue[]): string[] {
@@ -95,6 +95,59 @@ test('parseSearchQuery: maxDistanceKm requires lat/lng and a sane value', () => 
     });
     assert.equal(r.ok, false, bad);
   }
+});
+
+test('parseCalendarQuery: valid range with location', () => {
+  assert.deepEqual(
+    parseCalendarQuery({
+      sport: 'badminton',
+      from: '2026-11-25',
+      to: ' 2026-12-01 ',
+      lat: '49.2',
+      lng: '16.6',
+      maxDistanceKm: '10',
+    }),
+    {
+      ok: true,
+      value: {
+        sport: 'badminton',
+        from: '2026-11-25',
+        to: '2026-12-01',
+        lat: 49.2,
+        lng: 16.6,
+        maxDistanceKm: 10,
+      },
+    },
+  );
+  assert.deepEqual(
+    parseCalendarQuery({ sport: 'badminton', from: '2026-11-25', to: '2026-11-25' }),
+    { ok: true, value: { sport: 'badminton', from: '2026-11-25', to: '2026-11-25' } },
+  );
+});
+
+test('parseCalendarQuery: missing and invalid fields', () => {
+  const missing = parseCalendarQuery({});
+  assert.equal(missing.ok, false);
+  if (!missing.ok) assert.deepEqual(fields(missing.issues), ['from', 'sport', 'to']);
+
+  const bad = parseCalendarQuery({ sport: 'squash', from: '2026-13-01', to: 'x', lat: '49' });
+  assert.equal(bad.ok, false);
+  if (!bad.ok) assert.deepEqual(fields(bad.issues), ['from', 'lng', 'sport', 'to']);
+});
+
+test('parseCalendarQuery: to before from and too long ranges', () => {
+  const reversed = parseCalendarQuery({ sport: 'badminton', from: '2026-11-25', to: '2026-11-24' });
+  assert.equal(reversed.ok, false);
+  if (!reversed.ok) assert.deepEqual(fields(reversed.issues), ['to']);
+
+  // 15 days (CALENDAR_MAX_DAYS) is fine, 16 is not.
+  assert.equal(
+    parseCalendarQuery({ sport: 'badminton', from: '2026-11-25', to: '2026-12-09' }).ok,
+    true,
+  );
+  const long = parseCalendarQuery({ sport: 'badminton', from: '2026-11-25', to: '2026-12-10' });
+  assert.equal(long.ok, false);
+  if (!long.ok) assert.match(long.issues[0]?.message ?? '', /at most 15 days/);
 });
 
 test('parseGeocodeQuery trims and checks length', () => {

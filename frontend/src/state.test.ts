@@ -2,12 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ApiRequestError } from './api.ts';
 import {
+  calendarErrorState,
   geocodeErrorMessage,
   geolocationErrorMessage,
   isDistanceFilterEnabled,
   locationStatusText,
-  searchErrorState,
-  searchInvalidState,
 } from './state.ts';
 
 test('geolocation error messages', () => {
@@ -33,25 +32,20 @@ test('geocode error messages', () => {
   assert.match(geocodeErrorMessage(new Error('boom')), /Something went wrong/);
 });
 
-test('searchErrorState maps API errors', () => {
-  const range = searchErrorState(new ApiRequestError(422, 'DATE_OUT_OF_RANGE', 'x'));
+test('calendarErrorState maps API errors', () => {
+  const range = calendarErrorState(new ApiRequestError(422, 'DATE_OUT_OF_RANGE', 'x'));
   assert.equal(range.status, 'error');
   if (range.status === 'error') assert.match(range.message, /14 days/);
 
-  const issues = [{ field: 'time', message: 'bad' }];
-  const validation = searchErrorState(new ApiRequestError(400, 'VALIDATION_ERROR', 'x', issues));
+  const issues = [{ field: 'to', message: 'bad' }];
+  const validation = calendarErrorState(new ApiRequestError(400, 'VALIDATION_ERROR', 'x', issues));
   if (validation.status === 'error') assert.deepEqual(validation.issues, issues);
 
-  const network = searchErrorState(new ApiRequestError(0, 'NETWORK_ERROR', 'Cannot reach'));
-  if (network.status === 'error') assert.equal(network.message, 'Cannot reach');
+  const server = calendarErrorState(new ApiRequestError(500, 'INTERNAL_ERROR', 'Internal error'));
+  if (server.status === 'error') assert.equal(server.message, 'Internal error');
 
-  const unknown = searchErrorState(new Error('x'));
+  const unknown = calendarErrorState(new Error('x'));
   if (unknown.status === 'error') assert.match(unknown.message, /Something went wrong/);
-});
-
-test('searchInvalidState carries issues', () => {
-  const state = searchInvalidState([{ field: 'a', message: 'b' }]);
-  assert.equal(state.status, 'error');
 });
 
 test('locationStatusText and distance filter', () => {

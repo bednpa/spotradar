@@ -45,6 +45,17 @@ export function addDays(date: string, days: number): string {
   return utc.toISOString().slice(0, 10);
 }
 
+/** Whole days from `from` to `to` (negative when `to` is earlier). */
+export function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
+}
+
+/** Every date from `from` to `to` inclusive (empty when to < from). */
+export function dateRange(from: string, to: string): string[] {
+  const n = daysBetween(from, to);
+  return Array.from({ length: Math.max(0, n + 1) }, (_, i) => addDays(from, i));
+}
+
 /** Day of week of a "YYYY-MM-DD" date. */
 export function weekdayOf(date: string): Weekday {
   const [y, m, d] = date.split('-').map(Number);

@@ -4,7 +4,14 @@ import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { after, before, describe, it } from 'node:test';
-import type { ApiError, GeocodeResponse, HealthResponse, SearchResponse } from '@spotradar/shared';
+import type {
+  ApiError,
+  CalendarResponse,
+  GeocodeResponse,
+  HealthResponse,
+  SearchResponse,
+  ValidationIssue,
+} from '@spotradar/shared';
 import { createApp } from './app.ts';
 import { createAvailabilityService } from './connectors/availabilityService.ts';
 import { VENUE_RECORDS } from './data/venues.ts';
@@ -216,6 +223,124 @@ describe('GET /api/search', () => {
   it('rejects other methods with 405', async () => {
     const res = await fetch(`${baseUrl}/api/search`, { method: 'POST' });
     assert.equal(res.status, 405);
+  });
+});
+
+describe('GET /api/calendar', () => {
+  it('returns venues and one day per date with consistent venue order', async () => {
+    const { status, body } = await get<CalendarResponse>(
+      `/api/calendar?sport=badminton&from=${TODAY}&to=2026-11-26`,
+    );
+    assert.equal(status, 200);
+    assert.deepEqual(body.query, { sport: 'badminton', from: TODAY, to: '2026-11-26' });
+    assert.equal(body.venues.length, VENUE_RECORDS.length);
+    assert.equal(JSON.stringify(body).includes('"source"'), false);
+    assert.deepEqual(
+      body.days.map((d) => d.date),
+      [TODAY, TOMORROW, '2026-11-26'],
+    );
+    const ids = body.venues.map((v) => v.venue.id);
+    for (const day of body.days) {
+      assert.deepEqual(
+        day.venues.map((v) => v.venueId),
+        ids,
+      );
+    }
+    const kuklenska = (date: string) =>
+      body.days.find((d) => d.date === date)?.venues.find((v) => v.venueId === 'kuklenska');
+    assert.equal(kuklenska(TODAY)?.availability.status, 'live');
+    assert.deepEqual(kuklenska(TODAY)?.availability.freeSlots, [slot('10:00', '11:00', 3)]);
+    assert.equal(kuklenska(TOMORROW)?.availability.freeSlots.length, 2);
+    const viktoria = body.days[0]?.venues.find((v) => v.venueId === 'centrum-viktoria');
+    assert.equal(viktoria?.availability.status, 'unavailable');
+  });
+
+  it('applies lat/lng and maxDistanceKm', async () => {
+    const { status, body } = await get<CalendarResponse>(
+      `/api/calendar?sport=badminton&from=${TODAY}&to=${TOMORROW}&lat=49.1951&lng=16.6068&maxDistanceKm=3`,
+    );
+    assert.equal(status, 200);
+    assert.ok(body.venues.length > 0 && body.venues.length < VENUE_RECORDS.length);
+    assert.ok(body.venues.every((v) => typeof v.distanceKm === 'number' && v.distanceKm <= 3));
+    const distances = body.venues.map((v) => v.distanceKm ?? 0);
+    assert.deepEqual(
+      distances,
+      distances.toSorted((a, b) => a - b),
+    );
+    for (const day of body.days) {
+      assert.equal(day.venues.length, body.venues.length);
+    }
+  });
+
+  it('returns 400 VALIDATION_ERROR with issue fields for invalid input', async () => {
+    const cases: [string, string][] = [
+      ['/api/calendar', 'sport'],
+      [`/api/calendar?sport=tennis&from=${TODAY}&to=${TOMORROW}`, 'sport'],
+      [`/api/calendar?sport=badminton&from=24.11.2026&to=${TOMORROW}`, 'from'],
+      [`/api/calendar?sport=badminton&from=${TODAY}`, 'to'],
+      [`/api/calendar?sport=badminton&from=${TODAY}&to=${TOMORROW}&lat=49.1`, 'lng'],
+      [
+        `/api/calendar?sport=badminton&from=${TODAY}&to=${TOMORROW}&maxDistanceKm=5`,
+        'maxDistanceKm',
+      ],
+    ];
+    for (const [url, field] of cases) {
+      const { status, body } = await get<ApiError>(url);
+      assert.equal(status, 400, url);
+      assert.equal(body.code, 'VALIDATION_ERROR', url);
+      const issues = body.details as ValidationIssue[];
+      assert.ok(Array.isArray(issues) && issues.length > 0, url);
+      assert.ok(
+        issues.every((i) => typeof i.field === 'string' && typeof i.message === 'string'),
+        url,
+      );
+      assert.ok(
+        issues.some((i) => i.field === field),
+        `${url} -> ${field}`,
+      );
+    }
+  });
+
+  it('returns 400 when to is before from', async () => {
+    const { status, body } = await get<ApiError>(
+      `/api/calendar?sport=badminton&from=${TOMORROW}&to=${TODAY}`,
+    );
+    assert.equal(status, 400);
+    assert.equal(body.code, 'VALIDATION_ERROR');
+  });
+
+  it('accepts exactly 15 days and rejects longer ranges with 400', async () => {
+    const ok = await get<CalendarResponse>(
+      `/api/calendar?sport=badminton&from=${TODAY}&to=2026-12-08`,
+    );
+    assert.equal(ok.status, 200);
+    assert.equal(ok.body.days.length, 15);
+    const tooLong = await get<ApiError>(
+      `/api/calendar?sport=badminton&from=${TODAY}&to=2026-12-09`,
+    );
+    assert.equal(tooLong.status, 400);
+    assert.equal(tooLong.body.code, 'VALIDATION_ERROR');
+  });
+
+  it('returns 422 DATE_OUT_OF_RANGE when from or to is outside the search window', async () => {
+    for (const [from, to] of [
+      ['2026-11-23', TODAY],
+      [TOMORROW, '2026-12-09'],
+      ['2026-12-09', '2026-12-10'],
+    ]) {
+      const { status, body } = await get<ApiError>(
+        `/api/calendar?sport=badminton&from=${from}&to=${to}`,
+      );
+      assert.equal(status, 422, `${from}..${to}`);
+      assert.equal(body.code, 'DATE_OUT_OF_RANGE', `${from}..${to}`);
+    }
+  });
+
+  it('rejects other methods with 405 and an Allow header', async () => {
+    const res = await fetch(`${baseUrl}/api/calendar`, { method: 'POST' });
+    assert.equal(res.status, 405);
+    assert.equal(res.headers.get('allow'), 'GET');
+    assert.equal(((await res.json()) as ApiError).code, 'METHOD_NOT_ALLOWED');
   });
 });
 

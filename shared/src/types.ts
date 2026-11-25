@@ -120,6 +120,53 @@ export interface SearchResponse {
   results: SearchResult[];
 }
 
+/** Parsed query of GET /api/calendar (availability for a range of days). */
+export interface CalendarQuery {
+  sport: SportId;
+  /** First day "YYYY-MM-DD" (inclusive). */
+  from: string;
+  /** Last day "YYYY-MM-DD" (inclusive), from ≤ to, at most CALENDAR_MAX_DAYS days. */
+  to: string;
+  /** lat and lng are either both present or both absent. */
+  lat?: number;
+  lng?: number;
+  /** Only allowed together with lat/lng. */
+  maxDistanceKm?: number;
+}
+
+/** Raw query string parameters of GET /api/calendar (all strings). */
+export type CalendarQueryParams = Partial<Record<keyof CalendarQuery, string>>;
+
+/** A venue matching the calendar filters. */
+export interface CalendarVenue {
+  venue: Venue;
+  /** Distance from the origin in km (1 decimal); present only when lat/lng were given. */
+  distanceKm?: number;
+}
+
+/** Availability of one venue on one day. */
+export interface CalendarDayVenue {
+  venueId: string;
+  /** Same semantics as in /api/search: slots that already ended today are removed. */
+  availability: VenueAvailability;
+}
+
+export interface CalendarDay {
+  /** "YYYY-MM-DD" */
+  date: string;
+  /** One entry per item of CalendarResponse.venues, in the same order. */
+  venues: CalendarDayVenue[];
+}
+
+/** GET /api/calendar → 200 */
+export interface CalendarResponse {
+  query: CalendarQuery;
+  /** Matching venues sorted by distanceKm when an origin was given, otherwise by name (Czech collation). */
+  venues: CalendarVenue[];
+  /** Every date from `from` to `to`, ascending. */
+  days: CalendarDay[];
+}
+
 /** Parsed query of GET /api/geocode. */
 export interface GeocodeQuery {
   /** Trimmed free-text address. */
