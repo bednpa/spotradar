@@ -2,17 +2,17 @@
 
 Status (2026-11-25): **4 of 7 venues are live** – two on **ClubSpire**, Hala Sprint on
 **MemberZone** and Sportcentrum Ivanovice on **MemberPro**. The three **Bizzy** venues are still
-`unknown` ("check on website") because their booking server could not be reached when the
-connectors were built (see below). Every connector implements `AvailabilityConnector`
+`unknown` ("check on website"): their server blocks data-centre IPs, but real pages and the
+date-switch protocol are now recorded (see below), so the connector can be built. Every connector implements `AvailabilityConnector`
 (`backend/src/connectors/types.ts`) and is registered in `createDefaultConnectors`; a venue goes
 from `unknown` to `live` once its `source.type` has a registered connector.
 
-| Venues                                              | System                     | Public schedule page                                           | Status                                     |
-| --------------------------------------------------- | -------------------------- | -------------------------------------------------------------- | ------------------------------------------ |
-| Kuklenská, Centrum Viktoria                         | ClubSpire                  | `timeline/day` (server-rendered HTML)                          | ✅ live                                    |
-| Hala Sprint                                         | MemberZone                 | `memberzone.cz/sprint_tenis/Sportoviste.aspx?ID_Sportoviste=3` | ✅ live                                    |
-| Sportcentrum Ivanovice                              | MemberPro (memberzone.cz)  | `memberzone.cz/ivanovice/`                                     | ✅ live                                    |
-| Badminton Jehnice, Badminton Líšeň, X-Arena Slatina | Bizzy (`*.e-rezervace.cz`) | `/Branch/pages/Schedule.faces` (JSF page)                      | ⛔ blocked – server unreachable, see below |
+| Venues                                              | System                     | Public schedule page                                           | Status                                          |
+| --------------------------------------------------- | -------------------------- | -------------------------------------------------------------- | ----------------------------------------------- |
+| Kuklenská, Centrum Viktoria                         | ClubSpire                  | `timeline/day` (server-rendered HTML)                          | ✅ live                                         |
+| Hala Sprint                                         | MemberZone                 | `memberzone.cz/sprint_tenis/Sportoviste.aspx?ID_Sportoviste=3` | ✅ live                                         |
+| Sportcentrum Ivanovice                              | MemberPro (memberzone.cz)  | `memberzone.cz/ivanovice/`                                     | ✅ live                                         |
+| Badminton Jehnice, Badminton Líšeň, X-Arena Slatina | Bizzy (`*.e-rezervace.cz`) | `/Branch/pages/Schedule.faces` (JSF page)                      | ⏳ recorded, connector to do (blocks cloud IPs) |
 
 ## MemberZone (Hala Sprint) – how it works
 
@@ -47,31 +47,70 @@ from `unknown` to `live` once its `source.type` has a registered connector.
 - Hala Sprint and Ivanovice share the host `memberzone.cz`, so they share the per-host limiter
   and their requests are serialized.
 
-## Bizzy (Jehnice, Líšeň, X-Arena) – what blocked it
+## Bizzy (Jehnice, Líšeň, X-Arena) – recorded protocol
 
 All three Bizzy subdomains (`badminton-jehnice`, `badmintonlisen`, `xarena` `.e-rezervace.cz`)
-resolve to **185.58.41.50**. When the connectors were built (2026-11-25), that address actively
-**refused TCP connections on ports 80 and 443** (`ECONNREFUSED`). This happened both from the CI
-runner and from a second, independent fetcher, while every other host (memberzone.cz, ClubSpire,
-`www.e-rezervace.cz` on a different IP) worked. The server is probably firewalled against
-data-centre IP ranges. The only copy of the page available was a Wayback Machine snapshot from
-March 2025. It shows the JSF form and `javax.faces.ViewState`, but it cannot be used to confirm
-the current markup, the date-switch request or any real availability.
+resolve to **185.58.41.50**. The server **refuses TCP connections from data-centre IPs**: the CI
+runner and a second cloud fetcher got `ECONNREFUSED` on 2026-11-25. The same pages load fine from
+a Czech residential connection, so the real pages were recorded there on 2026-11-25 and saved in
+`backend/src/connectors/bizzy/fixtures/` (emails, phones and session ids replaced; bookings are
+anonymised by Bizzy itself, `"blinded":true`, no names).
 
-A parser written without a current recording would be guesswork. So, under the "no invented
-fixtures" rule, Bizzy has **no connector** and those venues keep showing "check on website" with
-a direct link. Before building it, also check that the production host (Render) can reach
-185.58.41.50 at all: if Bizzy blocks cloud IPs, a connector would only ever report `unavailable`.
+| Fixture                                 | What it is                                                          |
+| --------------------------------------- | ------------------------------------------------------------------- |
+| `<venue>-2026-11-25-today.html`         | `GET /Branch/pages/Schedule.faces` (venue's default view)           |
+| `<venue>-2026-11-25-tomorrow-ajax.html` | A4J date-picker postback for 26.11.2026                             |
+| `<venue>-2026-11-25-saturday-ajax.html` | A4J date-picker postback for 28.11.2026 (weekend hours)             |
+| `<venue>-2026-11-25-week-ajax.html`     | A4J view switch to `horizontal_service_dayandweek` (8 days at once) |
 
-Next steps for Bizzy (needs a network that can reach the server):
+Venues: `jehnice` (5 courts, default view is already "today + 7 days"), `lisen` and `xarena`
+(default view "one day").
 
-1. Record `GET /Branch/pages/Schedule.faces` (keep `JSESSIONID` + `javax.faces.ViewState`) for
-   today, a busy evening and a closed day. Find the embedded booking JSON
-   (`"events":[{"start":[..],"end":[..],"gridId":..}]`) and the court grid definition.
-2. Find the "next day" / date-picker request in the page's form and JS (JSF/RichFaces A4J
-   postback), and confirm that it returns a different day's events.
-3. Free slots = opening hours × courts minus events. X-Arena only accepts bookings at least 2 h
-   ahead, so slots starting sooner must not count as free.
+### Page structure
+
+- `var scheduleData = {...}` (a JSON object inside a `<script>`) holds `grids` (one per shown
+  day: `id`, `cols` = hourly columns, `rows` = courts, `closed`) and `events` (bookings:
+  `gridId`, `start: [col, row]`, `end: [col, row]`, inclusive cell ranges; `blinded: true`).
+  `pastTimeData` marks already-past cells per grid.
+- Each grid is rendered as `table#schedule_<gridId>`: its header holds the date (`St 25/11`) and
+  the hour labels of the columns (`7:00` … `21:00`; the number of columns differs per day),
+  the row headers hold the court names (`Kurt 1` …).
+- Free court-hours = all cells of a non-closed grid minus the cells covered by events.
+  Confirm the `[col, row]` orientation against the table (cols = hours, rows = courts) and a
+  multi-cell booking in the fixtures before relying on it.
+- X-Arena only accepts bookings at least 2 h ahead, so cells starting sooner are not free.
+
+### Date and view switching (verified live)
+
+RichFaces 3 A4J postback: `POST /Branch/pages/Schedule.faces` with the `JSESSIONID` cookie from
+the GET and the `scheduleNavigForm` fields:
+
+- `AJAXREQUEST=scheduleNavigForm:schedule-navig-region` (the region id, **not** `_viewRoot`,
+  otherwise the server ignores the action), `AJAX:EVENTS_COUNT=1`,
+  `scheduleNavigForm=scheduleNavigForm`, `javax.faces.ViewState=<from the page>`, the hidden
+  `scheduleNavigForm:j_idNNN` input with its value, `scheduleNavigForm:view_filter_menu=<view>`,
+- `scheduleNavigForm:schedule_calendarInputDate=D.M.YYYY` and
+  `scheduleNavigForm:schedule_calendarInputCurrentDate=M/YYYY`,
+- plus the action parameter `<id>=<id>`: the date picker's `onchanged` component id for a date
+  change, or the `view_filter_menu` `onchange` component id for a view change.
+
+The `j_idNNN` ids **differ per venue** (date change is `j_id205` at Jehnice/Líšeň but `j_id209`
+at X-Arena), so read them from the GET page (`'onchanged':function…'parameters':{'<id>'` and
+the `select#scheduleNavigForm:view_filter_menu` `onchange`). The response is an XHTML fragment
+that again contains `var scheduleData` and the tables. The chosen date and view are stored in
+the session, so a following GET returns them too.
+
+Best strategy: one GET + one view switch to `horizontal_service_dayandweek` gives 8 days per
+venue; a date change on that view moves the 8-day window.
+
+### Production reachability
+
+Render's servers are data-centre IPs too, so the connector will most likely get
+`ECONNREFUSED` in production as well. The connector must treat that like any other failure
+(`unavailable` → "check on website"), and the backend should log one clear warning instead of
+one per request. Making it work in production needs the operator's cooperation (ask Bizzy /
+the venues to allow it or provide a feed). Routing around the block through residential proxies
+is not an option.
 
 ## Recipe per system (same for every connector)
 
