@@ -8,6 +8,7 @@ import {
   parseCalendarQuery,
   parseGeocodeQuery,
   parseSearchQuery,
+  parseVenueQuery,
 } from '@spotradar/shared';
 import type {
   ApiError,
@@ -15,9 +16,12 @@ import type {
   CalendarResponse,
   ErrorCode,
   GeocodeQueryParams,
+  GeocodeSuggestResponse,
   HealthResponse,
   SearchQueryParams,
   SearchResponse,
+  VenueQueryParams,
+  VenuesResponse,
 } from '@spotradar/shared';
 import type { AvailabilityService } from './connectors/availabilityService.ts';
 import { HttpError, validationError } from './errors.ts';
@@ -25,11 +29,15 @@ import type { VenueRepository } from './repositories/venueRepository.ts';
 import type { Geocoder } from './services/geocode.ts';
 import { getCalendar } from './services/calendar.ts';
 import { searchVenues } from './services/search.ts';
+import type { Suggester } from './services/suggest.ts';
+import { listVenues } from './services/venues.ts';
 
 export interface AppOptions {
   venues: VenueRepository;
   availability: AvailabilityService;
   geocoder: Geocoder;
+  /** Address autocomplete for GET /api/geocode/suggest. */
+  suggest: Suggester;
   /** Injectable clock (tests use a fixed one). */
   now: () => Date;
   /** Directory with the built frontend (absolute path). */
@@ -51,6 +59,8 @@ const MIME_TYPES: Record<string, string> = {
 
 const SEARCH_QUERY_KEYS = ['sport', 'date', 'time', 'lat', 'lng', 'maxDistanceKm'] as const;
 const CALENDAR_QUERY_KEYS = ['sport', 'from', 'to', 'lat', 'lng', 'maxDistanceKm'] as const;
+
+const VENUE_QUERY_KEYS = ['sport', 'q'] as const;
 
 function sendJson(
   res: ServerResponse,
@@ -151,6 +161,40 @@ async function handleApi(
       availability: options.availability,
       now: options.now,
     });
+    sendJson(res, 200, body);
+    return;
+  }
+
+  if (segments.length === 2 && resource === 'venues') {
+    if (method !== 'GET') return methodNotAllowed('GET');
+    const params: VenueQueryParams = {};
+    for (const key of VENUE_QUERY_KEYS) {
+      const value = url.searchParams.get(key);
+      if (value !== null) params[key] = value;
+    }
+    const parsed = parseVenueQuery(params);
+    if (!parsed.ok) throw validationError(parsed.issues);
+    const body: VenuesResponse = {
+      query: parsed.value,
+      venues: listVenues(parsed.value, {
+        venues: options.venues,
+        availability: options.availability,
+      }),
+    };
+    sendJson(res, 200, body);
+    return;
+  }
+
+  if (segments.length === 3 && resource === 'geocode' && segments[2] === 'suggest') {
+    if (method !== 'GET') return methodNotAllowed('GET');
+    const params: GeocodeQueryParams = {};
+    const q = url.searchParams.get('q');
+    if (q !== null) params.q = q;
+    const parsed = parseGeocodeQuery(params);
+    if (!parsed.ok) throw validationError(parsed.issues);
+    const body: GeocodeSuggestResponse = {
+      suggestions: await options.suggest.suggest(parsed.value.q),
+    };
     sendJson(res, 200, body);
     return;
   }

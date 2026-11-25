@@ -43,6 +43,24 @@ export interface Venue {
   bookingUrl: string;
   phone?: string;
   availabilitySource: AvailabilitySource;
+  /** The venue's own website (not the booking page); absent when unknown. */
+  website?: string;
+  /** Short, human-readable court price, e.g. "from 250 Kč / hour"; absent when unknown. */
+  priceInfo?: string;
+  /** MultiSport card acceptance; absent when unknown. */
+  multisport?: MultisportInfo;
+  /**
+   * Other sports/activities offered at the venue that SpotRadar does not search
+   * (display only, e.g. ["Squash", "Table tennis"]); absent or empty when none.
+   */
+  otherActivities?: string[];
+}
+
+/** Whether the venue accepts the MultiSport card (for the sport) and on what terms. */
+export interface MultisportInfo {
+  accepted: boolean;
+  /** Short terms, e.g. "1 card = 60 min, book the court in advance". */
+  terms?: string;
 }
 
 /**
@@ -167,7 +185,31 @@ export interface CalendarResponse {
   days: CalendarDay[];
 }
 
-/** Parsed query of GET /api/geocode. */
+/** Parsed query of GET /api/venues (venue directory). */
+export interface VenueQuery {
+  /** Only venues offering this sport; all venues when absent. */
+  sport?: SportId;
+  /** Trimmed free-text search (1–VENUE_QUERY_MAX chars) over name, district and address. */
+  q?: string;
+}
+
+/** Raw query string parameters of GET /api/venues (all strings). */
+export type VenueQueryParams = Partial<Record<keyof VenueQuery, string>>;
+
+export interface VenueListItem {
+  venue: Venue;
+  /** True when SpotRadar can read live court availability for this venue (a connector exists). */
+  liveAvailability: boolean;
+}
+
+/** GET /api/venues → 200 */
+export interface VenuesResponse {
+  query: VenueQuery;
+  /** Matching venues sorted by name (Czech collation); empty when nothing matches. */
+  venues: VenueListItem[];
+}
+
+/** Parsed query of GET /api/geocode and GET /api/geocode/suggest. */
 export interface GeocodeQuery {
   /** Trimmed free-text address. */
   q: string;
@@ -181,6 +223,15 @@ export interface GeocodeResponse {
   lng: number;
   /** Human-readable place name. */
   label: string;
+}
+
+/**
+ * GET /api/geocode/suggest → 200: address suggestions while the user types
+ * (at most GEOCODE_SUGGEST_LIMIT, biased to Brno; empty when nothing matches –
+ * never 404).
+ */
+export interface GeocodeSuggestResponse {
+  suggestions: GeocodeResponse[];
 }
 
 export interface ValidationIssue {

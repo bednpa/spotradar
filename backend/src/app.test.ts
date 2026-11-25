@@ -8,15 +8,18 @@ import type {
   ApiError,
   CalendarResponse,
   GeocodeResponse,
+  GeocodeSuggestResponse,
   HealthResponse,
   SearchResponse,
   ValidationIssue,
+  VenuesResponse,
 } from '@spotradar/shared';
 import { createApp } from './app.ts';
 import { createAvailabilityService } from './connectors/availabilityService.ts';
 import { VENUE_RECORDS } from './data/venues.ts';
 import { createVenueRepository } from './repositories/venueRepository.ts';
 import { createGeocoder } from './services/geocode.ts';
+import { createSuggester } from './services/suggest.ts';
 import {
   FIXED_NOW,
   TODAY,
@@ -30,7 +33,17 @@ import {
 
 const BRNO_HIT = [{ lat: '49.2', lon: '16.6', display_name: 'Brno, Česko' }];
 
+const PHOTON_HITS = {
+  features: [
+    {
+      properties: { name: 'Kuklenská', district: 'Židenice', city: 'Brno', countrycode: 'CZ' },
+      geometry: { coordinates: [16.6340891, 49.194112] },
+    },
+  ],
+};
+
 let geocodeBehavior: () => Response | Promise<Response> = () => jsonResponse(BRNO_HIT);
+let suggestBehavior: () => Response | Promise<Response> = () => jsonResponse(PHOTON_HITS);
 let baseUrl = '';
 let staticDir = '';
 let close: () => Promise<void> = () => Promise.resolve();
@@ -60,6 +73,11 @@ before(async () => {
     }),
     geocoder: createGeocoder({
       fetch: recordingFetch(() => geocodeBehavior()),
+      now: () => FIXED_NOW,
+      sleep: () => Promise.resolve(),
+    }),
+    suggest: createSuggester({
+      fetch: recordingFetch(() => suggestBehavior()),
       now: () => FIXED_NOW,
       sleep: () => Promise.resolve(),
     }),
@@ -384,5 +402,125 @@ describe('GET /api/geocode', () => {
     const network = await get<ApiError>('/api/geocode?q=another+failing+street');
     assert.equal(network.status, 502);
     assert.equal(network.body.code, 'GEOCODER_UNAVAILABLE');
+  });
+});
+
+describe('GET /api/geocode/suggest', () => {
+  it('returns 200 with up to 5 suggestions', async () => {
+    suggestBehavior = () => jsonResponse(PHOTON_HITS);
+    const { status, body } = await get<GeocodeSuggestResponse>(
+      `/api/geocode/suggest?q=${encodeURIComponent('Kuklensk')}`,
+    );
+    assert.equal(status, 200);
+    assert.deepEqual(body, {
+      suggestions: [{ lat: 49.194112, lng: 16.6340891, label: 'Kuklenská, Židenice, Brno' }],
+    });
+  });
+
+  it('returns 200 with an empty list when nothing matches', async () => {
+    suggestBehavior = () => jsonResponse({ features: [] });
+    const { status, body } = await get<GeocodeSuggestResponse>('/api/geocode/suggest?q=zzzzqqqq');
+    assert.equal(status, 200);
+    assert.deepEqual(body, { suggestions: [] });
+  });
+
+  it('returns 400 VALIDATION_ERROR for a missing, too short or too long q', async () => {
+    for (const url of [
+      '/api/geocode/suggest',
+      '/api/geocode/suggest?q=',
+      '/api/geocode/suggest?q=a',
+      `/api/geocode/suggest?q=${'x'.repeat(201)}`,
+    ]) {
+      const { status, body } = await get<ApiError>(url);
+      assert.equal(status, 400, url);
+      assert.equal(body.code, 'VALIDATION_ERROR', url);
+    }
+  });
+
+  it('returns 502 GEOCODER_UNAVAILABLE when Photon fails', async () => {
+    suggestBehavior = () => jsonResponse({ error: 'boom' }, 500);
+    const { status, body } = await get<ApiError>('/api/geocode/suggest?q=failing+street');
+    assert.equal(status, 502);
+    assert.equal(body.code, 'GEOCODER_UNAVAILABLE');
+  });
+
+  it('rejects other methods with 405 and an Allow header', async () => {
+    const res = await fetch(`${baseUrl}/api/geocode/suggest?q=brno`, { method: 'POST' });
+    assert.equal(res.status, 405);
+    assert.equal(res.headers.get('allow'), 'GET');
+    assert.equal(((await res.json()) as ApiError).code, 'METHOD_NOT_ALLOWED');
+  });
+});
+
+describe('GET /api/venues', () => {
+  it('lists all venues sorted by name with the liveAvailability flag, never leaking source', async () => {
+    const { status, body } = await get<VenuesResponse>('/api/venues');
+    assert.equal(status, 200);
+    assert.deepEqual(body.query, {});
+    assert.equal(body.venues.length, VENUE_RECORDS.length);
+    const names = body.venues.map((v) => v.venue.name);
+    assert.deepEqual(
+      names,
+      names.toSorted((a, b) => a.localeCompare(b, 'cs')),
+    );
+    for (const item of body.venues) assert.ok(!('source' in item.venue));
+    const live = new Map(body.venues.map((v) => [v.venue.id, v.liveAvailability]));
+    // the test service only has a ClubSpire connector
+    assert.equal(live.get('kuklenska'), true);
+    assert.equal(live.get('hala-sprint'), false);
+    const kuklenska = body.venues.find((v) => v.venue.id === 'kuklenska')?.venue;
+    assert.equal(kuklenska?.website, 'https://www.sportkuklenska.cz/');
+    assert.equal(kuklenska?.multisport?.accepted, true);
+  });
+
+  it('filters by sport', async () => {
+    const { status, body } = await get<VenuesResponse>('/api/venues?sport=badminton');
+    assert.equal(status, 200);
+    assert.deepEqual(body.query, { sport: 'badminton' });
+    assert.equal(body.venues.length, VENUE_RECORDS.length);
+  });
+
+  it('filters by q, ignoring case and diacritics', async () => {
+    const { status, body } = await get<VenuesResponse>('/api/venues?q=lisen');
+    assert.equal(status, 200);
+    assert.deepEqual(body.query, { q: 'lisen' });
+    assert.deepEqual(
+      body.venues.map((v) => v.venue.id),
+      ['badminton-lisen'],
+    );
+    const upper = await get<VenuesResponse>(`/api/venues?q=${encodeURIComponent('KUKLENSKÁ')}`);
+    assert.deepEqual(
+      upper.body.venues.map((v) => v.venue.id),
+      ['kuklenska'],
+    );
+  });
+
+  it('returns 200 with an empty list when nothing matches', async () => {
+    const { status, body } = await get<VenuesResponse>('/api/venues?q=nonexistent');
+    assert.equal(status, 200);
+    assert.deepEqual(body.venues, []);
+  });
+
+  it('returns 400 VALIDATION_ERROR for an unknown sport or a too long q', async () => {
+    const sport = await get<ApiError>('/api/venues?sport=curling');
+    assert.equal(sport.status, 400);
+    assert.equal(sport.body.code, 'VALIDATION_ERROR');
+    assert.deepEqual(
+      (sport.body.details as ValidationIssue[]).map((i) => i.field),
+      ['sport'],
+    );
+    const q = await get<ApiError>(`/api/venues?q=${'x'.repeat(101)}`);
+    assert.equal(q.status, 400);
+    assert.deepEqual(
+      (q.body.details as ValidationIssue[]).map((i) => i.field),
+      ['q'],
+    );
+  });
+
+  it('rejects other methods with 405 and an Allow header', async () => {
+    const res = await fetch(`${baseUrl}/api/venues`, { method: 'POST' });
+    assert.equal(res.status, 405);
+    assert.equal(res.headers.get('allow'), 'GET');
+    assert.equal(((await res.json()) as ApiError).code, 'METHOD_NOT_ALLOWED');
   });
 });

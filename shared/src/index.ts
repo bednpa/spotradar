@@ -4,6 +4,7 @@ export * from './dates.ts';
 export * from './errors.ts';
 export * from './search.ts';
 export * from './validation.ts';
+export * from './venues.ts';
 export { WEEKDAYS } from './types.ts';
 export type {
   ApiError,
@@ -20,7 +21,9 @@ export type {
   GeocodeQuery,
   GeocodeQueryParams,
   GeocodeResponse,
+  GeocodeSuggestResponse,
   HealthResponse,
+  MultisportInfo,
   OpeningHours,
   SearchQuery,
   SearchQueryParams,
@@ -29,5 +32,9 @@ export type {
   ValidationIssue,
   Venue,
   VenueAvailability,
+  VenueListItem,
+  VenueQuery,
+  VenueQueryParams,
+  VenuesResponse,
   Weekday,
 } from './types.ts';

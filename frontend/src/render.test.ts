@@ -8,8 +8,9 @@ import {
   renderError,
   renderFilters,
   renderLegend,
+  renderMainNav,
   renderSkeleton,
-  renderSportNav,
+  renderSportChips,
   renderToolbar,
   safeHref,
 } from './render.ts';
@@ -33,9 +34,19 @@ test('escapeHtml and safeHref', () => {
   assert.equal(safeHref('javascript:alert(1)'), null);
 });
 
-test('sport nav marks the selected sport with aria-current', () => {
-  const html = renderSportNav('badminton');
-  assert.match(html, /data-sport="badminton" aria-current="page">Badminton</);
+test('main nav has Reserve and Venues links; the active one has aria-current', () => {
+  const calendar = renderMainNav('calendar');
+  assert.match(calendar, /href="\/" data-route="calendar" aria-current="page">Reserve</);
+  assert.match(calendar, /href="\/venues" data-route="venues">Venues</);
+  assert.doesNotMatch(calendar, /data-route="venues" aria-current/);
+  assert.match(renderMainNav('venues'), /data-route="venues" aria-current="page">Venues</);
+});
+
+test('sport chips mark the selected sport', () => {
+  assert.match(
+    renderSportChips('badminton'),
+    /data-sport="badminton" aria-pressed="true">Badminton</,
+  );
 });
 
 test('toolbar has view switcher, today, prev/next and the period title', () => {
@@ -51,44 +62,36 @@ test('toolbar has view switcher, today, prev/next and the period title', () => {
   assert.match(renderToolbar(state({ view: 'month' })), /aria-label="Next month"/);
 });
 
-test('week view: 7 columns, hour rows, aria labels, disabled past cells', () => {
-  const html = renderCalendar(state({ view: 'week', fromHour: 6, toHour: 23 }), success, NOW);
+test('week view: 7 columns, fixed 06–23 hour rows, aria labels, disabled past cells', () => {
+  const html = renderCalendar(state({ view: 'week' }), success, NOW);
   assert.equal((html.match(/role="columnheader"/g) ?? []).length, 8);
   assert.equal((html.match(/role="rowheader"/g) ?? []).length, 17);
-  assert.match(html, /aria-label="Thursday 26 November, 08:00–09:00: 1 venue free"/);
+  assert.match(html, />Thursday 26 November, 08:00–09:00: 1 venue free<\/span><\/button>/);
   // Monday is in the past: disabled.
-  assert.match(html, /aria-label="Monday 23 November, 08:00–09:00: in the past" disabled/);
+  assert.match(html, / disabled>[^]*?Monday 23 November, 08:00–09:00: in the past<\/span>/);
   assert.match(html, /aria-current="date"/);
-  assert.match(html, /class="cell-n">1</);
-  assert.match(html, /class="cell-tag">check</);
+  assert.match(html, /class="cell-n" aria-hidden="true">1</);
 });
 
-test('time filter narrows the hour rows', () => {
-  const html = renderCalendar(state({ view: 'week', fromHour: 8, toHour: 10 }), success, NOW);
-  assert.equal((html.match(/role="rowheader"/g) ?? []).length, 2);
-  assert.doesNotMatch(html, /06:00–07:00/);
-});
-
-test('only free hides check cells', () => {
-  const html = renderCalendar(
-    state({ view: 'day', date: '2026-11-26', onlyFree: true }),
-    success,
-    NOW,
-  );
-  assert.doesNotMatch(html, /to check on website/);
-  assert.match(html, /nothing free/);
+test('no amber "check" cells any more: hours with only unread venues are plain', () => {
+  const html = renderCalendar(state({ view: 'week' }), success, NOW);
+  assert.doesNotMatch(html, /cell-check|cell-tag|to check on website/);
+  const day = renderCalendar(state({ view: 'day', date: '2026-11-26' }), success, NOW);
+  assert.doesNotMatch(day, /cell-check|to check on website/);
+  assert.match(day, /12:00–13:00: nothing free/);
 });
 
 test('day view shows venues and courts', () => {
   const html = renderCalendar(state({ view: 'day', date: '2026-11-26' }), success, NOW);
   assert.match(html, /1 venue · 3 courts free/);
-  assert.match(html, /2 venues to check on website/);
   assert.match(html, /Nothing free/);
+  assert.equal((html.match(/role="rowheader"/g) ?? []).length, 17);
 });
 
 test('week view outside the window shows "not available yet" cells', () => {
   const html = renderCalendar(state({ view: 'week', date: '2026-12-09' }), success, NOW);
-  assert.match(html, /Thursday 10 December, 08:00–09:00: not available yet" disabled/);
+  assert.match(html, /Thursday 10 December, 08:00–09:00: not available yet<\/span><\/button>/);
+  assert.doesNotMatch(html, /aria-label="Thursday 10 December/);
 });
 
 test('month view summarises days inside the window and disables the rest', () => {
@@ -97,6 +100,7 @@ test('month view summarises days inside the window and disables the rest', () =>
   assert.match(html, /Thursday 26 November: 3 free hours, best at 08:00/);
   assert.match(html, /Tuesday 24 November: in the past/);
   assert.match(html, /Tuesday 1 December: 3 free hours/);
+  assert.doesNotMatch(html, /mday-check/);
 });
 
 test('year view has 12 months and links to month view', () => {
@@ -142,27 +146,32 @@ test('loading, error, empty and outside states', () => {
   assert.match(outside, /data-action="today"/);
 });
 
-test('filters are labelled and the distance filter follows the location', () => {
-  const withoutOrigin = renderFilters(state(), { status: 'idle' });
-  for (const label of ['Go to date', 'From', 'To', 'Address', 'Only show free']) {
-    assert.match(withoutOrigin, new RegExp(`>${label}|${label}</label>`));
-  }
-  assert.match(withoutOrigin, /for="goto-date"/);
-  assert.match(withoutOrigin, /Use my location/);
-  assert.match(withoutOrigin, /Next free court/);
-  assert.match(withoutOrigin, /data-km="5" aria-pressed="false" disabled/);
-  assert.match(withoutOrigin, /<option value="6" selected>06:00/);
-  assert.match(withoutOrigin, /<option value="23" selected>23:00/);
+test('filters: sport, address combobox with an in-field location button, max distance', () => {
+  const html = renderFilters(state(), { status: 'idle' });
+  assert.match(html, /id="sport-label" class="label">Sport</);
+  assert.match(html, /data-sport="badminton" aria-pressed="true"/);
+  assert.match(html, /<label for="address">Address<\/label>/);
+  assert.match(html, /id="address" type="text" role="combobox" aria-expanded="false"/);
+  assert.match(html, /aria-controls="address-listbox"/);
+  assert.match(html, /id="address-listbox" class="listbox" role="listbox"[^>]* hidden/);
+  assert.match(html, /id="use-location"[^>]*aria-label="Use my location"/);
+  assert.match(html, /data-km="5" aria-pressed="false" disabled/);
+  assert.match(html, /id="clear-location"[^>]* hidden/);
+});
 
+test('removed controls are gone: time filter, free toggle, next free court, date input', () => {
+  const html = renderFilters(state(), { status: 'idle' });
+  assert.doesNotMatch(html, /from-hour|to-hour|only-free|Only show free|Next free|goto-date/);
+  assert.doesNotMatch(html, /Find address/);
+});
+
+test('with an origin: status text, enabled distance chips and a visible clear button', () => {
   const origin = { lat: 1, lng: 2, label: 'Brno', source: 'address' } as const;
-  const located = renderFilters(state({ origin, maxDistanceKm: 5, onlyFree: true }), {
-    status: 'set',
-    origin,
-  });
+  const located = renderFilters(state({ origin, maxDistanceKm: 5 }), { status: 'set', origin });
   assert.match(located, /Searching near: Brno/);
   assert.match(located, /data-km="5" aria-pressed="true"/);
   assert.doesNotMatch(located, /data-km="5" aria-pressed="true" disabled/);
-  assert.match(located, /id="only-free" type="checkbox" checked/);
+  assert.doesNotMatch(located, /id="clear-location"[^>]* hidden/);
 });
 
 test('distance chips', () => {
@@ -176,8 +185,9 @@ test('legend lists venues with their data quality', () => {
   assert.match(html, /data-venue-id="kuklenska" data-coverage="live"/);
   assert.match(html, /data-venue-id="viktoria" data-coverage="unavailable"/);
   assert.match(html, /data-venue-id="unknown" data-coverage="unknown"/);
-  assert.match(html, /badge-live">Live</);
-  assert.match(html, /Check on website/);
+  assert.match(html, /badge-live">Live data</);
+  assert.match(html, /No live data yet/);
   assert.match(html, /1\.5 km/);
+  assert.doesNotMatch(html, /swatch-check/);
   assert.equal(renderLegend({ ...data, venues: [] }), '');
 });

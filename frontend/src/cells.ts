@@ -1,4 +1,8 @@
-/** Pure cell logic of the calendar: one cell = one hour of one day. */
+/**
+ * Pure cell logic of the calendar: one cell = one hour of one day.
+ * Only live (free) availability is shown in cells; venues without live data
+ * never make a cell "free" and are listed separately in the slot panel.
+ */
 import { getSearchWindow, slotStatuses, summarizeSlot, toLocalDateTime } from '@spotradar/shared';
 import type {
   CalendarDay,
@@ -7,9 +11,10 @@ import type {
   SlotSummary,
   SlotVenueStatus,
 } from '@spotradar/shared';
+import { DEFAULT_FROM_HOUR, DEFAULT_TO_HOUR } from './calendar-range.ts';
 import { formatLongDate, formatVenues, hourLabel, hourRangeLabel } from './format.ts';
 
-export type CellKind = 'free' | 'check' | 'none' | 'past' | 'outside';
+export type CellKind = 'free' | 'none' | 'past' | 'outside';
 
 export interface HourCell {
   kind: CellKind;
@@ -42,8 +47,6 @@ export function hourStatuses(
 
 export interface CellOptions {
   now: Date;
-  /** Treat "check on website" hours as empty. */
-  onlyFree: boolean;
 }
 
 export function computeCell(
@@ -66,7 +69,6 @@ export function computeCell(
     const level = Math.min(4, summary.freeVenues) as 1 | 2 | 3 | 4;
     return { date, hour, summary, kind: 'free', level };
   }
-  if (summary.checkVenues > 0 && !options.onlyFree) return { ...base, summary, kind: 'check' };
   return { ...base, summary, kind: 'none' };
 }
 
@@ -76,8 +78,6 @@ export function cellAriaLabel(cell: HourCell): string {
   switch (cell.kind) {
     case 'free':
       return `${prefix}: ${formatVenues(cell.summary.freeVenues)} free`;
-    case 'check':
-      return `${prefix}: no live data, ${formatVenues(cell.summary.checkVenues)} to check on website`;
     case 'none':
       return `${prefix}: nothing free`;
     case 'past':
@@ -91,35 +91,9 @@ export function isCellSelectable(cell: HourCell): boolean {
   return cell.kind !== 'past' && cell.kind !== 'outside';
 }
 
-export interface NextFree {
-  date: string;
-  hour: number;
-  summary: SlotSummary;
-}
-
-/** Earliest upcoming hour (from now, inside the hour filter) with a free court. */
-export function findNextFree(
-  data: CalendarResponse,
-  now: Date,
-  fromHour: number,
-  toHour: number,
-): NextFree | null {
-  const days = indexDays(data);
-  const dates = [...days.keys()].sort();
-  for (const date of dates) {
-    for (let hour = fromHour; hour < toHour; hour++) {
-      const cell = computeCell(days, data.venues, date, hour, { now, onlyFree: true });
-      if (cell.kind === 'free') return { date, hour, summary: cell.summary };
-    }
-  }
-  return null;
-}
-
 export interface DaySummary {
-  /** Hours (inside the filter) with a free court. */
+  /** Hours (06–23) with a free court at a venue with live data. */
   freeHours: number;
-  /** Hours with only "check on website" venues. */
-  checkHours: number;
   /** Hour with the most free courts, null when nothing is free. */
   bestHour: number | null;
 }
@@ -128,15 +102,12 @@ export function summarizeDay(
   days: DayIndex,
   venues: readonly CalendarVenue[],
   date: string,
-  fromHour: number,
-  toHour: number,
   options: CellOptions,
 ): DaySummary {
   let freeHours = 0;
-  let checkHours = 0;
   let bestHour: number | null = null;
   let bestCourts = 0;
-  for (let hour = fromHour; hour < toHour; hour++) {
+  for (let hour = DEFAULT_FROM_HOUR; hour < DEFAULT_TO_HOUR; hour++) {
     const cell = computeCell(days, venues, date, hour, options);
     if (cell.kind === 'free') {
       freeHours++;
@@ -144,9 +115,9 @@ export function summarizeDay(
         bestCourts = cell.summary.freeCourts;
         bestHour = hour;
       }
-    } else if (cell.kind === 'check') checkHours++;
+    }
   }
-  return { freeHours, checkHours, bestHour };
+  return { freeHours, bestHour };
 }
 
 export type Coverage = 'live' | 'unavailable' | 'unknown';

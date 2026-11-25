@@ -1,6 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCalendarQuery, parseGeocodeQuery, parseSearchQuery } from './validation.ts';
+import { VENUE_QUERY_MAX } from './catalog.ts';
+import {
+  parseCalendarQuery,
+  parseGeocodeQuery,
+  parseSearchQuery,
+  parseVenueQuery,
+} from './validation.ts';
 import type { ValidationIssue } from './types.ts';
 
 function fields(issues: ValidationIssue[]): string[] {
@@ -148,6 +154,22 @@ test('parseCalendarQuery: to before from and too long ranges', () => {
   const long = parseCalendarQuery({ sport: 'badminton', from: '2026-11-25', to: '2026-12-10' });
   assert.equal(long.ok, false);
   if (!long.ok) assert.match(long.issues[0]?.message ?? '', /at most 15 days/);
+});
+
+test('parseVenueQuery: everything optional, blanks ignored, q trimmed', () => {
+  assert.deepEqual(parseVenueQuery({}), { ok: true, value: {} });
+  assert.deepEqual(parseVenueQuery({ sport: ' ', q: '  ' }), { ok: true, value: {} });
+  assert.deepEqual(parseVenueQuery({ sport: 'badminton', q: '  Líšeň ' }), {
+    ok: true,
+    value: { sport: 'badminton', q: 'Líšeň' },
+  });
+});
+
+test('parseVenueQuery: unknown sport and too long q are rejected', () => {
+  const result = parseVenueQuery({ sport: 'curling', q: 'x'.repeat(VENUE_QUERY_MAX + 1) });
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.deepEqual(fields(result.issues), ['q', 'sport']);
+  assert.equal(parseVenueQuery({ q: 'x'.repeat(VENUE_QUERY_MAX) }).ok, true);
 });
 
 test('parseGeocodeQuery trims and checks length', () => {

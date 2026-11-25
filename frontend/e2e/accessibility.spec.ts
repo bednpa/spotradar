@@ -1,21 +1,15 @@
-/** Keyboard and accessibility scenarios of the calendar UI. */
+/** Keyboard and accessibility scenarios of the calendar and venues pages. */
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-
-function addDays(date: string, days: number): string {
-  const [y, m, d] = date.split('-').map(Number);
-  return new Date(Date.UTC(y ?? 0, (m ?? 1) - 1, (d ?? 1) + days)).toISOString().slice(0, 10);
-}
-
-function today(): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Prague',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
-}
-
-const tomorrow = (): string => addDays(today(), 1);
+import {
+  addDays,
+  addressBox,
+  longDate,
+  mainNav,
+  openSlotWithFreeVenue,
+  today,
+  tomorrow,
+} from './helpers.ts';
 
 test.describe('keyboard and accessibility', () => {
   test('cells are buttons with descriptive labels and open the panel with Enter', async ({
@@ -23,10 +17,8 @@ test.describe('keyboard and accessibility', () => {
   }) => {
     await page.goto(`/?view=day&date=${tomorrow()}`);
     const cell = page.locator('button.cell-free:not([disabled])').first();
-    await expect(cell).toHaveAttribute(
-      'aria-label',
-      /^\w+day \d+ \w+, \d\d:00–\d\d:00: \d+ venues? free$/,
-    );
+    // the accessible name (a visually hidden text, so it always contains the visible text)
+    await expect(cell).toHaveAccessibleName(/^\w+day \d+ \w+, \d\d:00–\d\d:00: \d+ venues? free$/);
     await cell.focus();
     await page.keyboard.press('Enter');
     const dialog = page.getByRole('dialog');
@@ -42,7 +34,7 @@ test.describe('keyboard and accessibility', () => {
     await expect(page.locator('main')).toHaveJSProperty('inert', true);
     await expect(page.locator('header.topbar')).toHaveJSProperty('inert', true);
 
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 14; i++) {
       await page.keyboard.press('Tab');
       const inside = await page.evaluate(
         () => document.activeElement?.closest('[role="dialog"]') !== null,
@@ -81,15 +73,65 @@ test.describe('keyboard and accessibility', () => {
     await expect(cell).not.toBeFocused();
   });
 
+  test('the date strip is keyboard accessible', async ({ page }) => {
+    await page.goto(`/?view=day&date=${tomorrow()}`);
+    const strip = page.getByRole('group', { name: 'Select a day' });
+    const first = strip.getByRole('button', { name: `Today, ${longDate(today())}` });
+    await first.focus();
+    await page.keyboard.press('ArrowRight');
+    const second = strip.getByRole('button', { name: longDate(tomorrow()) });
+    await expect(second).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(strip.getByRole('button', { name: longDate(addDays(today(), 2)) })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(new RegExp(`date=${addDays(today(), 2)}`));
+    // focus is kept on the (re-rendered) pill
+    await expect(strip.getByRole('button', { name: longDate(addDays(today(), 2)) })).toBeFocused();
+    await page.keyboard.press('Home');
+    await expect(first).toBeFocused();
+    await page.keyboard.press('End');
+    await expect(strip.getByRole('button', { name: longDate(addDays(today(), 14)) })).toBeFocused();
+  });
+
   test('the view switcher and filters are reachable by their labels', async ({ page }) => {
     await page.goto('/');
     for (const name of ['Day', 'Week', 'Month', 'Year']) {
       await expect(page.getByRole('button', { name, exact: true })).toBeVisible();
     }
-    for (const label of ['Go to date', 'From', 'To', 'Address', 'Only show free']) {
-      await expect(page.getByLabel(label, { exact: true })).toBeVisible();
-    }
+    await expect(addressBox(page)).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Sport' })).toBeVisible();
     await expect(page.getByRole('group', { name: 'Max distance' })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Select a day' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Use my location' })).toBeVisible();
+    await expect(mainNav(page).getByRole('link')).toHaveText(['Reserve', 'Venues']);
+  });
+
+  test('the address field follows the ARIA combobox pattern', async ({ page }) => {
+    await page.goto('/');
+    const box = addressBox(page);
+    await expect(box).toHaveAttribute('aria-autocomplete', 'list');
+    await expect(box).toHaveAttribute('aria-controls', 'address-listbox');
+    await expect(box).toHaveAttribute('aria-expanded', 'false');
+    await box.fill('Brno');
+    const listbox = page.getByRole('listbox', { name: 'Address suggestions' });
+    await expect(listbox).toBeVisible();
+    await expect(box).toHaveAttribute('aria-expanded', 'true');
+    await expect(listbox.getByRole('option').first()).toBeVisible();
+    await box.press('ArrowDown');
+    const activeId = await box.getAttribute('aria-activedescendant');
+    expect(activeId).toMatch(/^address-option-\d+$/);
+    await expect(page.locator(`#${activeId}`)).toHaveAttribute('aria-selected', 'true');
+    await box.press('Escape');
+    await expect(listbox).toBeHidden();
+  });
+
+  test('the user can tab from the address field to the in-field location button', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await addressBox(page).focus();
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: 'Use my location' })).toBeFocused();
   });
 
   test('month and year views explain the searchable window; year grid is a group', async ({
@@ -104,11 +146,65 @@ test.describe('keyboard and accessibility', () => {
     await expect(page.getByRole('group', { name: /^\d{4}$/ })).toBeVisible();
   });
 
-  test('the date filter ignores dates outside the searchable window', async ({ page }) => {
+  test('navigating moves focus to the page content and the title changes', async ({ page }) => {
+    await page.goto('/');
+    await expect(page).toHaveTitle(/free badminton courts in Brno/);
+    await mainNav(page).getByRole('link', { name: 'Venues' }).click();
+    await expect(page).toHaveTitle(/^Venues/);
+    await expect(page.locator('main')).toBeFocused();
+  });
+});
+
+test.describe('automated accessibility checks (axe)', () => {
+  test('calendar page has no detectable violations', async ({ page }) => {
+    await page.goto(`/?view=week&date=${today()}`);
+    await expect(page.getByRole('grid')).toBeVisible();
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(results.violations).toEqual([]);
+  });
+
+  test('calendar page with open suggestions and the day view has no violations', async ({
+    page,
+  }) => {
     await page.goto(`/?view=day&date=${tomorrow()}`);
-    const input = page.getByLabel('Go to date', { exact: true });
-    await input.fill(addDays(today(), 30));
-    await expect(input).toHaveValue(tomorrow());
-    await expect(page).toHaveURL(new RegExp(`date=${tomorrow()}`));
+    await expect(page.getByRole('grid')).toBeVisible();
+    await addressBox(page).fill('Brno');
+    await expect(page.getByRole('option').first()).toBeVisible();
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(results.violations).toEqual([]);
+  });
+
+  test('slot panel has no violations', async ({ page }) => {
+    await page.goto(`/?view=day&date=${tomorrow()}`);
+    await openSlotWithFreeVenue(page, 'kuklenska');
+    const results = await new AxeBuilder({ page }).include('[role="dialog"]').analyze();
+    expect(results.violations).toEqual([]);
+  });
+
+  test('venues page has no detectable violations', async ({ page }) => {
+    await page.goto('/venues');
+    await expect(page.locator('.vcard').first()).toBeVisible();
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(results.violations).toEqual([]);
+  });
+
+  test('venues empty state has no violations', async ({ page }) => {
+    await page.goto('/venues?q=zzzzqq');
+    await expect(page.getByRole('heading', { name: /No venues match/ })).toBeVisible();
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(results.violations).toEqual([]);
+  });
+});
+
+test.describe('automated accessibility checks (axe, dark mode)', () => {
+  test.use({ colorScheme: 'dark' });
+
+  test('calendar and venues pages have no violations in dark mode', async ({ page }) => {
+    await page.goto(`/?view=week&date=${today()}`);
+    await expect(page.getByRole('grid')).toBeVisible();
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    await page.goto('/venues');
+    await expect(page.locator('.vcard').first()).toBeVisible();
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   });
 });
