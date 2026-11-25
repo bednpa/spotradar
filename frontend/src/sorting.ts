@@ -98,6 +98,6 @@ export function renderListControls(sort: SortMode, cards: MultisportCards, scope
   ).join('');
   return `<div class="list-controls">
   <div class="list-control"><span class="label" id="${scope}-sort-label">Sort by</span><div class="segmented" role="group" aria-labelledby="${scope}-sort-label">${sortButtons}</div></div>
-  <div class="list-control"><span class="label" id="${scope}-cards-label">MultiSport cards</span><div class="segmented" role="group" aria-labelledby="${scope}-cards-label">${cardButtons}</div></div>
+  <div class="list-control list-control-cards"><span class="label" id="${scope}-cards-label">MultiSport cards</span><div class="segmented" role="group" aria-labelledby="${scope}-cards-label">${cardButtons}</div></div>
 </div>`;
 }

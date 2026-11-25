@@ -175,6 +175,8 @@ test.describe('automated accessibility checks (axe)', () => {
   });
 
   test('slot panel has no violations', async ({ page }) => {
+    // Without this axe can measure colours mid fade/slide-in and report false contrast failures.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto(`/?view=day&date=${tomorrow()}`);
     await openSlotWithFreeVenue(page, 'kuklenska');
     const results = await new AxeBuilder({ page }).include('[role="dialog"]').analyze();

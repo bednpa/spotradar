@@ -480,10 +480,13 @@ input[type='search']:focus-visible {
 
 /* ---------- list controls (Sort by, MultiSport cards) ---------- */
 
+/* Sort by and MultiSport cards always sit side by side, also in the narrow slot panel:
+   the card buttons share whatever width the sort control leaves. */
 .list-controls {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 1.5rem;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: 0.75rem;
   margin-bottom: 1rem;
 }
 
@@ -491,6 +494,50 @@ input[type='search']:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.list-controls .seg-btn {
+  padding: 0.3rem 0.7rem;
+}
+
+.list-control-cards {
+  flex: 0 1 15rem;
+}
+
+.list-control-cards .label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.list-control-cards .segmented {
+  display: flex;
+}
+
+.list-control-cards .seg-btn {
+  flex: 1 1 2.75rem;
+  min-width: 2.25rem;
+  padding: 0.3rem 0;
+}
+
+@media (max-width: 420px) {
+  /* Full row width: the compact minimums below fit a 320 px phone. */
+  .list-controls {
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .list-controls .seg-btn {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .list-control-cards .seg-btn {
+    min-width: 1.75rem;
+    padding: 0.3rem 0;
+  }
 }
 
 .segmented {
@@ -1682,5 +1729,22 @@ input[type='search']:focus-visible {
   .fact-row {
     grid-template-columns: 1fr;
     gap: 0.1rem;
+  }
+}
+
+/* Smallest phones (≈320 px): tighter list controls so both groups still share one row. */
+@media (max-width: 359px) {
+  .list-controls .label {
+    font-size: 0.7rem;
+    letter-spacing: 0.02em;
+  }
+
+  .list-controls .seg-btn {
+    padding: 0.3rem 0.4rem;
+  }
+
+  .list-control-cards .seg-btn {
+    min-width: 1.5rem;
+    padding: 0.3rem 0;
   }
 }

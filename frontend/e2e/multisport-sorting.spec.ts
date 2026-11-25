@@ -404,3 +404,48 @@ test.describe('venues page: sort by and MultiSport cards', () => {
     ).toHaveAttribute('aria-pressed', 'true');
   });
 });
+
+/**
+ * Both groups on one row, nothing sticking out of the controls or the viewport.
+ * Retried so the slot panel's slide-in animation can finish first.
+ */
+async function expectSideBySide(page: Page, scope: Locator): Promise<void> {
+  await expect(async () => {
+    const sortBox = await sortGroup(scope).boundingBox();
+    const cardsBox = await cardsGroup(scope).boundingBox();
+    const controlsBox = await scope.locator('.list-controls').boundingBox();
+    if (!sortBox || !cardsBox || !controlsBox) throw new Error('list controls not rendered');
+    expect(Math.abs(sortBox.y - cardsBox.y)).toBeLessThan(2);
+    expect(cardsBox.x).toBeGreaterThanOrEqual(sortBox.x + sortBox.width);
+    const right = Math.min(
+      controlsBox.x + controlsBox.width,
+      page.viewportSize()?.width ?? Infinity,
+    );
+    expect(cardsBox.x + cardsBox.width).toBeLessThanOrEqual(right + 1);
+    // The buttons themselves must not spill out of their pill either.
+    const lastCard = await cardsGroup(scope).getByRole('button').last().boundingBox();
+    if (!lastCard) throw new Error('cards buttons not rendered');
+    expect(lastCard.x + lastCard.width).toBeLessThanOrEqual(cardsBox.x + cardsBox.width + 1);
+  }).toPass({ timeout: 5000 });
+}
+
+test.describe('list controls layout', () => {
+  for (const width of [320, 375, 1280]) {
+    test(`Sort by and MultiSport cards sit side by side at ${width} px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await routeCalendar(page);
+      await routeVenues(page);
+
+      await openDay(page);
+      await page.locator('button.cell-free:not([disabled])').first().click();
+      const dialog = page.getByRole('dialog');
+      await expect(sortGroup(dialog)).toBeVisible();
+      await expectSideBySide(page, dialog);
+
+      await page.goto('/venues');
+      const main = page.getByRole('main');
+      await expect(sortGroup(main)).toBeVisible();
+      await expectSideBySide(page, main);
+    });
+  }
+});
