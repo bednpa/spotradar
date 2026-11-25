@@ -25,6 +25,7 @@ import type {
 } from '@spotradar/shared';
 import type { AvailabilityService } from './connectors/availabilityService.ts';
 import { HttpError, validationError } from './errors.ts';
+import type { Logger } from './logger.ts';
 import type { VenueRepository } from './repositories/venueRepository.ts';
 import type { Geocoder } from './services/geocode.ts';
 import { getCalendar } from './services/calendar.ts';
@@ -42,6 +43,8 @@ export interface AppOptions {
   now: () => Date;
   /** Directory with the built frontend (absolute path). */
   staticDir: string;
+  /** Request timing logs (default: console). */
+  logger?: Logger;
 }
 
 const JSON_CONTENT_TYPE = 'application/json; charset=utf-8';
@@ -156,11 +159,15 @@ async function handleApi(
     ) {
       throw new HttpError('DATE_OUT_OF_RANGE', 'Date is outside the searchable window');
     }
+    const began = performance.now();
     const body: CalendarResponse = await getCalendar(parsed.value, {
       venues: options.venues,
       availability: options.availability,
       now: options.now,
     });
+    (options.logger ?? console).info(
+      `[calendar] ${parsed.value.from}..${parsed.value.to} ${body.venues.length} venues in ${Math.round(performance.now() - began)} ms`,
+    );
     sendJson(res, 200, body);
     return;
   }

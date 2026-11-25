@@ -1,7 +1,9 @@
 import {
   compareSearchResults,
+  daysBetween,
   distanceKm,
   freeCourtsAt,
+  minutesToTime,
   roundKm,
   timeToMinutes,
   toLocalDateTime,
@@ -28,6 +30,31 @@ export function withoutPastSlots(slots: FreeSlot[], date: string, now: Date): Fr
   const local = toLocalDateTime(now);
   if (local.date !== date) return slots;
   return slots.filter((slot) => timeToMinutes(slot.end) > local.minutes);
+}
+
+/**
+ * Venues that only accept bookings `leadMinutes` ahead (X-Arena: 120): nothing starting before
+ * now + lead, rounded up to the next full hour (Bizzy cells start on the hour; rounding up never
+ * reports a too-early cell as free), is free. Slots crossing the cutoff are shortened to start
+ * there. Applied at answer time, after the cache, so cached data never keeps a stale cutoff.
+ */
+export function withoutTooSoonSlots(
+  slots: FreeSlot[],
+  date: string,
+  now: Date,
+  leadMinutes: number | undefined,
+): FreeSlot[] {
+  if (!leadMinutes || leadMinutes <= 0) return slots;
+  const local = toLocalDateTime(now);
+  const offsetDays = daysBetween(local.date, date);
+  if (offsetDays < 0) return [];
+  const cutoff = Math.ceil((local.minutes + leadMinutes - offsetDays * 24 * 60) / 60) * 60;
+  if (cutoff <= 0) return slots;
+  return slots
+    .filter((slot) => timeToMinutes(slot.end) > cutoff)
+    .map((slot) =>
+      timeToMinutes(slot.start) < cutoff ? { ...slot, start: minutesToTime(cutoff) } : slot,
+    );
 }
 
 export interface VenueCandidate {
@@ -75,8 +102,16 @@ export async function getDayAvailability(
     // The service should never reject; a failing connector must not fail the request.
     availability = { status: 'unavailable', freeSlots: [] };
   }
+  const leadMinutes = venue.source.type === 'bizzy' ? venue.source.minLeadMinutes : undefined;
   const freeSlots =
-    availability.status === 'live' ? withoutPastSlots(availability.freeSlots, date, now) : [];
+    availability.status === 'live'
+      ? withoutTooSoonSlots(
+          withoutPastSlots(availability.freeSlots, date, now),
+          date,
+          now,
+          leadMinutes,
+        )
+      : [];
   return { ...availability, freeSlots };
 }
 

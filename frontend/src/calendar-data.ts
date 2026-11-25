@@ -86,6 +86,20 @@ export class CalendarCache {
     return null;
   }
 
+  /**
+   * Warms the cache in the background: skipped when already cached, errors are swallowed.
+   * Resolves to true when a request was started.
+   */
+  async prefetch(query: CalendarQuery): Promise<boolean> {
+    if (this.peek(query)) return false;
+    try {
+      await this.get(query);
+    } catch {
+      // prefetching is best effort; the real load shows errors
+    }
+    return true;
+  }
+
   /** `fresh: true` bypasses the cache (used by "Try again"). */
   async get(query: CalendarQuery, options: { fresh?: boolean } = {}): Promise<CalendarResponse> {
     if (!options.fresh) {

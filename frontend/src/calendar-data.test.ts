@@ -104,6 +104,42 @@ test('fresh: true bypasses the cache and replaces the entry', async () => {
   assert.equal(calls.length, 2);
 });
 
+test('a day entry and the range entry coexist; the range stays cached after it arrives', async () => {
+  const calls: string[] = [];
+  const cache = new CalendarCache(countingFetch(calls));
+  const day = { ...base, from: '2026-11-26', to: '2026-11-26' };
+  const range = { ...base, from: '2026-11-25', to: '2026-11-29' };
+  const [dayData, rangeData] = await Promise.all([cache.get(day), cache.get(range)]);
+  assert.equal(dayData.days.length, 1);
+  assert.equal(rangeData.days.length, 5);
+  assert.equal(calls.length, 2);
+  // both are served from the cache afterwards, and a sibling day is sliced from the range
+  assert.equal(cache.peek(day), dayData);
+  assert.equal(cache.peek(range), rangeData);
+  assert.equal(cache.peek({ ...base, from: '2026-11-28', to: '2026-11-28' })?.days.length, 1);
+  assert.equal(calls.length, 2);
+});
+
+test('prefetch fills the cache once and skips cached or covered queries', async () => {
+  const calls: string[] = [];
+  const cache = new CalendarCache(countingFetch(calls));
+  const next = { ...base, from: '2026-11-30', to: '2026-12-06' };
+  assert.equal(await cache.prefetch(next), true);
+  assert.equal(await cache.prefetch(next), false);
+  assert.equal(await cache.prefetch({ ...next, from: '2026-12-01', to: '2026-12-01' }), false);
+  assert.equal(calls.length, 1);
+  assert.ok(cache.peek(next));
+});
+
+test('prefetch swallows errors and caches nothing', async () => {
+  const cache = new CalendarCache(() =>
+    Promise.resolve(jsonResponse(503, { error: 'down', code: 'INTERNAL_ERROR' })),
+  );
+  const next = { ...base, from: '2026-11-30', to: '2026-12-06' };
+  assert.equal(await cache.prefetch(next), true);
+  assert.equal(cache.peek(next), null);
+});
+
 test('sliceResponse filters days', () => {
   const sliced = sliceResponse(makeCalendar(), '2026-11-26', '2026-11-26');
   assert.equal(sliced.days.length, 1);

@@ -2,12 +2,73 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ApiRequestError } from './api.ts';
 import {
+  calendarData,
   calendarErrorState,
+  calendarStatusText,
   geocodeErrorMessage,
   geolocationErrorMessage,
+  isCalendarBusy,
   isDistanceFilterEnabled,
+  loadingStateFor,
   locationStatusText,
 } from './state.ts';
+import { makeCalendar } from './test-fixtures.test.ts';
+
+test('partial state: data is usable and the region is busy until the range failed', () => {
+  const data = makeCalendar();
+  const partial = {
+    status: 'partial',
+    data,
+    pendingFrom: '2026-11-25',
+    pendingTo: '2026-11-27',
+    error: null,
+  } as const;
+  assert.equal(calendarData(partial), data);
+  assert.equal(calendarData({ status: 'success', data }), data);
+  assert.equal(calendarData({ status: 'loading' }), null);
+  assert.equal(isCalendarBusy(partial), true);
+  assert.equal(isCalendarBusy({ ...partial, error: 'x' }), false);
+  assert.equal(isCalendarBusy({ status: 'loading' }), true);
+  assert.equal(isCalendarBusy({ status: 'success', data }), false);
+});
+
+test('live region text: loading, loading the rest, and empty when done or failed', () => {
+  const data = makeCalendar();
+  const partial = {
+    status: 'partial',
+    data,
+    pendingFrom: '2026-11-25',
+    pendingTo: '2026-11-27',
+    error: null,
+  } as const;
+  assert.equal(calendarStatusText({ status: 'loading' }, 'week'), 'Loading availability…');
+  assert.equal(calendarStatusText(partial, 'week'), 'Loading the rest of the week…');
+  assert.equal(calendarStatusText(partial, 'month'), 'Loading the rest of the month…');
+  assert.equal(calendarStatusText({ ...partial, error: 'x' }, 'week'), '');
+  assert.equal(calendarStatusText({ status: 'success', data }, 'week'), '');
+  assert.equal(calendarStatusText({ status: 'outside' }, 'week'), '');
+});
+
+test('retrying keeps a visible day on screen, other states restart from the skeleton', () => {
+  const data = makeCalendar();
+  const range = { from: '2026-11-25', to: '2026-11-27' };
+  const failed = {
+    status: 'partial',
+    data,
+    pendingFrom: range.from,
+    pendingTo: range.to,
+    error: 'Boom',
+  } as const;
+  assert.deepEqual(loadingStateFor(failed, range), { ...failed, error: null });
+  // a partial state of another range is not reused
+  assert.deepEqual(loadingStateFor(failed, { from: '2026-11-30', to: '2026-12-06' }), {
+    status: 'loading',
+  });
+  assert.deepEqual(loadingStateFor({ status: 'error', message: 'x', issues: [] }, range), {
+    status: 'loading',
+  });
+  assert.deepEqual(loadingStateFor({ status: 'loading' }, range), { status: 'loading' });
+});
 
 test('geolocation error messages', () => {
   assert.match(geolocationErrorMessage(1), /denied/);

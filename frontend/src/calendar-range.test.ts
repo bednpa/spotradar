@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import {
   anchorFor,
   clampRange,
+  firstDayRange,
   monthGrid,
+  nextPeriodRange,
   periodTitle,
   requestRange,
   shiftDate,
@@ -113,4 +115,51 @@ test('visibleHours', () => {
   assert.deepEqual(visibleHours(6, 9), [6, 7, 8]);
   assert.deepEqual(visibleHours(9, 9), []);
   assert.deepEqual(visibleHours(10, 9), []);
+});
+
+test('firstDayRange: the focused day of a multi-day range, clamped; null for a single day', () => {
+  const week = { from: '2026-11-25', to: '2026-11-29' };
+  assert.deepEqual(firstDayRange(week, '2026-11-27', WINDOW), {
+    from: '2026-11-27',
+    to: '2026-11-27',
+  });
+  // focus before / after the range is clamped into it
+  assert.deepEqual(firstDayRange(week, '2026-11-23', WINDOW), {
+    from: '2026-11-25',
+    to: '2026-11-25',
+  });
+  assert.deepEqual(firstDayRange(week, '2026-12-03', WINDOW), {
+    from: '2026-11-29',
+    to: '2026-11-29',
+  });
+  // month/year ranges (the whole window) with the focus outside the window
+  assert.deepEqual(firstDayRange(WINDOW, '2026-12-20', WINDOW), {
+    from: '2026-12-09',
+    to: '2026-12-09',
+  });
+  assert.equal(firstDayRange({ from: '2026-11-25', to: '2026-11-25' }, '2026-11-25', WINDOW), null);
+});
+
+test('nextPeriodRange: next week / next 7 days, clamped to the window, none for month/year', () => {
+  assert.deepEqual(nextPeriodRange('week', '2026-11-25', WINDOW), {
+    from: '2026-11-30',
+    to: '2026-12-06',
+  });
+  // the last week is cut at the end of the window
+  assert.deepEqual(nextPeriodRange('week', '2026-12-02', WINDOW), {
+    from: '2026-12-07',
+    to: '2026-12-09',
+  });
+  assert.equal(nextPeriodRange('week', '2026-12-09', WINDOW), null);
+  assert.deepEqual(nextPeriodRange('day', '2026-11-25', WINDOW), {
+    from: '2026-11-26',
+    to: '2026-12-02',
+  });
+  assert.deepEqual(nextPeriodRange('day', '2026-12-07', WINDOW), {
+    from: '2026-12-08',
+    to: '2026-12-09',
+  });
+  assert.equal(nextPeriodRange('day', '2026-12-09', WINDOW), null);
+  assert.equal(nextPeriodRange('month', '2026-11-25', WINDOW), null);
+  assert.equal(nextPeriodRange('year', '2026-11-25', WINDOW), null);
 });

@@ -135,6 +135,8 @@ describe('getCalendar', () => {
     const availability: AvailabilityService = {
       getAvailability: () => Promise.reject(new Error('boom')),
       supports: () => true,
+      isHostBackedOff: () => false,
+      warm: () => Promise.resolve('skipped'),
     };
     const response = await getCalendar(
       { sport: 'badminton', from: TODAY, to: TOMORROW },

@@ -63,7 +63,15 @@ export interface Venue {
  */
 export type AvailabilitySourceConfig =
   | { type: 'clubspire'; baseUrl: string; tabIdx: number }
-  | { type: 'bizzy'; scheduleUrl: string }
+  | {
+      type: 'bizzy';
+      scheduleUrl: string;
+      /**
+       * Bookings must start at least this many minutes from now (X-Arena: 120);
+       * hour cells starting sooner are never reported as free. Absent = no limit.
+       */
+      minLeadMinutes?: number;
+    }
   | { type: 'memberzone'; url: string }
   | { type: 'memberpro'; url: string }
   | { type: 'none' };

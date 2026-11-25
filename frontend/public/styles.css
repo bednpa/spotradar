@@ -1013,6 +1013,65 @@ input[type='search']:focus-visible {
   border-radius: var(--radius);
 }
 
+.skeleton-week {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.skeleton-month {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.skeleton-month .skeleton-row {
+  height: 5.2rem;
+}
+
+.skeleton-year {
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.75rem;
+}
+
+.skeleton-grid .visually-hidden {
+  grid-column: 1 / -1;
+}
+
+/* days of a partially loaded period that have not arrived yet */
+
+.cell-skeleton,
+.mday-skeleton {
+  pointer-events: none;
+}
+
+.cell-skeleton:not(.skeleton) {
+  background: var(--full-bg);
+  opacity: 0.55;
+}
+
+.mday-skeleton:not(.skeleton) {
+  background: var(--full-bg);
+  opacity: 0.55;
+}
+
+.mday-skeleton .mday-num {
+  opacity: 0.6;
+}
+
+.d-pending {
+  border-radius: 4px;
+}
+
+.d-pending-failed {
+  opacity: 0.4;
+}
+
+.load-status {
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+}
+
+.load-status:empty {
+  margin: 0;
+}
+
 @keyframes shimmer {
   to {
     background-position: -200% 0;

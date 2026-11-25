@@ -17,7 +17,7 @@ import {
 import type { SuggestState } from './address-suggest.ts';
 import { fetchVenues, geocodeAddress, suggestAddresses } from './api.ts';
 import { CalendarCache } from './calendar-data.ts';
-import { requestRange, shiftDate } from './calendar-range.ts';
+import { firstDayRange, nextPeriodRange, requestRange, shiftDate } from './calendar-range.ts';
 import { renderDateStrip, stripKeyTarget, viewAfterDateSelect } from './date-strip.ts';
 import { renderPanel } from './panel.ts';
 import { isCalendarView, stateFromSearch, stateToSearch, toCalendarQuery } from './query.ts';
@@ -33,7 +33,11 @@ import {
 import { ROUTE_TITLES, isPlainLeftClick, isRoute, routeFromPath, routeUrl } from './router.ts';
 import type { Route } from './router.ts';
 import {
+  calendarData,
   calendarErrorState,
+  calendarStatusText,
+  isCalendarBusy,
+  loadingStateFor,
   geocodeErrorMessage,
   geolocationErrorMessage,
   isDistanceFilterEnabled,
@@ -64,6 +68,7 @@ const filtersRoot = byId<HTMLElement>('filters');
 const dateStripRoot = byId<HTMLElement>('date-strip');
 const toolbarRoot = byId<HTMLElement>('toolbar');
 const calendarRoot = byId<HTMLElement>('calendar');
+const calendarStatusRoot = byId<HTMLElement>('calendar-status');
 const legendRoot = byId<HTMLElement>('legend');
 const panelRoot = byId<HTMLElement>('panel-root');
 const venuesFiltersRoot = byId<HTMLElement>('venues-filters');
@@ -104,8 +109,12 @@ const venuesDebounce = new Debouncer(250);
 
 // ---------- rendering ----------
 
+function currentCalendar(): CalendarState {
+  return calendar;
+}
+
 function currentData(): CalendarResponse | null {
-  return calendar.status === 'success' ? calendar.data : null;
+  return calendarData(calendar);
 }
 
 /** Re-renders `root`, keeping keyboard focus on the element with the same data-key. */
@@ -133,7 +142,8 @@ function renderChrome(): void {
 
 function renderCalendarArea(): void {
   const now = new Date();
-  calendarRoot.setAttribute('aria-busy', calendar.status === 'loading' ? 'true' : 'false');
+  calendarRoot.setAttribute('aria-busy', isCalendarBusy(calendar) ? 'true' : 'false');
+  calendarStatusRoot.textContent = calendarStatusText(calendar, state.view);
   replaceKeepingFocus(calendarRoot, renderCalendar(state, calendar, now));
   const data = currentData();
   if (data) legendRoot.innerHTML = renderLegend(data);
@@ -164,10 +174,20 @@ function syncFilterControls(): void {
 
 // ---------- data ----------
 
-/** Loads the data for the current view (served from the cache when possible). */
+/** Warms the cache with the next period in the background (never touches the UI state). */
+function prefetchNext(): void {
+  const next = nextPeriodRange(state.view, state.date, getSearchWindow(new Date()));
+  if (next) void cache.prefetch(toCalendarQuery(state, next));
+}
+
+/**
+ * Loads the data for the current view (served from the cache when possible). For a multi-day
+ * range the focused day is requested first and shown while the full range is still loading.
+ */
 async function load(fresh = false): Promise<void> {
   const token = ++loadToken;
-  const range = requestRange(state.view, state.date, getSearchWindow(new Date()));
+  const searchWindow = getSearchWindow(new Date());
+  const range = requestRange(state.view, state.date, searchWindow);
   if (range === null) {
     calendar = { status: 'outside' };
     renderCalendarArea();
@@ -175,20 +195,79 @@ async function load(fresh = false): Promise<void> {
   }
   const query = toCalendarQuery(state, range);
   const cached = fresh ? null : cache.peek(query);
+  const previous = currentCalendar();
   if (cached) {
     calendar = { status: 'success', data: cached };
     renderCalendarArea();
+    prefetchNext();
     return;
   }
-  calendar = { status: 'loading' };
-  renderCalendarArea();
-  try {
-    const data = await cache.get(query, { fresh });
-    if (token === loadToken) calendar = { status: 'success', data };
-  } catch (error) {
-    if (token === loadToken) calendar = calendarErrorState(error);
+
+  const dayRange = firstDayRange(range, state.date, searchWindow);
+  let rangeDone = false;
+  const showDay = (day: CalendarResponse): void => {
+    if (token !== loadToken || rangeDone) return;
+    calendar = {
+      status: 'partial',
+      data: day,
+      pendingFrom: range.from,
+      pendingTo: range.to,
+      error: null,
+    };
+    renderCalendarArea();
+  };
+
+  const rangeRequest = cache.get(query, { fresh }).then(
+    (data) => ({ ok: true as const, data }),
+    (error: unknown) => ({ ok: false as const, error }),
+  );
+  const dayQuery = dayRange ? toCalendarQuery(state, dayRange) : null;
+  const cachedDay = dayQuery && !fresh ? cache.peek(dayQuery) : null;
+  // Resolves to the day (or null when there is none / it failed); a failing day request is
+  // ignored: the range request decides the outcome.
+  let dayRequest: Promise<CalendarResponse | null> = Promise.resolve(cachedDay);
+  if (cachedDay) {
+    showDay(cachedDay);
+  } else {
+    // "Try again" keeps a visible day on screen instead of replacing it with the skeleton
+    calendar = fresh ? loadingStateFor(previous, range) : { status: 'loading' };
+    renderCalendarArea();
+    if (dayQuery) {
+      dayRequest = cache.get(dayQuery, { fresh }).then(
+        (day) => {
+          showDay(day);
+          return day;
+        },
+        () => null,
+      );
+    }
   }
-  if (token === loadToken) renderCalendarArea();
+
+  const result = await rangeRequest;
+  rangeDone = true;
+  if (token !== loadToken) return;
+  if (result.ok) {
+    calendar = { status: 'success', data: result.data };
+  } else {
+    const failure = calendarErrorState(result.error);
+    // The range may fail before the day arrived: wait for it so the day can stay visible.
+    const day = await dayRequest;
+    if (token !== loadToken) return;
+    const shown = currentCalendar();
+    if (failure.status !== 'error') calendar = failure;
+    else if (shown.status === 'partial') calendar = { ...shown, error: failure.message };
+    else if (day) {
+      calendar = {
+        status: 'partial',
+        data: day,
+        pendingFrom: range.from,
+        pendingTo: range.to,
+        error: failure.message,
+      };
+    } else calendar = failure;
+  }
+  renderCalendarArea();
+  if (result.ok) prefetchNext();
 }
 
 function syncUrl(): void {

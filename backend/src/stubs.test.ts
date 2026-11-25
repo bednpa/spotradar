@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
-import { toLocalDateTime } from '@spotradar/shared';
+import { addDays, toLocalDateTime } from '@spotradar/shared';
+import { createBizzyConnector } from './connectors/bizzy/connector.ts';
 import {
   createAvailabilityService,
   createDefaultConnectors,
@@ -14,6 +15,8 @@ import { createVenueRepository } from './repositories/venueRepository.ts';
 import { getCalendar } from './services/calendar.ts';
 import { createStubFetch, createStubGeocoder, createStubSuggester, isStubMode } from './stubs.ts';
 import { FIXED_NOW, TOMORROW, silentLogger } from './testHelpers.ts';
+
+const slot = (start: string, end: string, freeCourts: number) => ({ start, end, freeCourts });
 
 function venue(id: string) {
   const found = VENUE_RECORDS.find((v) => v.id === id);
@@ -28,7 +31,7 @@ describe('stub mode', () => {
     assert.equal(isStubMode({}), false);
   });
 
-  it('feeds the real ClubSpire parser: Kuklenská live, Viktoria unavailable, others unknown', async () => {
+  it('feeds the real ClubSpire parser: Kuklenská live, Viktoria unavailable, Bizzy live', async () => {
     const service = createAvailabilityService({
       connectors: createDefaultConnectors({ fetch: createStubFetch() }),
       now: () => FIXED_NOW,
@@ -47,7 +50,7 @@ describe('stub mode', () => {
     );
     assert.equal(
       (await service.getAvailability(venue('badminton-jehnice'), TOMORROW)).status,
-      'unknown',
+      'live',
     );
   });
 
@@ -112,6 +115,85 @@ describe('stub mode', () => {
     assert.throws(() => parseMemberproGrid(html, '2026-11-26'), /expected 26\.11\.2026/);
   });
 
+  it('serves the three Bizzy venues live for any date through the real connector and parser', async () => {
+    // Every stubbed day is the recorded Thursday 26.11.2026, with nothing counted as already past.
+    const expected: Record<string, ReturnType<typeof slot>[]> = {
+      'badminton-jehnice': [slot('17:00', '18:00', 1), slot('19:00', '21:00', 1)],
+      'badminton-lisen': [
+        slot('07:00', '10:00', 6),
+        slot('10:00', '11:00', 5),
+        slot('11:00', '14:30', 6),
+        slot('14:30', '15:00', 5),
+        slot('15:00', '15:30', 3),
+        slot('15:30', '16:00', 4),
+        slot('16:30', '17:00', 1),
+        slot('18:00', '19:00', 1),
+        slot('21:00', '22:00', 6),
+      ],
+      'x-arena-slatina': [
+        slot('07:00', '08:00', 2),
+        slot('08:00', '09:00', 6),
+        slot('09:00', '12:00', 5),
+        slot('12:00', '14:00', 6),
+        slot('14:00', '15:00', 5),
+        slot('17:00', '19:00', 1),
+        slot('19:00', '21:00', 2),
+        slot('21:00', '22:00', 5),
+      ],
+    };
+    const today = toLocalDateTime(new Date()).date;
+    const dates = [addDays(today, 3), addDays(today, 20), '2027-01-05', '2028-02-29'];
+    for (const [id, slots] of Object.entries(expected)) {
+      for (const date of dates) {
+        // a fresh connector per date: the first request has to move the window by itself
+        const connector = createBizzyConnector({ fetch: createStubFetch() });
+        assert.deepEqual(await connector.getFreeSlots(venue(id), date), slots, `${id} ${date}`);
+      }
+    }
+  });
+
+  it('answers Bizzy like the real site: session cookie, A4J window, 8 days per page', async () => {
+    const calls: string[] = [];
+    const base = createStubFetch();
+    const fetchFn: typeof base = (input, init) => {
+      calls.push(`${init?.method ?? 'GET'} ${new URL(input).host}`);
+      return base(input, init);
+    };
+    const connector = createBizzyConnector({ fetch: fetchFn });
+    const today = toLocalDateTime(new Date()).date;
+    // 7 consecutive days = GET + 1 view switch per one-day venue, a single GET at Jehnice
+    for (let i = 1; i <= 7; i++) {
+      for (const id of ['badminton-jehnice', 'badminton-lisen', 'x-arena-slatina']) {
+        const slots = await connector.getFreeSlots(venue(id), addDays(today, i));
+        assert.ok(slots.length > 0, `${id} +${i}`);
+      }
+    }
+    assert.deepEqual(calls, [
+      'GET badminton-jehnice.e-rezervace.cz',
+      'GET badmintonlisen.e-rezervace.cz',
+      'POST badmintonlisen.e-rezervace.cz',
+      'GET xarena.e-rezervace.cz',
+      'POST xarena.e-rezervace.cz',
+    ]);
+
+    const raw = createStubFetch();
+    const url = 'http://badmintonlisen.e-rezervace.cz/Branch/pages/Schedule.faces';
+    const get = await raw(url);
+    assert.equal(get.status, 200);
+    assert.equal(get.headers.getSetCookie()[0]?.split(';')[0], 'JSESSIONID=stub');
+    const post = (body: Record<string, string>, cookie?: string): Promise<Response> =>
+      raw(url, {
+        method: 'POST',
+        headers: cookie ? { cookie } : {},
+        body: new URLSearchParams(body).toString(),
+      });
+    const ajax = { AJAXREQUEST: 'scheduleNavigForm:schedule-navig-region' };
+    assert.equal((await post(ajax, 'JSESSIONID=stub')).status, 200);
+    await assert.rejects(post(ajax), /session cookie/);
+    await assert.rejects(post({ AJAXREQUEST: '_viewRoot' }, 'JSESSIONID=stub'), /AJAXREQUEST/);
+    await assert.rejects(raw('http://badmintonlisen.e-rezervace.cz/other'), /unreachable/);
+  });
+
   it('keeps every other memberzone.cz page and host failing', async () => {
     const fetchFn = createStubFetch();
     await assert.rejects(fetchFn('https://memberzone.cz/other/'), /unreachable/);
@@ -145,7 +227,9 @@ describe('stub mode', () => {
       assert.equal(status.get('centrum-viktoria'), 'unavailable');
       assert.equal(status.get('hala-sprint'), 'live');
       assert.equal(status.get('sportcentrum-ivanovice'), 'live');
-      assert.equal(status.get('badminton-jehnice'), 'unknown');
+      assert.equal(status.get('badminton-jehnice'), 'live');
+      assert.equal(status.get('badminton-lisen'), 'live');
+      assert.equal(status.get('x-arena-slatina'), 'live');
     }
   });
 

@@ -8,9 +8,11 @@
     "start": "node --disable-warning=ExperimentalWarning src/server.ts",
     "start:e2e": "SPOTRADAR_STUB_EXTERNAL=1 node --disable-warning=ExperimentalWarning src/server.ts",
     "test": "node --disable-warning=ExperimentalWarning --test \"src/**/*.test.ts\"",
+    "test:only": "node --disable-warning=ExperimentalWarning --test",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint .",
-    "fetch:clubspire": "node --disable-warning=ExperimentalWarning scripts/fetch-clubspire.ts"
+    "fetch:clubspire": "node --disable-warning=ExperimentalWarning scripts/fetch-clubspire.ts",
+    "measure:calendar": "node --disable-warning=ExperimentalWarning scripts/measure-calendar.ts"
   },
   "dependencies": {
     "cheerio": "^1.2.0"

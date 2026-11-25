@@ -25,7 +25,8 @@ The view and filters are kept in the URL, so links are shareable. Free courts ar
 booking pages** (where a connector exists) via `GET /api/calendar`.
 **SpotRadar never books anything itself** – booking always happens on the venue's website.
 
-Availability is read live (cached for 15 minutes per venue and date) and may be a few minutes old.
+Availability is read live (cached for 15 minutes per venue and date, pre-loaded in the background) and may be a few
+minutes old – the panel always shows when it was checked.
 
 ### Data sources and connector status
 
@@ -33,21 +34,36 @@ Venues are a static data file in the backend (`backend/src/data/venues.ts`). Eac
 (`availabilitySource`) and a backend-only connector configuration. Connectors implement a pluggable
 `AvailabilityConnector` interface, so new booking systems can be added without touching the search logic.
 
-| Venue                  | District          | Courts | Booking system | Connector status                                         |
-| ---------------------- | ----------------- | ------ | -------------- | -------------------------------------------------------- |
-| Sportcentrum Kuklenská | Brno-Židenice     | 4      | ClubSpire      | ✅ live                                                  |
-| Centrum Viktoria       | Brno-Komárov      | 3      | ClubSpire      | ✅ live                                                  |
-| Hala Sprint            | Brno-Královo Pole | 6      | MemberZone     | ✅ live                                                  |
-| Sportcentrum Ivanovice | Brno-Ivanovice    | 3      | MemberPro      | ✅ live                                                  |
-| Badminton Jehnice      | Brno-Jehnice      | 5      | Bizzy          | ⏳ fixtures recorded, connector to do – status `unknown` |
-| Badminton Líšeň        | Brno-Líšeň        | 6      | Bizzy          | ⏳ fixtures recorded, connector to do – status `unknown` |
-| X-Arena Slatina        | Brno-Slatina      | 6      | Bizzy          | ⏳ fixtures recorded, connector to do – status `unknown` |
+| Venue                  | District          | Courts | Booking system | Connector status                                           |
+| ---------------------- | ----------------- | ------ | -------------- | ---------------------------------------------------------- |
+| Sportcentrum Kuklenská | Brno-Židenice     | 4      | ClubSpire      | ✅ live                                                    |
+| Centrum Viktoria       | Brno-Komárov      | 3      | ClubSpire      | ✅ live                                                    |
+| Hala Sprint            | Brno-Královo Pole | 6      | MemberZone     | ✅ live                                                    |
+| Sportcentrum Ivanovice | Brno-Ivanovice    | 3      | MemberPro      | ✅ live                                                    |
+| Badminton Jehnice      | Brno-Jehnice      | 5      | Bizzy          | ✅ live (`unavailable` while the host refuses our servers) |
+| Badminton Líšeň        | Brno-Líšeň        | 6      | Bizzy          | ✅ live (`unavailable` while the host refuses our servers) |
+| X-Arena Slatina        | Brno-Slatina      | 6      | Bizzy          | ✅ live, bookings ≥ 2 h ahead only                         |
 
 Availability status per venue: `live` (read from the booking page), `unavailable` (a connector exists but reading failed –
 the search still succeeds), `unknown` (no connector yet). Opening hours marked `approximate` are estimates. Venues without
-live data are listed under **"check on website"** in the slot panel – a free court is never guessed. Why the Bizzy
-venues are blocked, how the MemberZone/MemberPro connectors work and the next steps are in
+live data are listed under **"check on website"** in the slot panel – a free court is never guessed. How the connectors
+work (including the Bizzy protocol and why its server may refuse data-centre IPs) is in
 [`docs/live-data-connectors.md`](docs/live-data-connectors.md).
+
+**Bizzy connector** (Jehnice, Líšeň, X-Arena; `*.e-rezervace.cz`, a RichFaces/JSF page): one GET, then an A4J postback
+that switches to the 8-day view (`horizontal_service_dayandweek`) – one read covers 8 days; a date-change postback moves
+the window. The parser reads the `scheduleData` JSON (grids, bookings as inclusive `[col, row]` rectangles, past cells)
+and the `table#schedule_<gridId>` headers (date, time columns, courts). The Bizzy server often refuses connections from
+data-centre IPs: that maps to `unavailable` with one warning per host per hour, and the host is backed off.
+
+**Fast calendar loading:** the backend warms its cache in the background (right after startup, then every 10 min: today
+
+- 6 days for every venue, one request at a time per host, skipping hosts that fail). Entries older than 15 min but younger
+  than 60 min are answered immediately with their real "checked x min ago" time and refreshed in the background
+  (stale-while-revalidate). After a connection failure (refused, timeout, DNS) a host is backed off for 5 → 60 min, so
+  requests answer `unavailable` immediately instead of waiting for timeouts. The frontend loads the focused day first
+  (skeleton for the rest of the week) and prefetches the next week. Measure against the live sites with
+  `npm run measure:calendar -w @spotradar/backend`.
 
 **MemberZone / MemberPro connectors** (Hala Sprint, Ivanovice): ASP.NET WebForms pages read with plain HTTP. A GET, then a
 form postback with the page's hidden fields and session cookie switches the date. MemberZone returns a whole week of free

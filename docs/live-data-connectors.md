@@ -1,18 +1,18 @@
 # Live availability for all Brno badminton venues – connector plan
 
-Status (2026-11-25): **4 of 7 venues are live** – two on **ClubSpire**, Hala Sprint on
-**MemberZone** and Sportcentrum Ivanovice on **MemberPro**. The three **Bizzy** venues are still
-`unknown` ("check on website"): their server blocks data-centre IPs, but real pages and the
-date-switch protocol are now recorded (see below), so the connector can be built. Every connector implements `AvailabilityConnector`
+Status (2026-11-25): **all 7 venues have a connector** – two on **ClubSpire**, Hala Sprint on
+**MemberZone**, Sportcentrum Ivanovice on **MemberPro** and the three **Bizzy** venues
+(`backend/src/connectors/bizzy/`, built from the recordings below). The Bizzy server often refuses
+data-centre IPs; then those venues are `unavailable` ("check on website"). Every connector implements `AvailabilityConnector`
 (`backend/src/connectors/types.ts`) and is registered in `createDefaultConnectors`; a venue goes
 from `unknown` to `live` once its `source.type` has a registered connector.
 
-| Venues                                              | System                     | Public schedule page                                           | Status                                          |
-| --------------------------------------------------- | -------------------------- | -------------------------------------------------------------- | ----------------------------------------------- |
-| Kuklenská, Centrum Viktoria                         | ClubSpire                  | `timeline/day` (server-rendered HTML)                          | ✅ live                                         |
-| Hala Sprint                                         | MemberZone                 | `memberzone.cz/sprint_tenis/Sportoviste.aspx?ID_Sportoviste=3` | ✅ live                                         |
-| Sportcentrum Ivanovice                              | MemberPro (memberzone.cz)  | `memberzone.cz/ivanovice/`                                     | ✅ live                                         |
-| Badminton Jehnice, Badminton Líšeň, X-Arena Slatina | Bizzy (`*.e-rezervace.cz`) | `/Branch/pages/Schedule.faces` (JSF page)                      | ⏳ recorded, connector to do (blocks cloud IPs) |
+| Venues                                              | System                     | Public schedule page                                           | Status                                         |
+| --------------------------------------------------- | -------------------------- | -------------------------------------------------------------- | ---------------------------------------------- |
+| Kuklenská, Centrum Viktoria                         | ClubSpire                  | `timeline/day` (server-rendered HTML)                          | ✅ live                                        |
+| Hala Sprint                                         | MemberZone                 | `memberzone.cz/sprint_tenis/Sportoviste.aspx?ID_Sportoviste=3` | ✅ live                                        |
+| Sportcentrum Ivanovice                              | MemberPro (memberzone.cz)  | `memberzone.cz/ivanovice/`                                     | ✅ live                                        |
+| Badminton Jehnice, Badminton Líšeň, X-Arena Slatina | Bizzy (`*.e-rezervace.cz`) | `/Branch/pages/Schedule.faces` (JSF page)                      | ✅ live (may refuse cloud IPs → `unavailable`) |
 
 ## MemberZone (Hala Sprint) – how it works
 
@@ -106,11 +106,30 @@ venue; a date change on that view moves the 8-day window.
 ### Production reachability
 
 Render's servers are data-centre IPs too, so the connector will most likely get
-`ECONNREFUSED` in production as well. The connector must treat that like any other failure
-(`unavailable` → "check on website"), and the backend should log one clear warning instead of
-one per request. Making it work in production needs the operator's cooperation (ask Bizzy /
-the venues to allow it or provide a feed). Routing around the block through residential proxies
-is not an option.
+`ECONNREFUSED` in production as well. (On 2026-11-25 evening a later CI runner did reach the
+server, so the block is not constant.) The connector treats that like any other failure
+(`unavailable` → "check on website"); `AvailabilityService` logs **one warning per host per hour**
+(with the number of suppressed failures) and backs the host off for 5 → 60 min after a
+connection-level failure (refused, reset, DNS, timeout), so neither user requests nor the cache
+warmer keep hammering it. Making it work reliably in production needs the operator's cooperation
+(ask Bizzy / the venues to allow it or provide a feed). Routing around the block through
+residential proxies is not an option.
+
+### Implementation notes (verified on all 12 fixtures)
+
+- `[col, row]` = `[time column, court]`, both ends inclusive, an event is a rectangle (e.g. Líšeň
+  Saturday `[24,0]–[27,5]` books all 6 courts 20:00–22:00). Cell ids `sched_<grid>_i_<row>_<col>`
+  confirm the orientation.
+- Column length differs per venue: Líšeň uses **30-minute** columns, Jehnice and X-Arena hourly;
+  the step comes from the header labels.
+- `pastTimeData[grid][row]` is the index of the last already-started column (-1 = none); those
+  cells are never free.
+- Headers have no year (`So 28/11`); it is inferred from `schedule_calendarInputDate` (or the
+  requested date), handling Dec → Jan, and the Czech weekday must match.
+- X-Arena's 2-hour lead time is configured as `minLeadMinutes: 120` on its source and applied at
+  read time (not when caching).
+- Stub mode (E2E) serves the recorded pages with dates rewritten; every stubbed day is a copy of
+  the recorded Thursday 26.11 grid.
 
 ## Recipe per system (same for every connector)
 
