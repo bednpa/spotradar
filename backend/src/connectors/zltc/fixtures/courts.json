@@ -1,0 +1,196 @@
+{
+  "documents": [
+    {
+      "name": "projects/zltc-prod-c9e6c/databases/(default)/documents/courts/4ZRmE9G2rc3RAGKqqKFr",
+      "fields": {
+        "is_summer": {
+          "booleanValue": true
+        },
+        "name": {
+          "stringValue": "Antuka 8"
+        },
+        "is_winter": {
+          "booleanValue": false
+        }
+      },
+      "createTime": "2023-09-21T17:30:45.299181Z",
+      "updateTime": "2023-09-21T17:32:08.620429Z"
+    },
+    {
+      "name": "projects/zltc-prod-c9e6c/databases/(default)/documents/courts/6SmpbDB693u3iRugbkJM",
+      "fields": {
+        "name": {
+          "stringValue": "Antuka 2"
+        },
+        "is_summer": {
+          "booleanValue": true
+        },
+        "is_winter": {
+          "booleanValue": false
+        }
+      },
+      "createTime": "2023-09-21T17:20:11.307926Z",
+      "updateTime": "2024-04-28T19:09:29.764430Z"
+    },
+    {
+      "name": "projects/zltc-prod-c9e6c/databases/(default)/documents/courts/LTbMO2z1rhhPNXKoQEeW",
+      "fields": {
+        "is_winter": {
+          "booleanValue": false
+        },
+        "is_summer": {
+          "booleanValue": true
+        },
+        "name": {
+          "stringValue": "Antuka 1"
+        }
+      },
+      "createTime": "2023-09-21T17:20:01.313669Z",
+      "updateTime": "2025-03-31T08:28:50.297607Z"
+    },
+    {
+      "name": "projects/zltc-prod-c9e6c/databases/(default)/documents/courts/LhECQCh4k4Ku3pF3JqzM",
+      "fields": {
+        "is_summer": {
+          "booleanValue": true
+        },
+        "name": {
+          "stringValue": "Antuka 4"
+        },
+        "is_winter": {
+          "booleanValue": false
+        }
+      },
+      "createTime": "2023-09-21T17:30:19.951040Z",
+      "updateTime": "2023-09-21T17:32:04.744960Z"
+    },
+    {
+      "name": "projects/zltc-prod-c9e6c/databases/(default)/documents/courts/RY2AQFZzGv2Dp6M0nV4N",
+      "fields": {
+        "is_summer": {
+          "booleanValue": true
+        },
+        "name": {
+          "stringValue": "Antuka 5"
+        },
+        "is_winter": {
+          "booleanValue": false
+        }
+      },
+      "createTime": "2023-09-21T17:30:27.733268Z",
+      "updateTime": "2023-09-21T17:32:06.316426Z"
+    },
+    {
+      "name": "projects/zltc-prod-c9e6c/databases/(default)/documents/courts/YMvDvbTjmmDnkVgRZkFQ",
+      "fields": {
+        "name": {
+          "stringValue": "Nafukovací hala 1"
+        },
+        "is_summer": {
+          "booleanValue": false
+        },
+        "is_winter": {
+          "booleanValue": true
+        }
+      },
+      "createTime": "2023-09-21T18:33:33.264497Z",
+      "updateTime": "2023-09-21T21:15:59.896083Z"
+    },
+    {
+      "name": "projects/zltc-prod-c9e6c/databases/(default)/documents/courts/ZHRQ4fzQXvt8c78jQANw",
+      "fields": {
+        "name": {
+          "stringValue": "Nafukovací hala 2"
+        },
+        "is_summer": {
+          "booleanValue": false
+        },
+        "is_winter": {
+          "booleanValue": true
+        }
+      },
+      "createTime": "2023-09-21T18:33:47.139685Z",
+      "updateTime": "2023-09-21T21:15:37.402451Z"
+    },
+    {
+      "name": "projects/zltc-prod-c9e6c/databases/(default)/documents/courts/anHPXKnU6VAyIkBJQFRh",
+      "fields": {
+        "name": {
+          "stringValue": "Pevná hala"
+        },
+        "is_summer": {
+          "booleanValue": false
+        },
+        "is_winter": {
+          "booleanValue": true
+        }
+      },
+      "createTime": "2023-09-21T18:33:18.638378Z",
+      "updateTime": "2023-09-21T21:15:31.382431Z"
+    },
+    {
+      "name": "projects/zltc-prod-c9e6c/databases/(default)/documents/courts/mJZ28G5RdOKqcDSG1DHx",
+      "fields": {
+        "is_winter": {
+          "booleanValue": false
+        },
+        "is_summer": {
+          "booleanValue": true
+        },
+        "name": {
+          "stringValue": "Antuka 3"
+        }
+      },
+      "createTime": "2023-09-21T17:20:20.870566Z",
+      "updateTime": "2023-09-21T17:25:29.035436Z"
+    },
+    {
+      "name": "projects/zltc-prod-c9e6c/databases/(default)/documents/courts/tk3rHFM68ooYtgtUmgS6",
+      "fields": {
+        "name": {
+          "stringValue": "Antuka 10"
+        },
+        "is_winter": {
+          "booleanValue": false
+        },
+        "is_summer": {
+          "booleanValue": true
+        }
+      },
+      "createTime": "2023-09-21T17:31:40.839885Z",
+      "updateTime": "2024-01-16T23:02:47.174484Z"
+    },
+    {
+      "name": "projects/zltc-prod-c9e6c/databases/(default)/documents/courts/xlmW6cDVMEdaSuZ1JnUn",
+      "fields": {
+        "name": {
+          "stringValue": "Antuka 6"
+        },
+        "is_winter": {
+          "booleanValue": false
+        },
+        "is_summer": {
+          "booleanValue": true
+        }
+      },
+      "createTime": "2023-09-21T17:30:35.808473Z",
+      "updateTime": "2023-09-21T17:32:07.023791Z"
+    },
+    {
+      "name": "projects/zltc-prod-c9e6c/databases/(default)/documents/courts/yCBlkU9tOyMtICFEyt1X",
+      "fields": {
+        "name": {
+          "stringValue": "Antuka 9"
+        },
+        "is_winter": {
+          "booleanValue": false
+        },
+        "is_summer": {
+          "booleanValue": true
+        }
+      },
+      "createTime": "2023-09-21T17:31:33.679288Z",
+      "updateTime": "2023-09-21T17:32:04.065786Z"
+    }
+  ]
+}

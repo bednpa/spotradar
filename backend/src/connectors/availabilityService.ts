@@ -1,12 +1,19 @@
 import type { AvailabilitySourceConfig, FreeSlot, VenueAvailability } from '@spotradar/shared';
 import type { Logger } from '../logger.ts';
 import type { AvailabilityTarget } from './types.ts';
+import { FIRESTORE_API_ORIGIN, PADELOS_API_ORIGIN, REZZY_API_ORIGIN } from './apiOrigins.ts';
 import { createBizzyConnector } from './bizzy/connector.ts';
 import { createClubspireConnector } from './clubspire/connector.ts';
 import { createHostLimiter } from './hostLimiter.ts';
 import { createMemberproConnector } from './memberpro/connector.ts';
 import { createMemberzoneConnector } from './memberzone/connector.ts';
 import { createStarezConnector } from './starez/connector.ts';
+import { createReenioConnector } from './reenio/connector.ts';
+import { createIsportsystemConnector } from './isportsystem/connector.ts';
+import { createPadelosConnector } from './padelos/connector.ts';
+import { createRezzyConnector } from './rezzy/connector.ts';
+import { createKomarovConnector } from './komarov/connector.ts';
+import { createZltcConnector } from './zltc/connector.ts';
 import { UpstreamTimeoutError } from './timeout.ts';
 import type { AvailabilityConnector, FetchFn } from './types.ts';
 
@@ -77,7 +84,21 @@ export function sourceHost(source: AvailabilitySourceConfig): string | undefined
     case 'memberzone':
     case 'memberpro':
     case 'starez':
+    case 'komarov':
       raw = source.url;
+      break;
+    case 'reenio':
+    case 'isportsystem':
+      raw = source.baseUrl;
+      break;
+    case 'padelos':
+      raw = PADELOS_API_ORIGIN;
+      break;
+    case 'rezzy':
+      raw = REZZY_API_ORIGIN;
+      break;
+    case 'zltc':
+      raw = FIRESTORE_API_ORIGIN;
       break;
     default:
       return undefined;
@@ -140,6 +161,12 @@ export function createDefaultConnectors(
     createMemberproConnector({ fetch: options.fetch, limiter }),
     createBizzyConnector({ fetch: options.fetch, limiter }),
     createStarezConnector({ fetch: options.fetch, limiter }),
+    createReenioConnector({ fetch: options.fetch, limiter }),
+    createIsportsystemConnector({ fetch: options.fetch, limiter }),
+    createPadelosConnector({ fetch: options.fetch, limiter }),
+    createRezzyConnector({ fetch: options.fetch, limiter }),
+    createKomarovConnector({ fetch: options.fetch, limiter }),
+    createZltcConnector({ fetch: options.fetch, limiter }),
   ];
 }
 

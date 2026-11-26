@@ -2,6 +2,17 @@ import { readFileSync } from 'node:fs';
 import type { GeocodeResponse } from '@spotradar/shared';
 import { addDays, isValidDate, toLocalDateTime } from '@spotradar/shared';
 import { bizzyPageStartingAt } from './connectors/bizzy/stubPages.ts';
+import { serveIsportsystemStub } from './connectors/isportsystem/stub.ts';
+import { serveReenioStub } from './connectors/reenio/stub.ts';
+import { servePadelosStub } from './connectors/padelos/stub.ts';
+import { serveRezzyStub } from './connectors/rezzy/stub.ts';
+import { serveKomarovStub } from './connectors/komarov/stub.ts';
+import { serveZltcStub } from './connectors/zltc/stub.ts';
+import {
+  FIRESTORE_API_ORIGIN,
+  PADELOS_API_ORIGIN,
+  REZZY_API_ORIGIN,
+} from './connectors/apiOrigins.ts';
 import { HttpError } from './errors.ts';
 import type { Suggester } from './services/suggest.ts';
 import type { FetchFn } from './connectors/types.ts';
@@ -52,6 +63,21 @@ const FITNESS_BOBY_HOST = 'rezervace.fitnessboby.cz:28080';
 const STAREZ_BEACH_HOST = 'beach.starez.cz';
 const STAREZ_BEACH_FIXTURE = 'starez/fixtures/beach-2026-11-25-today.html';
 const STAREZ_BEACH_DATE = '2026-11-25';
+
+/**
+ * Hosts whose connector module ships its own stub (recorded answer rewritten to the requested
+ * date, see each `connectors/<system>/stub.ts`).
+ */
+const HOST_STUBS: Record<string, (url: URL, init: RequestInit | undefined) => Response> = {
+  'tjteslabrno.reenio.cz': serveReenioStub,
+  'squashslovan.isportsystem.cz': serveIsportsystemStub,
+  [new URL(PADELOS_API_ORIGIN).host]: (url, init) => servePadelosStub(url, init),
+  [new URL(REZZY_API_ORIGIN).host]: (url) => serveRezzyStub(url),
+  'www.tenis-komarov.cz': (url, init) =>
+    serveKomarovStub(url, init, toLocalDateTime(new Date()).date),
+  [new URL(FIRESTORE_API_ORIGIN).host]: (url, init) =>
+    serveZltcStub(url, init, toLocalDateTime(new Date()).date),
+};
 
 /**
  * ClubSpire timelines per host and tab. Viktoria's badminton tab (1) is deliberately missing,
@@ -247,7 +273,8 @@ function serveBizzy(url: URL, init: RequestInit | undefined): Response {
  * recorded pages with the dates rewritten to the requested date. Badminton Jehnice, Badminton
  * Líšeň and X-Arena (Bizzy) replay their recorded pages with every day set to the same recorded
  * weekday, so any date shows the same free hours (see `serveBizzy`). Beach Riviéra (STAREZ) shows
- * its recorded grid for any date. Every other host or tab fails.
+ * its recorded grid for any date. The hosts in `HOST_STUBS` (Reenio, iSportSystem, PadelOS,
+ * Rezzy, Komárov, ŽLTC) answer through their connector's `stub.ts`. Every other host or tab fails.
  */
 export function createStubFetch(): FetchFn {
   return (input, init) => {
@@ -263,6 +290,8 @@ export function createStubFetch(): FetchFn {
       if (url.host === STAREZ_BEACH_HOST) return Promise.resolve(serveStarez(url, init));
       if (Object.hasOwn(BIZZY_FIXTURE_PREFIX, url.host))
         return Promise.resolve(serveBizzy(url, init));
+      const serve = HOST_STUBS[url.host];
+      if (serve) return Promise.resolve(serve(url, init));
     } catch (err) {
       return Promise.reject(err instanceof Error ? err : new Error(String(err)));
     }

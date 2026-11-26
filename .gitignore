@@ -10,6 +10,8 @@ playwright-report/
 test-results/
 # Raw live pages downloaded by backend/scripts/fetch-clubspire.ts (sanitize before committing as fixtures)
 *.raw.html
+# Scratch recordings made while researching booking systems (never committed unsanitized)
+.research/
 
 # Personal Claude Code settings (not shared)
 .claude/settings.local.json

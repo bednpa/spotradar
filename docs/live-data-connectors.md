@@ -13,36 +13,44 @@ Researched for every sport; "free slots w/o login" was checked by fetching the s
 Values we could not confirm are stored as unknown (no `openingHours`, no `pricing`,
 `multisport: { category: 'unknown' }`), never guessed.
 
-| Venue                             | Sports in SpotRadar                                | Booking system                  | Public schedule                                                     | Free slots w/o login                  | In SpotRadar                  |
-| --------------------------------- | -------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------- | ------------------------------------- | ----------------------------- |
-| Centrum Viktoria                  | badminton, squash, padel, beach volleyball, tennis | ClubSpire                       | `rezervace.centrumviktoria.cz:18443/timeline/day?tabIdx=`           | yes (tabs 0 squash, 1, 2 beach, 3)    | live; tennis "check" ¹        |
-| Sportcentrum Kuklenská            | badminton                                          | ClubSpire                       | `kuklenska.clubspire.cz/timeline/day?tabIdx=0`                      | yes                                   | live                          |
-| Fitness Boby                      | squash                                             | ClubSpire                       | `rezervace.fitnessboby.cz:28080/timeline/day?tabIdx=4`              | yes                                   | live                          |
-| Hala Sprint                       | badminton, tennis (6 indoor)                       | MemberZone                      | `memberzone.cz/sprint_tenis/Sportoviste.aspx?ID_Sportoviste=3 / =1` | yes                                   | live                          |
-| Sportcentrum Ivanovice            | badminton, squash, table tennis                    | MemberPro                       | `memberzone.cz/ivanovice/` (BTN5 / BTN4 / BTN3)                     | yes                                   | live                          |
-| Badminton Jehnice, Líšeň, X-Arena | badminton                                          | Bizzy                           | `*.e-rezervace.cz/Branch/pages/Schedule.faces`                      | yes, but refuses data-centre IPs      | live / `unavailable`          |
-| Beach Riviéra (STAREZ)            | beach volleyball (6, heated hall in winter)        | STAREZ (own, `*.starez.cz`)     | `beach.starez.cz/vstupenky-rezervace`                               | yes (server-rendered)                 | live (**new connector**)      |
-| Padel Powers Slatina              | padel (10 indoor)                                  | PadelOS                         | `player.padelos.co/company/217?clubIds=216930`                      | unknown (JS app) ²                    | check on website              |
-| Padel Powers Kraví hora           | padel (4 outdoor)                                  | PadelOS                         | `player.padelos.co/company/217?clubIds=216928`                      | unknown (JS app) ²                    | check on website              |
-| Padel Club Brno                   | padel (4, closed in winter)                        | own                             | `padelclub.cz/rezervace`                                            | no (script + login)                   | check on website              |
-| Club Classic                      | tennis (10), beach volleyball (4), table tennis    | unknown                         | `rezervace.clubclassic.cz`                                          | refused (HTTP 403)                    | check on website              |
-| Kraví hora beach                  | beach volleyball (2, May–Oct)                      | own client zone                 | `zakaznik.kravihora-brno.cz/kzona`                                  | grid public, cells not verified       | check on website (closed now) |
-| Tenis Paradise                    | tennis                                             | JDEMENATO                       | `jdemenato.cz/reservation/tenis-paradise/…`                         | refused (HTTP 403)                    | check on website              |
-| ŽLTC Brno                         | tennis                                             | own (+ Auksys, login)           | `zltc.cz/reservations`                                              | unknown (JS)                          | check on website              |
-| Tenisový areál Komárov            | tennis                                             | own                             | `tenis-komarov.cz/rozvrh/0`                                         | probably (styling only, not verified) | check on website              |
-| Tenisová hala Kohoutovice         | tennis (4)                                         | Rezzy                           | `rezzy.eu/tennislinden/schedules`                                   | unknown (JS)                          | check on website              |
-| TK Tesla Brno                     | tennis (8 outdoor)                                 | own (MRBS)                      | `teslabrno.cz/rezervace/`                                           | yes, but shows player names ³         | check on website              |
-| Tenis Park Lužánky                | tennis (8 outdoor)                                 | phone / e-mail                  | –                                                                   | –                                     | check on website              |
-| TJ Start Brno                     | tennis                                             | own (login)                     | `tjstartbrno.cz/online-rezervace/`                                  | unknown                               | check on website              |
-| ZONE4YOU                          | squash (4)                                         | MemberZone (lessons)            | `memberzone.cz/zone4you/scheduler.aspx`                             | refused (HTTP 403)                    | check on website              |
-| Squash Slovan                     | squash                                             | phone / SMS (iSportSystem view) | `squashslovan.isportsystem.cz`                                      | refused (HTTP 403)                    | check on website              |
-| TJ Tesla – Sportovní hala Lesná   | volleyball (whole hall)                            | Reenio                          | `tjteslabrno.reenio.cz/…/sportovni-hala-r51584`                     | unknown (JS app)                      | check on website              |
+| Venue                             | Sports in SpotRadar                                | Booking system               | Public schedule                                                      | Free slots w/o login                                  | In SpotRadar                  |
+| --------------------------------- | -------------------------------------------------- | ---------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------- | ----------------------------- |
+| Centrum Viktoria                  | badminton, squash, padel, beach volleyball, tennis | ClubSpire                    | `rezervace.centrumviktoria.cz:18443/timeline/day?tabIdx=`            | yes (tabs 0 squash, 1, 2 beach, 3)                    | live; tennis "check" ¹        |
+| Sportcentrum Kuklenská            | badminton                                          | ClubSpire                    | `kuklenska.clubspire.cz/timeline/day?tabIdx=0`                       | yes                                                   | live                          |
+| Fitness Boby                      | squash                                             | ClubSpire                    | `rezervace.fitnessboby.cz:28080/timeline/day?tabIdx=4`               | yes                                                   | live                          |
+| Hala Sprint                       | badminton, tennis (6 indoor)                       | MemberZone                   | `memberzone.cz/sprint_tenis/Sportoviste.aspx?ID_Sportoviste=3 / =1`  | yes                                                   | live                          |
+| Sportcentrum Ivanovice            | badminton, squash, table tennis                    | MemberPro                    | `memberzone.cz/ivanovice/` (BTN5 / BTN4 / BTN3)                      | yes                                                   | live                          |
+| Badminton Jehnice, Líšeň, X-Arena | badminton                                          | Bizzy                        | `*.e-rezervace.cz/Branch/pages/Schedule.faces`                       | yes, but refuses data-centre IPs                      | live / `unavailable`          |
+| Beach Riviéra (STAREZ)            | beach volleyball (6, heated hall in winter)        | STAREZ (own, `*.starez.cz`)  | `beach.starez.cz/vstupenky-rezervace`                                | yes (server-rendered)                                 | live (**new connector**)      |
+|                                   | Padel Powers Slatina                               | padel (10 indoor)            | PadelOS                                                              | `api.padelos.co/customers/searchByDate` (club 216930) | yes (JSON, no login)          | live (**new**, 2026-11-26) |
+| Padel Powers Kraví hora           | padel (4 outdoor)                                  | PadelOS                      | `api.padelos.co/customers/searchByDate` (club 216928)                | yes (no slots offered in winter)                      | live (**new**)                |
+| Padel Club Brno                   | padel (4, closed in winter)                        | own                          | `padelclub.cz/rezervace`                                             | no (script + login)                                   | check on website              |
+| Club Classic                      | tennis (10), beach volleyball (4), table tennis    | unknown                      | `rezervace.clubclassic.cz`                                           | no: HTTP 403 "no index" page (nothing deployed) ⁴     | check on website              |
+| Kraví hora beach                  | beach volleyball (2, May–Oct)                      | own client zone (Wardeneta)  | `zakaznik.kravihora-brno.cz/kzona`                                   | no: API answers 401 `MISSING_TOKEN` ⁵                 | check on website (closed now) |
+| Tenis Paradise                    | tennis                                             | JDEMENATO                    | `jdemenato.cz/reservation/tenis-paradise/…`                          | refused (HTTP 403, Cloudflare challenge) ⁴            | check on website              |
+| ŽLTC Brno                         | tennis                                             | own (SvelteKit + Firestore)  | Firestore project `zltc-prod-c9e6c` (`courts`, `config`, `runQuery`) | yes (public read; names never fetched)                | live (**new**)                |
+| Tenisový areál Komárov            | tennis                                             | own                          | `tenis-komarov.cz/rozvrh/<week offset>/`                             | yes (server-rendered)                                 | live (**new**)                |
+| Tenisová hala Kohoutovice         | tennis (4)                                         | Rezzy                        | `rezzy.eu/api/…/CustomerSchedules/ReservationBlockers`               | yes (anonymous busy times)                            | live (**new**)                |
+| TK Tesla Brno                     | tennis (8 outdoor)                                 | own (MRBS)                   | `teslabrno.cz/rezervace/index.php?view=day&page_date=`               | yes, but shows player names ³                         | check on website              |
+| Tenis Park Lužánky                | tennis (8 outdoor)                                 | phone / e-mail               | –                                                                    | –                                                     | check on website              |
+| TJ Start Brno                     | tennis                                             | own (login)                  | `tjstartbrno.cz/online-rezervace/`                                   | unknown                                               | check on website              |
+| ZONE4YOU                          | squash (4)                                         | EMA (DevExpress scheduler)   | `memberzone.cz/zone4you/scheduler.aspx`                              | page loads now (200), but a different app ⁶           | check on website              |
+| Squash Slovan                     | squash (3)                                         | iSportSystem (phone booking) | `squashslovan.isportsystem.cz/ajax/ajax.schema.php`                  | yes (200 now) ⁴                                       | live (**new**)                |
+| TJ Tesla – Sportovní hala Lesná   | volleyball (whole hall)                            | Reenio                       | `tjteslabrno.reenio.cz/cs/api/Term/List` (resource 51584)            | yes (JSON, no login)                                  | live (**new**)                |
 
-¹ Viktoria's tennis court is a row of ClubSpire tab 3, but it is bookable in November with no
-price or sport id, so its cells are not trusted. ² The PadelOS player app loads its API
-(`api.padelos.co`) from a lazily loaded bundle we could not inspect in this run; recording the
-browser's network requests is the next step. ³ Readable, but not used: the grid publishes
-customers' names.
+¹ Viktoria's tennis court is a row of ClubSpire tab 3 ("Tenis", group "PADEL 1-3 + Venkovní
+kurty"). Re-checked on 2026-11-26 for 26.11.–1.12.: every cell is bookable, Friday and Saturday
+evenings included, with `sportId/null`, no lesson name and no price, while the padel rows carry a
+sport id and "200 Kč /15 min.". The website describes it as an outdoor court (outdoor changing
+rooms, lighting surcharge), so the cells are not trusted and tennis stays "check on website"; in
+season the prefix would be `Tenis`. ³ Readable, but not used: the grid publishes customers'
+names, has no "closed" state (every cell of the outdoor clay courts is `new` in November, after the
+season ended in October) and the season dates are not published, so a free cell would not mean an
+open court. ⁴ Re-checked 2026-11-26 with plain `User-Agent: SpotRadar/1.0` requests. ⁵ The public
+`/plazovy-volejbal/rozpis?from=` table on `kravihora-brno.cz` is readable, but its summer 2026
+beach weeks show only free cells (client-zone bookings do not appear), so it cannot be trusted;
+re-check in the 2027 season. ⁶ `Sportoviste.aspx` answers 404 there; squash is a DevExpress
+ASPxScheduler resource behind a ViewState postback, so the MemberZone connector does not fit.
 
 Not added (no usable data found): STAREZ Aréna Vodova and Hala Morenda (STAREZ system, but generic
 halls, not offered per sport), Club Classic badminton, X-Arena / Squash Slovan / Kohoutovice table
@@ -50,25 +58,25 @@ tennis (listed as "other activities"), TJ Start's volleyball court.
 
 ### Live vs "check on website" per sport (in the venue data)
 
-| Sport            | Venues | Live (connector)                                   | Check on website |
-| ---------------- | -----: | -------------------------------------------------- | ---------------: |
-| Badminton        |      7 | 7 (Bizzy ones `unavailable` when the host refuses) |                0 |
-| Tennis           |     10 | 1 (Hala Sprint)                                    |                9 |
-| Squash           |      5 | 3 (Viktoria, Fitness Boby, Ivanovice)              |                2 |
-| Padel            |      4 | 1 (Viktoria)                                       |                3 |
-| Table tennis     |      2 | 1 (Ivanovice)                                      |                1 |
-| Volleyball       |      1 | 0                                                  |                1 |
-| Beach volleyball |      4 | 2 (Beach Riviéra; Viktoria in season only)         |                2 |
+| Sport            | Venues | Live before (2026-11-25)              | Live now (2026-11-26)                  | Check on website now |
+| ---------------- | -----: | ------------------------------------- | -------------------------------------- | -------------------: |
+| Badminton        |      7 | 7 (Bizzy `unavailable` if refused)    | 7 (unchanged)                          |                    0 |
+| Tennis           |     10 | 1 (Hala Sprint)                       | 4 (+ Kohoutovice, Komárov, ŽLTC)       |                    6 |
+| Squash           |      5 | 3 (Viktoria, Fitness Boby, Ivanovice) | 4 (+ Squash Slovan)                    |                    1 |
+| Padel            |      4 | 1 (Viktoria)                          | 3 (+ Padel Powers Slatina, Kraví hora) |                    1 |
+| Table tennis     |      2 | 1 (Ivanovice)                         | 1                                      |                    1 |
+| Volleyball       |      1 | 0                                     | 1 (+ TJ Tesla Lesná)                   |                    0 |
+| Beach volleyball |      4 | 2 (Beach Riviéra; Viktoria in season) | 2                                      |                    2 |
 
 ### Why the connectors were chosen this way
 
 By booking system, not by venue: the existing ClubSpire, MemberZone and MemberPro connectors
-cover 6 new offerings with configuration only (a ClubSpire tab + court-name filter, a MemberZone
-`ID_Sportoviste`, a MemberPro sport button). No other system covers more than one readable venue:
-PadelOS covers 2 venues but is not inspectable yet, JDEMENATO / iSportSystem / Club Classic refuse
-our requests, Reenio and Rezzy are JS apps with unknown APIs. STAREZ was the only new system that is
-server-rendered and readable without login; it is Brno's municipal operator, so its other venues
-can be added by data alone if they ever list sport courts.
+cover 6 offerings with configuration only. On 2026-11-26 the JS apps were inspected by reading
+their bundles: PadelOS, Reenio and Rezzy all have anonymous JSON endpoints, so each got a generic
+connector whose source holds only ids (Prague venues on the same systems need data only).
+iSportSystem answered 200 this time. Komárov and ŽLTC run their own systems, so their connectors
+are venue-specific (`bookingSystem: 'own'`). STAREZ is Brno's municipal operator, so its other
+venues can be added by data alone if they ever list sport courts. |
 
 ## Badminton status (unchanged)
 
@@ -271,13 +279,77 @@ STAREZ-SPORT is Brno's municipal sports company; its venues run one reservation 
 - STAREZ Aréna Vodova and Hala Morenda use the same system but list generic halls/gyms
   ("tělocvična", "celý sál"), not sport courts, so they are not in the data.
 
+## PadelOS, Reenio, Rezzy, iSportSystem (recorded 2026-11-26)
+
+All four were found by reading the apps' JS bundles and reproduced with plain `curl -A
+'SpotRadar/1.0'` (no cookies, tokens or logins). Each connector lives in
+`backend/src/connectors/<system>/` with `parser.ts`, `connector.ts`, `stub.ts` (E2E) and tests;
+the PadelOS fixtures are produced by `backend/scripts/sanitize-padelos-fixtures.ts`.
+
+- **PadelOS** (Padel Powers): `POST https://api.padelos.co/customers/searchByDate`, header
+  `x-clubos-club: <clubId>` (HTTP 400 without it), JSON body `{"date":"YYYY-MM-DD","sport":"padel",…}`.
+  `data[0].availability[]` holds one group per duration (60/90/120) with `slots[]`
+  `{date, startTime, endTime, courts[]}`; only bookable offers are listed (no booked cells, no
+  personal data), times are club-local. The server hides offers that would leave gaps < 60 min,
+  so the parser unions all duration groups per court before counting courts per 30 minutes. Past
+  start times of today are already omitted. The club id in the answer and every slot date are
+  checked. Kraví hora (outdoor) offers nothing in winter → live, empty. Booking horizon: Slatina
+  4 days, Kraví hora 15. Fixtures keep only `id`, `name`, timezone, policies and `availability`
+  (the large `company` block with terms and contacts is dropped).
+- **Reenio** (TJ Tesla hall): `POST {baseUrl}/api/Term/List` as **multipart** form data with
+  `date` and `filter.pseudoTerm.resourceIds[0]` (a JSON body is answered but the filter ignored, so
+  the parser checks every event's resource id). `data.events[]` are the bookable windows (UTC ISO
+  times, converted to Prague time), each with `reservationIntervalSize` (grid), `def.minLength`,
+  `reservations[]` and `collisions` (bookings of other resources of the same service, e.g. a
+  badminton court blocks the whole hall); free = window − reservations − collisions, on the grid,
+  ≥ `minLength`, and not sooner than `reservationDueDate` (2 h) from now. No personal data.
+- **Rezzy** (Kohoutovice): `GET https://www.rezzy.eu/api/sportarea/v1/Tenants/{tenantId}/SportAreas/{sportAreaId}?date=`
+  gives the courts in display order, the season hours per weekday, the 30-minute grid and the
+  60-minute minimum (cached 1 h); `GET …/reservation/v1/Tenants/{t}/SportAreas/{a}/CustomerSchedules/ReservationBlockers?date=`
+  gives anonymous busy blocks `{playfieldIdFrom, playfieldIdTo, from, to}` (an inclusive span in
+  display order). Free = hours − blocks per court, runs ≥ 60 min, started cells of today dropped.
+  The endpoints listing individual reservations answer 401 and are not used.
+- **iSportSystem** (Squash Slovan): `POST {baseUrl}/ajax/ajax.schema.php` with
+  `id_sport=1&day=&month=&year=&event=pageLoad&timetableWidth=970` returns ~4 days, one
+  `div.schemaFullContainer` per day ("Čtvrtek 26.11.", year inferred, weekday checked), 30-minute
+  cells with a `title` "15:00–15:30 - Obsazeno". Free = `tdNoBooking` ("Rezervace pouze
+  telefonicky": not taken, booked by phone, which is how the club takes bookings) or `empty`;
+  `booked`, `old` and "Technická přestávka" are not free. The answer is kept 60 s for its other
+  days. Weekends list only the booked hours (the club opens on demand).
+
+## Komárov and ŽLTC (own systems, recorded 2026-11-26)
+
+- **Tenisový areál Komárov**: `GET https://www.tenis-komarov.cz/rozvrh/<N>/` (trailing slash,
+  otherwise 301) shows the Monday–Sunday week `N` weeks from now (negative N = this week, so no
+  history). `section#rezervacni-system table.timetable`: one block per day
+  (`th.timetable-day` "Čt<br>26.11.2026", rowspan = courts), one row per court, hourly columns
+  07:00–22:00 with four 15-minute `<div>`s each. `free` / `discount` = free, `mass` / `single` =
+  booked, `closed` = closed. A court counts as free for a half hour when both quarters are free.
+  Past cells keep their colour, so started half hours of today are dropped. One request per week
+  (cached 2 min). No personal data; fixtures are trimmed by `backend/scripts/sanitize-komarov-fixtures.ts`.
+- **ŽLTC Brno**: the club's SvelteKit app reads Firebase project `zltc-prod-c9e6c` through the
+  public Firestore REST API (`firestore.googleapis.com`, no login or key). `documents/courts`
+  (winter: Pevná hala, Nafukovací hala 1 + 2; summer: clay courts) and `documents/config/reservations`
+  (48 half-hour segments per day, open/close segment, `is_summer`, `reservations_enabled`,
+  `last_allowed_reservation_date`) are cached 1 h; bookings come from `documents:runQuery` with
+  `dates ARRAY_CONTAINS <Prague midnight as UTC timestamp>`. The booking documents also hold
+  customers' names and user ids, so the query **always** has a field projection (`select` of
+  `dates` and `reservations` only): names are never downloaded, logged or stored (a test checks the
+  request body; the E2E stub rejects a query without the projection). Free = season courts × open
+  segments − booked segments. Caveat: the config has one closing segment (21:00) for every day,
+  while the website says weekends close at 20:00, so a weekend 20:00–21:00 may show as free.
+  Fixtures are produced by `backend/scripts/sanitize-zltc-fixtures.ts`, which fails unless each
+  document has only `dates` and `court_id` / `segment_idxs`.
+
 ## Next steps (not done in this change)
 
-- **PadelOS** (Padel Powers Slatina + Kraví hora, 14 courts): record the player app's network
-  requests in a browser (company 217, clubs 216930 / 216928) and check whether free slots are
-  readable without login; then it is the best next connector.
+- ZONE4YOU (EMA / DevExpress scheduler), TK Tesla (once a season or closed state is published)
+  and Kraví hora beach (re-check the public `rozpis` table in the 2027 season) are the remaining
+  readable candidates; JDEMENATO (Cloudflare challenge), Club Classic (no page), Padel Club Brno
+  and TJ Start (login) are blocked.
 - MultiSport terms "1 card = 1/4 of the price" (Club Classic, Tenis Paradise, Padel Club Brno) do
   not fit the current categories and are stored as `unknown` with a note; a `quarter-per-card`
   category would let the price calculation use them.
 - Prague: add venue records with the existing source types (ClubSpire, MemberZone/MemberPro, Bizzy,
-  STAREZ-like systems); no connector code is Brno-specific.
+  STAREZ-like systems, PadelOS, Reenio, Rezzy, iSportSystem); no connector code is Brno-specific
+  (only the Komárov and ŽLTC connectors are venue-specific).

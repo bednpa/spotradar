@@ -44,6 +44,17 @@ Venues are a static data file in the backend (`backend/src/data/venues.ts`). Eac
 | Badminton Líšeň        | Brno-Líšeň        | 6      | Bizzy          | ✅ live (`unavailable` while the host refuses our servers) |
 | X-Arena Slatina        | Brno-Slatina      | 6      | Bizzy          | ✅ live, bookings ≥ 2 h ahead only                         |
 
+Other sports (per sport: live / all venues; details and blockers in the docs):
+
+| Sport            | Live / venues | Live through                                                                                                                   | Still "check on website" (why)                                                                                                                     |
+| ---------------- | ------------: | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tennis           |        4 / 10 | Hala Sprint (MemberZone), Tenisová hala Kohoutovice (Rezzy), Tenisový areál Komárov (own timetable), ŽLTC (own app, Firestore) | Viktoria (outdoor row free all winter), Club Classic (no page), Tenis Paradise (Cloudflare challenge), TK Tesla, Lužánky (phone), TJ Start (login) |
+| Squash           |         4 / 5 | Viktoria, Fitness Boby (ClubSpire), Ivanovice (MemberPro), Squash Slovan (iSportSystem)                                        | ZONE4YOU (different scheduler app)                                                                                                                 |
+| Padel            |         3 / 4 | Viktoria (ClubSpire), Padel Powers Slatina + Kraví hora (PadelOS)                                                              | Padel Club Brno (login)                                                                                                                            |
+| Table tennis     |         1 / 2 | Ivanovice (MemberPro)                                                                                                          | Club Classic (no page)                                                                                                                             |
+| Volleyball       |         1 / 1 | TJ Tesla – Sportovní hala Lesná (Reenio)                                                                                       | –                                                                                                                                                  |
+| Beach volleyball |         2 / 4 | Beach Riviéra (STAREZ), Viktoria in season (ClubSpire)                                                                         | Club Classic (no page), Kraví hora (client zone needs login)                                                                                       |
+
 Availability status per venue: `live` (read from the booking page), `unavailable` (a connector exists but reading failed –
 the search still succeeds), `unknown` (no connector yet). Venues without
 live data are listed under **"check on website"** in the slot panel – a free court is never guessed. How the connectors

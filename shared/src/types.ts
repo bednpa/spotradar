@@ -127,6 +127,51 @@ export type AvailabilitySourceConfig =
       /** Title of the facility group to read, e.g. "Beachvolejbal" (one page lists several). */
       facility: string;
     }
+  | {
+      type: 'padelos';
+      /**
+       * PadelOS club id (Padel Powers Brno Slatina: "216930", Kraví hora: "216928"), sent as the
+       * `x-clubos-club` header of `POST https://api.padelos.co/customers/searchByDate`.
+       */
+      clubId: string;
+    }
+  | {
+      type: 'reenio';
+      /** Reenio tenant + language base, e.g. "https://tjteslabrno.reenio.cz/cs" (API: `{baseUrl}/api/Term/List`). */
+      baseUrl: string;
+      /** The bookable resource (the number after `-r` in the page URL, e.g. 51584 = whole hall). */
+      resourceId: number;
+    }
+  | {
+      type: 'rezzy';
+      /** Rezzy tenant id (Tenisová hala Kohoutovice, "tennislinden": 15). */
+      tenantId: number;
+      /** Sport area of the tenant (Kohoutovice: 33 = "Tenis - antuka"). */
+      sportAreaId: number;
+    }
+  | {
+      type: 'isportsystem';
+      /** iSportSystem site, e.g. "https://squashslovan.isportsystem.cz" (grid: `{baseUrl}/ajax/ajax.schema.php`). */
+      baseUrl: string;
+      /** The `id_sport` posted to load the grid (Squash Slovan: 1). */
+      sportId: number;
+    }
+  | {
+      type: 'komarov';
+      /**
+       * Tenisový areál Komárov's own weekly timetable, "https://www.tenis-komarov.cz/rozvrh/";
+       * the connector appends the week offset ("0/" = this Monday–Sunday, "1/" = next week).
+       */
+      url: string;
+    }
+  | {
+      type: 'zltc';
+      /**
+       * Firebase project of ŽLTC Brno's own booking app ("zltc-prod-c9e6c"), read through the
+       * public Firestore REST API. Queries select only dates, courts and segments, never names.
+       */
+      projectId: string;
+    }
   | { type: 'none' };
 
 /**

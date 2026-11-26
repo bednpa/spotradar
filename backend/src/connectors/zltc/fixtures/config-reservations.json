@@ -1,0 +1,28 @@
+{
+  "name": "projects/zltc-prod-c9e6c/databases/(default)/documents/config/reservations",
+  "fields": {
+    "last_allowed_reservation_date": {
+      "stringValue": "2027-04-11"
+    },
+    "summer_close_idx": {
+      "integerValue": "39"
+    },
+    "summer_open_idx": {
+      "integerValue": "14"
+    },
+    "winter_close_idx": {
+      "integerValue": "41"
+    },
+    "winter_open_idx": {
+      "integerValue": "14"
+    },
+    "is_summer": {
+      "booleanValue": false
+    },
+    "reservations_enabled": {
+      "booleanValue": true
+    }
+  },
+  "createTime": "2023-09-21T17:22:26.582693Z",
+  "updateTime": "2026-10-12T10:13:18.027437Z"
+}

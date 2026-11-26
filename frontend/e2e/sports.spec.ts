@@ -65,7 +65,7 @@ test.describe('multiple sports', () => {
     await expect(viktoria.locator('.pill-free')).toHaveText(/^[123] courts? free$/);
     // Padel venues without a connector are offered as "check on website".
     await expect(
-      dialog.locator('li[data-venue-id="padel-powers-slatina"][data-state="check"]'),
+      dialog.locator('li[data-venue-id="padel-club-brno"][data-state="check"]'),
     ).toHaveCount(1);
   });
 

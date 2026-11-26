@@ -64,6 +64,8 @@ describe('stub mode', () => {
       logger: silentLogger,
     });
     const expectedUnavailable = new Set(['centrum-viktoria/badminton']);
+    // Live but empty: the only Kraví hora recording is a winter day without bookable slots.
+    const expectedEmpty = new Set(['padel-powers-kravi-hora/padel']);
     // The stub builds "today's" pages from the real clock, so use dates relative to it.
     const realToday = toLocalDateTime(new Date()).date;
     for (const record of VENUE_RECORDS) {
@@ -75,7 +77,9 @@ describe('stub mode', () => {
           const expected = expectedUnavailable.has(key) ? 'unavailable' : 'live';
           assert.equal(result.status, expected, `${key} ${date}`);
           // X-Arena's 2-hour lead time uses the real clock: late in the day nothing is left.
-          if (expected === 'live' && record.id !== 'x-arena-slatina') {
+          if (expectedEmpty.has(key)) {
+            assert.deepEqual(result.freeSlots, [], `${key} ${date}`);
+          } else if (expected === 'live' && record.id !== 'x-arena-slatina') {
             assert.ok(result.freeSlots.length > 0, `${key} ${date}`);
           }
         }

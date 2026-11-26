@@ -107,11 +107,22 @@ describe('venue data', () => {
         assert.equal(o.bookingUrl, `${o.source.baseUrl}timeline/day?tabIdx=${o.source.tabIdx}`);
       } else if (o.source.type === 'bizzy') {
         assert.equal(o.bookingUrl, o.source.scheduleUrl, label);
-      } else if (o.source.type !== 'none') {
+      } else if (
+        o.source.type === 'memberzone' ||
+        o.source.type === 'memberpro' ||
+        o.source.type === 'starez'
+      ) {
         assert.equal(o.bookingUrl, o.source.url, label);
       }
+      // PadelOS, Reenio, Rezzy and iSportSystem sources hold API ids; their booking URL is
+      // the system's public player/schedule page (checked per venue in the connector tests).
       // The booking system of a connector source is that system.
-      if (o.source.type !== 'none') assert.equal(o.bookingSystem, o.source.type, label);
+      // Venue-specific connectors read the venue's own system.
+      if (o.source.type === 'komarov' || o.source.type === 'zltc') {
+        assert.equal(o.bookingSystem, 'own', label);
+      } else if (o.source.type !== 'none') {
+        assert.equal(o.bookingSystem, o.source.type, label);
+      }
     }
     for (const v of VENUE_RECORDS) {
       if (v.website !== undefined) assert.doesNotThrow(() => new URL(v.website ?? ''), v.id);

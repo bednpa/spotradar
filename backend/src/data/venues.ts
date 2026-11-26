@@ -89,6 +89,14 @@ function noConnector(
   return { ...offering, availabilitySource: 'none', source: { type: 'none' } };
 }
 
+/** An offering read live through `source` (keeps `availabilitySource === source.type`). */
+function withSource(
+  offering: Omit<SportOfferingConfig, 'availabilitySource' | 'source'>,
+  source: Exclude<SportOfferingConfig['source'], { type: 'none' }>,
+): SportOfferingConfig {
+  return { ...offering, availabilitySource: source.type, source };
+}
+
 const KUKLENSKA_BASE_URL = 'https://kuklenska.clubspire.cz/';
 const VIKTORIA_BASE_URL = 'https://rezervace.centrumviktoria.cz:18443/';
 const FITNESS_BOBY_BASE_URL = 'https://rezervace.fitnessboby.cz:28080/';
@@ -556,24 +564,27 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     phone: '601 280 568',
     website: 'https://www.padelpowers.com/brno-slatina/',
     offerings: [
-      noConnector({
-        sport: 'padel',
-        courts: 10,
-        // Source: https://www.padelpowers.com/brno-slatina/ (2026-11-25).
-        openingHours: weekdaysAndWeekend(false, ['07:00', '23:00'], ['08:00', '23:00']),
-        bookingUrl: 'https://player.padelos.co/company/217?clubIds=216930&locale=cs',
-        bookingSystem: 'padelos',
-        // Source: https://www.padelpowers.com/turnaje-a-akce/multisport/ (2026-11-25).
-        pricing: czkPerHour([
-          rule(MON_FRI, '07:00', '16:00', 700),
-          rule(MON_FRI, '16:00', '23:00', 850),
-          rule(SAT_SUN, '08:00', '23:00', 850),
-        ]),
-        multisport: multisportNote(
-          'Card covers the 1st hour of each booking (amount not stated); +55 CZK per card on weekday evenings and weekends',
-        ),
-        note: '10 indoor courts',
-      }),
+      withSource(
+        {
+          sport: 'padel',
+          courts: 10,
+          // Source: https://www.padelpowers.com/brno-slatina/ (2026-11-25).
+          openingHours: weekdaysAndWeekend(false, ['07:00', '23:00'], ['08:00', '23:00']),
+          bookingUrl: 'https://player.padelos.co/company/217?clubIds=216930&locale=cs',
+          bookingSystem: 'padelos',
+          // Source: https://www.padelpowers.com/turnaje-a-akce/multisport/ (2026-11-25).
+          pricing: czkPerHour([
+            rule(MON_FRI, '07:00', '16:00', 700),
+            rule(MON_FRI, '16:00', '23:00', 850),
+            rule(SAT_SUN, '08:00', '23:00', 850),
+          ]),
+          multisport: multisportNote(
+            'Card covers the 1st hour of each booking (amount not stated); +55 CZK per card on weekday evenings and weekends',
+          ),
+          note: '10 indoor courts',
+        },
+        { type: 'padelos', clubId: '216930' },
+      ),
     ],
   },
   {
@@ -586,17 +597,22 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     phone: '602 168 616',
     website: 'https://www.padelpowers.com/brno-kravi-hora/',
     offerings: [
-      noConnector({
-        sport: 'padel',
-        courts: 4,
-        // Source: https://www.padelpowers.com/brno-kravi-hora/ (2026-11-25).
-        openingHours: daily(false, ['08:00', '22:00']),
-        bookingUrl: 'https://player.padelos.co/company/217?clubIds=216928&locale=cs',
-        bookingSystem: 'padelos',
-        // Prices differ between the venue page and the MultiSport page: unknown.
-        multisport: multisportNote('Card covers the 1st hour of each booking (amount not stated)'),
-        note: '4 outdoor courts',
-      }),
+      withSource(
+        {
+          sport: 'padel',
+          courts: 4,
+          // Source: https://www.padelpowers.com/brno-kravi-hora/ (2026-11-25).
+          openingHours: daily(false, ['08:00', '22:00']),
+          bookingUrl: 'https://player.padelos.co/company/217?clubIds=216928&locale=cs',
+          bookingSystem: 'padelos',
+          // Prices differ between the venue page and the MultiSport page: unknown.
+          multisport: multisportNote(
+            'Card covers the 1st hour of each booking (amount not stated)',
+          ),
+          note: '4 outdoor courts',
+        },
+        { type: 'padelos', clubId: '216928' },
+      ),
     ],
   },
   {
@@ -744,15 +760,18 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     phone: '776 886 068',
     website: 'https://www.zltc.cz/',
     offerings: [
-      noConnector({
-        sport: 'tennis',
-        // Source: https://www.zltc.cz/ (2026-11-25).
-        openingHours: weekdaysAndWeekend(false, ['07:00', '21:00'], ['07:00', '20:00']),
-        bookingUrl: 'https://www.zltc.cz/reservations',
-        bookingSystem: 'own',
-        multisport: MULTISPORT_UNKNOWN,
-        note: '10 outdoor clay courts in summer, 3 indoor courts in winter',
-      }),
+      withSource(
+        {
+          sport: 'tennis',
+          // Source: https://www.zltc.cz/ (2026-11-25).
+          openingHours: weekdaysAndWeekend(false, ['07:00', '21:00'], ['07:00', '20:00']),
+          bookingUrl: 'https://www.zltc.cz/reservations',
+          bookingSystem: 'own',
+          multisport: MULTISPORT_UNKNOWN,
+          note: '10 outdoor clay courts in summer, 3 indoor courts in winter',
+        },
+        { type: 'zltc', projectId: 'zltc-prod-c9e6c' },
+      ),
     ],
   },
   {
@@ -765,24 +784,27 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     phone: '777 363 664',
     website: 'https://www.tenis-komarov.cz/',
     offerings: [
-      noConnector({
-        sport: 'tennis',
-        bookingUrl: 'https://www.tenis-komarov.cz/rozvrh/0',
-        bookingSystem: 'own',
-        // Source: https://www.tenis-komarov.cz/ (2026-11-25), hall prices for singles.
-        pricing: czkPerHour(
-          [
-            rule(MON_FRI, '07:00', '12:00', 480),
-            rule(MON_FRI, '12:00', '14:00', 450),
-            rule(MON_FRI, '14:00', '20:00', 700),
-            rule(MON_FRI, '20:00', '22:00', 520),
-            rule(SAT_SUN, '07:00', '21:00', 520),
-          ],
-          'Winter hall, singles (doubles up to 580); summer outdoor 220–280 CZK',
-        ),
-        multisport: MULTISPORT_UNKNOWN,
-        note: '5 outdoor clay courts in summer, 3 in inflatable halls in winter',
-      }),
+      withSource(
+        {
+          sport: 'tennis',
+          bookingUrl: 'https://www.tenis-komarov.cz/rozvrh/0/',
+          bookingSystem: 'own',
+          // Source: https://www.tenis-komarov.cz/ (2026-11-25), hall prices for singles.
+          pricing: czkPerHour(
+            [
+              rule(MON_FRI, '07:00', '12:00', 480),
+              rule(MON_FRI, '12:00', '14:00', 450),
+              rule(MON_FRI, '14:00', '20:00', 700),
+              rule(MON_FRI, '20:00', '22:00', 520),
+              rule(SAT_SUN, '07:00', '21:00', 520),
+            ],
+            'Winter hall, singles (doubles up to 580); summer outdoor 220–280 CZK',
+          ),
+          multisport: MULTISPORT_UNKNOWN,
+          note: '5 outdoor clay courts in summer, 3 in inflatable halls in winter',
+        },
+        { type: 'komarov', url: 'https://www.tenis-komarov.cz/rozvrh/' },
+      ),
     ],
   },
   {
@@ -795,28 +817,31 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     phone: '721 254 008',
     website: 'https://www.tenisovahalakohoutovice.cz',
     offerings: [
-      noConnector({
-        sport: 'tennis',
-        courts: 4,
-        // firmy.cz listing (2026-11-25).
-        openingHours: daily(true, ['08:00', '22:00']),
-        bookingUrl: 'https://rezzy.eu/tennislinden/schedules',
-        bookingSystem: 'unknown', // Rezzy (rezzy.eu)
-        // Source: https://www.tenisovahalakohoutovice.cz (2026-11-25), winter 2026/27.
-        pricing: czkPerHour(
-          [
-            rule(MON_FRI, '08:00', '12:00', 490),
-            rule(MON_FRI, '12:00', '14:00', 400),
-            rule(MON_FRI, '14:00', '15:00', 490),
-            rule(MON_FRI, '15:00', '20:00', 680),
-            rule(MON_FRI, '20:00', '22:00', 490),
-            rule(SAT_SUN, '08:00', '22:00', 500),
-          ],
-          'Winter 2026/27',
-        ),
-        multisport: MULTISPORT_UNKNOWN,
-        note: 'Clay courts in a hall; booking via Rezzy',
-      }),
+      withSource(
+        {
+          sport: 'tennis',
+          courts: 4,
+          // Rezzy tenant "tennislinden": 08:00 + 14 h every day (2026-11-26).
+          openingHours: daily(false, ['08:00', '22:00']),
+          bookingUrl: 'https://rezzy.eu/tennislinden/schedules',
+          bookingSystem: 'rezzy',
+          // Source: https://www.tenisovahalakohoutovice.cz (2026-11-25), winter 2026/27.
+          pricing: czkPerHour(
+            [
+              rule(MON_FRI, '08:00', '12:00', 490),
+              rule(MON_FRI, '12:00', '14:00', 400),
+              rule(MON_FRI, '14:00', '15:00', 490),
+              rule(MON_FRI, '15:00', '20:00', 680),
+              rule(MON_FRI, '20:00', '22:00', 490),
+              rule(SAT_SUN, '08:00', '22:00', 500),
+            ],
+            'Winter 2026/27',
+          ),
+          multisport: MULTISPORT_UNKNOWN,
+          note: 'Clay courts in a hall',
+        },
+        { type: 'rezzy', tenantId: 15, sportAreaId: 33 },
+      ),
     ],
   },
   {
@@ -928,34 +953,40 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     phone: '602 458 011',
     website: 'https://www.squashslovan.cz/',
     offerings: [
-      noConnector({
-        sport: 'squash',
-        // Source: https://www.squashslovan.cz/ (2026-11-25), by advance reservation only.
-        openingHours: {
-          approximate: false,
-          days: {
-            mon: { open: '06:00', close: '21:00' },
-            tue: { open: '06:00', close: '21:00' },
-            wed: { open: '06:00', close: '21:00' },
-            thu: { open: '06:00', close: '21:00' },
-            fri: { open: '06:00', close: '21:00' },
-            sat: { open: '08:00', close: '10:00' },
-            sun: { open: '17:00', close: '20:00' },
+      withSource(
+        {
+          sport: 'squash',
+          // iSportSystem schedule "Squash Kurt 1–3" (2026-11-26).
+          courts: 3,
+          // Source: https://www.squashslovan.cz/ (2026-11-25), by advance reservation only.
+          openingHours: {
+            approximate: false,
+            days: {
+              mon: { open: '06:00', close: '21:00' },
+              tue: { open: '06:00', close: '21:00' },
+              wed: { open: '06:00', close: '21:00' },
+              thu: { open: '06:00', close: '21:00' },
+              fri: { open: '06:00', close: '21:00' },
+              sat: { open: '08:00', close: '10:00' },
+              sun: { open: '17:00', close: '20:00' },
+            },
           },
+          // The public schedule; free courts are booked by phone/SMS (cells "Rezervace pouze telefonicky").
+          bookingUrl: 'https://squashslovan.isportsystem.cz/',
+          bookingSystem: 'isportsystem',
+          // Source: https://www.squashslovan.cz/cenik (from 1.9.2026), incl. 30 CZK changing-room fee.
+          pricing: czkPerHour([
+            rule(MON_FRI, '06:00', '15:00', 330),
+            rule(MON_FRI, '15:00', '21:00', 440),
+            rule(['sat'], '08:00', '10:00', 330),
+            rule(['sun'], '17:00', '20:00', 330),
+          ]),
+          // Source: https://www.squashslovan.cz/cenik – "Platby na recepci přijímáme v hotovosti nebo Multisport kartou."
+          multisport: multisportNote('MultiSport accepted as payment; terms not published'),
+          note: 'Booking by phone/SMS',
         },
-        bookingUrl: 'https://www.squashslovan.cz/',
-        bookingSystem: 'phone',
-        // Source: https://www.squashslovan.cz/cenik (from 1.9.2026), incl. 30 CZK changing-room fee.
-        pricing: czkPerHour([
-          rule(MON_FRI, '06:00', '15:00', 330),
-          rule(MON_FRI, '15:00', '21:00', 440),
-          rule(['sat'], '08:00', '10:00', 330),
-          rule(['sun'], '17:00', '20:00', 330),
-        ]),
-        // Source: https://www.squashslovan.cz/cenik – "Platby na recepci přijímáme v hotovosti nebo Multisport kartou."
-        multisport: multisportNote('MultiSport accepted as payment; terms not published'),
-        note: 'Booking by phone/SMS',
-      }),
+        { type: 'isportsystem', baseUrl: 'https://squashslovan.isportsystem.cz', sportId: 1 },
+      ),
     ],
   },
   {
@@ -968,21 +999,25 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     phone: '545 222 600',
     website: 'https://www.tjteslabrno.cz/sportovni-zarizeni/sportovni-hala',
     offerings: [
-      noConnector({
-        sport: 'volleyball',
-        courts: 1,
-        // Rental price list hours (https://www.tjteslabrno.cz/cenik, 2026-11-25).
-        openingHours: daily(true, ['06:00', '22:00']),
-        bookingUrl: 'https://tjteslabrno.reenio.cz/cs/#/view/lesna-f1/sportovni-hala-r51584',
-        bookingSystem: 'reenio',
-        pricing: czkPerHour(
-          [rule(MON_FRI, '06:00', '22:00', 1300)],
-          'Whole hall, one-off rental; weekends from 1,400 CZK',
-        ),
-        multisport: MULTISPORT_UNKNOWN,
-        // "vhodná především pro zápasy míčových sportů (futsal, florbal, basketbal, volejbal)".
-        note: 'Whole sports hall (18.5 × 36 m) rented as one',
-      }),
+      withSource(
+        {
+          sport: 'volleyball',
+          courts: 1,
+          // Rental price list hours (https://www.tjteslabrno.cz/cenik, 2026-11-25).
+          openingHours: daily(true, ['06:00', '22:00']),
+          bookingUrl: 'https://tjteslabrno.reenio.cz/cs/#/view/lesna-f1/sportovni-hala-r51584',
+          bookingSystem: 'reenio',
+          pricing: czkPerHour(
+            [rule(MON_FRI, '06:00', '22:00', 1300)],
+            'Whole hall, one-off rental; weekends from 1,400 CZK',
+          ),
+          multisport: MULTISPORT_UNKNOWN,
+          // "vhodná především pro zápasy míčových sportů (futsal, florbal, basketbal, volejbal)".
+          note: 'Whole sports hall (18.5 × 36 m) rented as one',
+        },
+        // Resource 51584 = "Sportovní hala celá" (Reenio Term/List, 2026-11-26).
+        { type: 'reenio', baseUrl: 'https://tjteslabrno.reenio.cz/cs', resourceId: 51584 },
+      ),
     ],
   },
 ];
