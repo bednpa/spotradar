@@ -53,7 +53,7 @@ test('category labels', () => {
   assert.equal(formatMultisport(NO), MULTISPORT_NOT_ACCEPTED_LABEL);
   assert.equal(formatMultisport(NO), 'No MultiSport');
   assert.equal(formatMultisport(UNKNOWN), MULTISPORT_UNKNOWN_LABEL);
-  assert.equal(formatMultisport(undefined), 'MultiSport: unknown');
+  assert.equal(formatMultisport(undefined), 'MultiSport: not available');
   assert.equal(acceptsMultisport(HALF), true);
   assert.equal(acceptsMultisport(MIN30), true);
   assert.equal(acceptsMultisport(NO), false);

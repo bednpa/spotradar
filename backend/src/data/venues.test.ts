@@ -125,13 +125,8 @@ describe('venue data', () => {
       if (o.pricing) assert.deepEqual(validatePricing(o.pricing), [], label);
     }
     for (const v of VENUE_RECORDS) {
-      if (v.otherActivities) {
-        assert.ok(v.otherActivities.length > 0, v.id);
-        assert.ok(
-          v.otherActivities.every((a) => a.trim() !== ''),
-          v.id,
-        );
-      }
+      // Only searchable sports are listed; unsupported activities (bowling, golf…) are not.
+      assert.ok(!('otherActivities' in v), v.id);
     }
   });
 
@@ -271,7 +266,6 @@ describe('venue data', () => {
       open: '07:00',
       close: '21:00',
     });
-    assert.deepEqual(venue('x-arena-slatina').otherActivities, ['Table tennis']);
     assert.equal(
       offering('kuklenska').bookingUrl,
       'https://kuklenska.clubspire.cz/timeline/day?tabIdx=0',
@@ -333,7 +327,7 @@ describe('venue repository', () => {
       );
       assert.equal('phone' in venue, record.phone !== undefined);
       assert.equal('website' in venue, record.website !== undefined);
-      assert.equal('otherActivities' in venue, record.otherActivities !== undefined);
+      assert.ok(!('otherActivities' in venue));
       record.offerings.forEach((o, i) => {
         const pub = venue.offerings[i];
         assert.ok(pub && !('source' in pub), `${record.id} ${o.sport}`);

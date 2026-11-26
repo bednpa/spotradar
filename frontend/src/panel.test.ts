@@ -87,7 +87,7 @@ test('unknown price and MultiSport are labelled, not hidden', () => {
   ]);
   const html = renderPanel({ date: '2026-11-26', hour: 18, data: plain, now: NOW, cards: 2 });
   assert.match(html, /data-testid="slot-price">Price on website</);
-  assert.match(html, />MultiSport: unknown</);
+  assert.match(html, />MultiSport: not available</);
   assert.doesNotMatch(html, /slot-price-cards|multisport-limits/);
 });
 

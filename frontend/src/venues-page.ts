@@ -20,13 +20,7 @@ import type {
 } from '@spotradar/shared';
 import { ApiRequestError } from './api.ts';
 import { formatCourts, formatDistance, sportName, sportNameLower } from './format.ts';
-import {
-  bookingSystemLabel,
-  formatSeason,
-  isOutOfSeason,
-  renderSportChipButtons,
-  renderSportLabel,
-} from './sports.ts';
+import { formatSeason, isOutOfSeason, renderSportChipButtons, renderSportLabel } from './sports.ts';
 import {
   DEFAULT_CARDS,
   DEFAULT_SORT,
@@ -36,14 +30,17 @@ import {
   sortEntries,
 } from './sorting.ts';
 import type { SortMode } from './sorting.ts';
-import { escapeHtml, externalLink, safeHref, telHref } from './html.ts';
+import { escapeHtml, externalLink, safeHref } from './html.ts';
 import { renderLiveStatus } from './live-status.ts';
 import {
   googleMapsLink,
-  groupOpeningHours,
+  openingHoursByDay,
+  renderDayRows,
   renderMultisportBadge,
   renderPriceSummary,
 } from './venue-info.ts';
+
+export const OPENING_HOURS_UNKNOWN_LABEL = 'Opening hours not available';
 
 /** `sport: null` = all sports. */
 export interface VenuesFilter {
@@ -195,17 +192,11 @@ export function shownOfferings(item: VenueListItem, sport: SportId | null): Spor
   return offering ? [offering] : [];
 }
 
+/** Opening hours as 7 rows (Mon … Sun), the same format as the price table. */
 function renderHours(hours: OpeningHours | undefined, today: string): string {
-  if (!hours) return fact('Opening hours', '<span class="muted">Opening hours unknown</span>');
-  const list = groupOpeningHours(hours)
-    .map(
-      (group) =>
-        `<li><span class="hours-days">${escapeHtml(group.days)}</span> ${escapeHtml(group.text)}</li>`,
-    )
-    .join('');
-  const approximate = hours.approximate
-    ? ' <span class="badge badge-neutral">approximate</span>'
-    : '';
+  if (!hours) {
+    return fact('Opening hours', `<span class="muted">${OPENING_HOURS_UNKNOWN_LABEL}</span>`);
+  }
   const season = hours.season
     ? `<p class="season">${escapeHtml(formatSeason(hours.season))}${
         isOutOfSeason(hours, today)
@@ -213,10 +204,10 @@ function renderHours(hours: OpeningHours | undefined, today: string): string {
           : ''
       }</p>`
     : '';
-  return fact(`Opening hours${approximate}`, `${season}<ul class="hours">${list}</ul>`);
+  return fact('Opening hours', `${season}${renderDayRows(openingHoursByDay(hours))}`);
 }
 
-/** Details of one sport at the venue: courts, price, MultiSport, hours, booking system + link. */
+/** Details of one sport at the venue: courts, price, MultiSport, hours + booking link. */
 export function renderOffering(
   offering: SportOffering,
   live: boolean,
@@ -230,7 +221,6 @@ export function renderOffering(
     fact('Price', renderPriceSummary(offering.pricing, offering.multisport, cards)),
     fact('MultiSport', renderMultisportBadge(offering.multisport)),
     renderHours(offering.openingHours, today),
-    fact('Booking', escapeHtml(bookingSystemLabel(offering.bookingSystem))),
   ].join('');
   // A group, not a <section>: named sections would add one landmark per sport and venue.
   const at = venueName ? `<span class="visually-hidden"> at ${escapeHtml(venueName)}</span>` : '';
@@ -263,21 +253,12 @@ export function renderVenueCard(
       live ? ' <span class="visually-hidden">(live)</span><span aria-hidden="true">●</span>' : ''
     }</li>`;
   });
-  const others = (venue.otherActivities ?? []).map(
-    (name) => `<li class="tag">${escapeHtml(name)}</li>`,
-  );
   const offerings = shownOfferings(item, sport)
     .map((o) => renderOffering(o, item.liveSports.includes(o.sport), cards, today, venue.name))
     .join('');
 
-  const phoneHref = venue.phone ? telHref(venue.phone) : null;
-  const links = [
-    externalLink(venue.website, 'Website'),
-    googleMapsLink(venue),
-    phoneHref && venue.phone
-      ? `<a class="link" href="${escapeHtml(phoneHref)}">${escapeHtml(venue.phone)}</a>`
-      : '',
-  ]
+  // No phone number in the list: booking goes through the venue's website.
+  const links = [externalLink(venue.website, 'Website'), googleMapsLink(venue)]
     .filter((link) => link !== '')
     .join('');
 
@@ -289,7 +270,7 @@ export function renderVenueCard(
   <p class="muted">${escapeHtml(venue.district)} · ${escapeHtml(venue.address)}${
     distance !== undefined ? ` · ${escapeHtml(formatDistance(distance))} away` : ''
   }</p>
-  <ul class="tags" aria-label="Sports and activities">${sports.join('')}${others.join('')}</ul>
+  <ul class="tags" aria-label="Sports">${sports.join('')}</ul>
   <div class="offerings">${offerings}</div>
   <div class="link-row">${links}</div>
 </li>`;

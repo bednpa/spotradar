@@ -7,7 +7,6 @@ import {
   formatCzk,
   formatMultisport,
   formatMultisportLimits,
-  formatPriceRule,
   googleMapsUrl,
 } from '@spotradar/shared';
 import type { MultisportInfo, OpeningHours, Pricing, Venue, Weekday } from '@spotradar/shared';
@@ -25,43 +24,51 @@ const WEEKDAY_LABEL: Record<Weekday, string> = {
   sun: 'Sun',
 };
 
-export interface HoursGroup {
-  /** "Mon–Fri", "Sat" … */
-  days: string;
-  /** "07:00–22:00" or "Closed" */
+/** One row of the 7-day tables (opening hours, prices): always Mon … Sun, never merged. */
+export interface DayRow {
+  /** "Mon" … "Sun" */
+  day: string;
+  /** "07:00–22:00", "Closed", "07:00–15:00 280 Kč · 15:00–22:00 380 Kč" or "–" */
   text: string;
 }
 
-function dayText(hours: OpeningHours, day: Weekday): string {
-  const entry = hours.days[day];
-  return entry ? `${entry.open}–${entry.close}` : 'Closed';
+/** Opening hours as 7 rows, one per weekday ("Mon 07:00–22:00", "Sun Closed"). */
+export function openingHoursByDay(hours: OpeningHours): DayRow[] {
+  return WEEKDAYS.map((day) => {
+    const entry = hours.days[day];
+    return { day: WEEKDAY_LABEL[day], text: entry ? `${entry.open}–${entry.close}` : 'Closed' };
+  });
 }
 
-/** Compact opening hours: consecutive days with identical hours are merged ("Mon–Fri 07:00–22:00"). */
-export function groupOpeningHours(hours: OpeningHours): HoursGroup[] {
-  const groups: HoursGroup[] = [];
-  let start = 0;
-  while (start < WEEKDAYS.length) {
-    const first = WEEKDAYS[start] as Weekday;
-    const text = dayText(hours, first);
-    let end = start;
-    while (end + 1 < WEEKDAYS.length && dayText(hours, WEEKDAYS[end + 1] as Weekday) === text) {
-      end++;
-    }
-    const last = WEEKDAYS[end] as Weekday;
-    const days =
-      start === end
-        ? WEEKDAY_LABEL[first]
-        : `${WEEKDAY_LABEL[first]}${end === start + 1 ? ', ' : '–'}${WEEKDAY_LABEL[last]}`;
-    groups.push({ days, text });
-    start = end + 1;
-  }
-  return groups;
+/**
+ * Court prices as 7 rows in the same format as the opening hours: each day lists its time
+ * ranges with the hourly price ("07:00–15:00 280 Kč · 15:00–22:00 380 Kč"); "–" when the
+ * price list has no rule for that day.
+ */
+export function pricesByDay(pricing: Pricing): DayRow[] {
+  return WEEKDAYS.map((day) => {
+    const parts = pricing.rules
+      .filter((rule) => rule.days.includes(day))
+      .toSorted((a, b) => a.from.localeCompare(b.from))
+      .map((rule) => `${rule.from}–${rule.to} ${formatCzk(rule.price)}`);
+    return { day: WEEKDAY_LABEL[day], text: parts.length > 0 ? parts.join(' · ') : '–' };
+  });
+}
+
+/** `<ul class="hours">` with one `<li>` per weekday. */
+export function renderDayRows(rows: readonly DayRow[]): string {
+  const items = rows
+    .map(
+      (row) =>
+        `<li><span class="hours-days">${escapeHtml(row.day)}</span> ${escapeHtml(row.text)}</li>`,
+    )
+    .join('');
+  return `<ul class="hours">${items}</ul>`;
 }
 
 /**
  * The one MultiSport badge (slot panel, venue list, venue detail), text from
- * `formatMultisport`; an unknown state reads "MultiSport: unknown". The note is the tooltip
+ * `formatMultisport`; unknown terms read "MultiSport: not available". The note is the tooltip
  * and short extra text.
  */
 export function renderMultisportBadge(multisport: MultisportInfo | undefined): string {
@@ -84,8 +91,9 @@ export function formatPriceFromWithCards(
 }
 
 /**
- * Short price ("from 280 Kč / h", computed with the selected cards) that expands to the full
- * price table and note. Unknown price: plain "Price on website".
+ * Short price ("from 280 Kč / h", computed with the selected cards) that expands to the
+ * per-day price table (Mon … Sun, same format as the opening hours) and note.
+ * Unknown price: plain "Price on website".
  */
 export function renderPriceSummary(
   pricing: Pricing | undefined,
@@ -95,11 +103,8 @@ export function renderPriceSummary(
   if (!pricing || pricing.rules.length === 0) {
     return `<span class="muted" data-testid="price-unknown">${escapeHtml(PRICE_UNKNOWN_LABEL)}</span>`;
   }
-  const rows = pricing.rules
-    .map((rule) => `<li>${escapeHtml(formatPriceRule(rule))}</li>`)
-    .join('');
   const note = pricing.note ? `<p class="muted price-note">${escapeHtml(pricing.note)}</p>` : '';
-  return `<details class="price-details" data-testid="price-details"><summary data-testid="price-from">${escapeHtml(formatPriceFromWithCards(pricing, multisport, cards))}</summary><ul class="price-rules">${rows}</ul>${note}</details>`;
+  return `<details class="price-details" data-testid="price-details"><summary data-testid="price-from">${escapeHtml(formatPriceFromWithCards(pricing, multisport, cards))}</summary><div class="price-rules">${renderDayRows(pricesByDay(pricing))}</div>${note}</details>`;
 }
 
 export function googleMapsLink(venue: Pick<Venue, 'name' | 'address'>): string {

@@ -45,7 +45,7 @@ Venues are a static data file in the backend (`backend/src/data/venues.ts`). Eac
 | X-Arena Slatina        | Brno-Slatina      | 6      | Bizzy          | ✅ live, bookings ≥ 2 h ahead only                         |
 
 Availability status per venue: `live` (read from the booking page), `unavailable` (a connector exists but reading failed –
-the search still succeeds), `unknown` (no connector yet). Opening hours marked `approximate` are estimates. Venues without
+the search still succeeds), `unknown` (no connector yet). Venues without
 live data are listed under **"check on website"** in the slot panel – a free court is never guessed. How the connectors
 work (including the Bizzy protocol and why its server may refuse data-centre IPs) is in
 [`docs/live-data-connectors.md`](docs/live-data-connectors.md).

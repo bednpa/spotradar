@@ -229,7 +229,7 @@ test.describe('slot panel: sort by and MultiSport cards', () => {
     // unknown price stays unknown and last
     await expect(price('delta')).toHaveText('Price on website');
     await expect(dialog.locator('li[data-venue-id="delta"]').getByTestId('multisport')).toHaveText(
-      'MultiSport: unknown',
+      'MultiSport: not available',
     );
     // limits: tooltip and visible short text
     const gamaBadge = dialog.locator('li[data-venue-id="gama"]').getByTestId('multisport');

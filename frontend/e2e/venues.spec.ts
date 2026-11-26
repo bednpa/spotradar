@@ -21,10 +21,23 @@ test.describe('venues page', () => {
     const kuklenska = page.locator('.vcard[data-venue-id="kuklenska"]');
     await expect(kuklenska.getByRole('heading', { level: 3 })).toHaveText('Sportcentrum Kuklenská');
     await expect(kuklenska).toContainText('Brno-Židenice');
-    await expect(kuklenska.getByLabel('Sports and activities')).toContainText('Badminton');
+    await expect(kuklenska.getByLabel('Sports', { exact: true })).toContainText('Badminton');
     await expect(kuklenska).toContainText('Courts');
     await expect(kuklenska).toContainText('Opening hours');
-    await expect(kuklenska.locator('.hours')).toContainText(/\d\d:\d\d–\d\d:\d\d/);
+    // Opening hours: one row per weekday (Mon … Sun), no day ranges, no "approximate".
+    const hoursRows = kuklenska.locator('.offering .facts > .fact-row').filter({
+      hasText: 'Opening hours',
+    });
+    await expect(hoursRows.locator('.hours li')).toHaveCount(7);
+    await expect(hoursRows.locator('.hours li').first()).toHaveText(/^Mon \d\d:\d\d–\d\d:\d\d$/);
+    await expect(hoursRows.locator('.hours li').last()).toHaveText(
+      /^Sun (\d\d:\d\d–\d\d:\d\d|Closed)$/,
+    );
+    await expect(kuklenska).not.toContainText(/approximate|Mon–Fri/);
+    // No booking system name and no phone number in the list.
+    await expect(kuklenska.locator('dt', { hasText: 'Booking' })).toHaveCount(0);
+    await expect(kuklenska).not.toContainText('ClubSpire');
+    await expect(kuklenska.locator('a[href^="tel:"]')).toHaveCount(0);
     await expect(kuklenska).toContainText(/from \d+ Kč \/ h/);
     await expect(kuklenska.getByTestId('multisport')).toHaveText('1 card = 50 % off');
     await expect(kuklenska.locator('.vcard-head').getByTestId('live-status')).toHaveAttribute(
@@ -50,10 +63,12 @@ test.describe('venues page', () => {
         .locator('.vcard[data-venue-id="badminton-jehnice"] .vcard-head')
         .getByTestId('live-status'),
     ).toHaveAttribute('data-status', 'live');
-    // Sports and other activities are listed as tags.
+    // Only sports SpotRadar searches are listed as tags (no bowling, fitness …).
     const viktoriaTags = page.locator('.vcard[data-venue-id="centrum-viktoria"] .tags');
     await expect(viktoriaTags).toContainText('Squash');
-    await expect(viktoriaTags).toContainText('Bowling');
+    await expect(viktoriaTags).not.toContainText('Bowling');
+    // MultiSport cards default to 0 when the user picks nothing.
+    await expect(page.locator('[data-cards-count="0"]')).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('search filters the list (diacritics-insensitive) and is kept in the URL', async ({

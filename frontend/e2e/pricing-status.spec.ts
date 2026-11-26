@@ -186,7 +186,7 @@ test.describe('price and MultiSport', () => {
     await expect(item).not.toContainText('With card');
   });
 
-  test('the venue list shows "from NNN Kč / h" that expands to the price table', async ({
+  test('the venue list shows "from NNN Kč / h" that expands to a 7-day price table', async ({
     page,
   }) => {
     await page.goto('/venues');
@@ -195,8 +195,12 @@ test.describe('price and MultiSport', () => {
     await expect(details.locator('summary')).toHaveText(/^from \d+ Kč \/ h$/);
     await expect(details).not.toHaveAttribute('open', '');
     await details.locator('summary').click();
+    await expect(details.locator('li')).toHaveCount(7);
     await expect(details.locator('li').first()).toBeVisible();
-    await expect(details.locator('li').first()).toContainText(/\d\d:\d\d–\d\d:\d\d: \d+ Kč \/ h/);
+    await expect(details.locator('li').first()).toHaveText(
+      /^Mon \d\d:\d\d–\d\d:\d\d \d+ Kč( · \d\d:\d\d–\d\d:\d\d \d+ Kč)*$/,
+    );
+    await expect(details.locator('li').last()).toContainText(/^Sun /);
   });
 
   test('a venue without pricing or MultiSport data shows the unknown labels in the panel', async ({
@@ -207,7 +211,7 @@ test.describe('price and MultiSport', () => {
     await page.locator('button.cell-free:not([disabled])').first().click();
     const item = page.getByRole('dialog').locator('li[data-venue-id="crafted"]');
     await expect(item.getByTestId('slot-price')).toHaveText('Price on website');
-    await expect(item.getByTestId('multisport')).toHaveText('MultiSport: unknown');
+    await expect(item.getByTestId('multisport')).toHaveText('MultiSport: not available');
     await expect(item.getByTestId('slot-price-cards')).toHaveCount(0);
   });
 
@@ -229,7 +233,7 @@ test.describe('price and MultiSport', () => {
     const card = page.locator('.vcard[data-venue-id="crafted"]');
     await expect(card.getByTestId('price-unknown')).toHaveText('Price on website');
     await expect(card.getByTestId('price-details')).toHaveCount(0);
-    await expect(card.getByTestId('multisport')).toHaveText('MultiSport: unknown');
+    await expect(card.getByTestId('multisport')).toHaveText('MultiSport: not available');
     await expect(card.locator('.vcard-head').getByTestId('live-status')).toHaveText(
       '● Check on website',
     );

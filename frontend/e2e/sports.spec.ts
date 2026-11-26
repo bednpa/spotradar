@@ -49,10 +49,10 @@ test.describe('multiple sports', () => {
     ).toHaveAttribute('href', /fitnessboby\.cz:28080\/timeline\/day\?tabIdx=4/);
     await page.keyboard.press('Escape');
 
-    // Back/forward restores the sport from the URL.
-    await page.goBack();
-    await expect(sportChip(page, 'Badminton')).toHaveAttribute('aria-pressed', 'true');
-    expect(page.url()).not.toContain('sport=squash');
+    // The sport is part of the URL state (replaceState, no history entry): a reload keeps it.
+    await page.reload();
+    await expect(sportChip(page, 'Squash')).toHaveAttribute('aria-pressed', 'true');
+    await expect(sportChip(page, 'Badminton')).toHaveAttribute('aria-pressed', 'false');
   });
 
   test('a sport in the URL is selected on load; padel only counts the 3 padel courts', async ({
@@ -97,7 +97,7 @@ test.describe('multiple sports', () => {
   test('venue list: sport filter, per-sport details and sport tags', async ({ page }) => {
     await page.goto('/venues');
     const viktoria = page.locator('.vcard[data-venue-id="centrum-viktoria"]');
-    const tags = viktoria.getByLabel('Sports and activities');
+    const tags = viktoria.getByLabel('Sports', { exact: true });
     for (const sport of ['Badminton', 'Squash', 'Padel', 'Beach volleyball', 'Tennis']) {
       await expect(tags).toContainText(sport);
     }
@@ -128,7 +128,7 @@ test.describe('multiple sports', () => {
     }
     // Unknown hours are labelled, not invented.
     await expect(page.locator('.vcard[data-venue-id="beach-riviera"] .offering')).toContainText(
-      'Opening hours unknown',
+      'Opening hours not available',
     );
   });
 

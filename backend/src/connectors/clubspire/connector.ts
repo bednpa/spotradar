@@ -8,7 +8,8 @@ import type { AvailabilityConnector, FetchFn } from '../types.ts';
 import { parseClubspireTimeline } from './parser.ts';
 
 export const USER_AGENT = 'SpotRadar/1.0';
-export const DEFAULT_TIMEOUT_MS = 8000;
+/** Timeline pages are large (~0.4–0.7 MB of tooltip markup), so allow more than the usual 8 s. */
+export const DEFAULT_TIMEOUT_MS = 15_000;
 
 export interface ClubspireConnectorOptions {
   fetch?: FetchFn;

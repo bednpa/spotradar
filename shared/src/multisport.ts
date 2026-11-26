@@ -67,7 +67,7 @@ export type MultisportInfo =
   | { category: 'unknown'; note?: string };
 
 export const MULTISPORT_UNKNOWN: MultisportInfo = { category: 'unknown' };
-export const MULTISPORT_UNKNOWN_LABEL = 'MultiSport: unknown';
+export const MULTISPORT_UNKNOWN_LABEL = 'MultiSport: not available';
 export const MULTISPORT_NOT_ACCEPTED_LABEL = 'No MultiSport';
 
 /** True for the categories where cards reduce the price. */
@@ -77,7 +77,7 @@ export function acceptsMultisport(info: MultisportInfo | undefined): boolean {
 
 /**
  * The short category badge text: "1 card = 50 % off", "2 cards = free", "1 card = 30 min",
- * "No MultiSport", "MultiSport: unknown" (also for `undefined`).
+ * "No MultiSport", "MultiSport: not available" (unknown terms, also for `undefined`).
  */
 export function formatMultisport(info: MultisportInfo | undefined): string {
   switch (info?.category) {

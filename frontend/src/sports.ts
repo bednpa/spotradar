@@ -1,6 +1,6 @@
 /** Sport labels, chips and season texts shared by the calendar and the venue list. */
-import { BOOKING_SYSTEM_LABELS, SPORTS, isInSeason, sportInfo } from '@spotradar/shared';
-import type { BookingSystem, OpeningHours, Season, SportId } from '@spotradar/shared';
+import { SPORTS, isInSeason, sportInfo } from '@spotradar/shared';
+import type { OpeningHours, Season, SportId } from '@spotradar/shared';
 import { escapeHtml } from './html.ts';
 
 /**
@@ -42,8 +42,4 @@ export function formatSeason(season: Season): string {
 /** True when the hours have a season and `date` lies outside it. */
 export function isOutOfSeason(hours: OpeningHours | undefined, date: string): boolean {
   return hours?.season !== undefined && !isInSeason(hours.season, date);
-}
-
-export function bookingSystemLabel(system: BookingSystem): string {
-  return BOOKING_SYSTEM_LABELS[system];
 }
