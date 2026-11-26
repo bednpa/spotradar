@@ -1,0 +1,25 @@
+{
+ "success": true,
+ "data": [
+  {
+   "id": "216928",
+   "name": "Brno Kravi Hora",
+   "addresses": [
+    {
+     "timezone": "Europe/Amsterdam"
+    }
+   ],
+   "clubPolicies": [
+    {
+     "bookingAheadLimit": "4",
+     "bookingAheadSportLimit": {
+      "padel": 15,
+      "squash": null,
+      "tennis": null
+     }
+    }
+   ],
+   "availability": []
+  }
+ ]
+}

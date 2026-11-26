@@ -1,0 +1,1612 @@
+{
+ "success": true,
+ "data": [
+  {
+   "id": "216930",
+   "name": "Brno, Slatina",
+   "addresses": [
+    {
+     "timezone": "Europe/Prague"
+    }
+   ],
+   "clubPolicies": [
+    {
+     "bookingAheadLimit": "4",
+     "bookingAheadSportLimit": {}
+    }
+   ],
+   "availability": [
+    {
+     "duration": "60",
+     "slotCount": 113,
+     "slots": [
+      {
+       "date": "2026-11-27",
+       "startTime": "07:00",
+       "endTime": "08:00",
+       "courts": [
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60093",
+         "name": "6. Court"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "08:00",
+       "endTime": "09:00",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "08:30",
+       "endTime": "09:30",
+       "courts": [
+        {
+         "id": "60088",
+         "name": "1. Court L’Osteria"
+        },
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "09:00",
+       "endTime": "10:00",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60093",
+         "name": "6. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "09:30",
+       "endTime": "10:30",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "10:00",
+       "endTime": "11:00",
+       "courts": [
+        {
+         "id": "60088",
+         "name": "1. Court L’Osteria"
+        },
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60093",
+         "name": "6. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "10:30",
+       "endTime": "11:30",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60093",
+         "name": "6. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "11:00",
+       "endTime": "12:00",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60093",
+         "name": "6. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "11:30",
+       "endTime": "12:30",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        },
+        {
+         "id": "60096",
+         "name": "9. Court FC Zbrojovka Brno"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "12:00",
+       "endTime": "13:00",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60093",
+         "name": "6. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "12:30",
+       "endTime": "13:30",
+       "courts": [
+        {
+         "id": "60088",
+         "name": "1. Court L’Osteria"
+        },
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        },
+        {
+         "id": "60096",
+         "name": "9. Court FC Zbrojovka Brno"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "13:00",
+       "endTime": "14:00",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        },
+        {
+         "id": "60096",
+         "name": "9. Court FC Zbrojovka Brno"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "13:30",
+       "endTime": "14:30",
+       "courts": [
+        {
+         "id": "60088",
+         "name": "1. Court L’Osteria"
+        },
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "14:00",
+       "endTime": "15:00",
+       "courts": [
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        },
+        {
+         "id": "60096",
+         "name": "9. Court FC Zbrojovka Brno"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "14:30",
+       "endTime": "15:30",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "15:00",
+       "endTime": "16:00",
+       "courts": [
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "16:00",
+       "endTime": "17:00",
+       "courts": [
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "17:00",
+       "endTime": "18:00",
+       "courts": [
+        {
+         "id": "60096",
+         "name": "9. Court FC Zbrojovka Brno"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "18:00",
+       "endTime": "19:00",
+       "courts": [
+        {
+         "id": "60096",
+         "name": "9. Court FC Zbrojovka Brno"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "20:00",
+       "endTime": "21:00",
+       "courts": [
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "20:30",
+       "endTime": "21:30",
+       "courts": [
+        {
+         "id": "60096",
+         "name": "9. Court FC Zbrojovka Brno"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "21:00",
+       "endTime": "22:00",
+       "courts": [
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "22:00",
+       "endTime": "23:00",
+       "courts": [
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        },
+        {
+         "id": "60096",
+         "name": "9. Court FC Zbrojovka Brno"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "duration": "90",
+     "slotCount": 95,
+     "slots": [
+      {
+       "date": "2026-11-27",
+       "startTime": "07:00",
+       "endTime": "08:30",
+       "courts": [
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "08:00",
+       "endTime": "09:30",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "08:30",
+       "endTime": "10:00",
+       "courts": [
+        {
+         "id": "60088",
+         "name": "1. Court L’Osteria"
+        },
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60096",
+         "name": "9. Court FC Zbrojovka Brno"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "09:00",
+       "endTime": "10:30",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60093",
+         "name": "6. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "09:30",
+       "endTime": "11:00",
+       "courts": [
+        {
+         "id": "60088",
+         "name": "1. Court L’Osteria"
+        },
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "10:00",
+       "endTime": "11:30",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60093",
+         "name": "6. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "10:30",
+       "endTime": "12:00",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60093",
+         "name": "6. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "11:00",
+       "endTime": "12:30",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "11:30",
+       "endTime": "13:00",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60093",
+         "name": "6. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        },
+        {
+         "id": "60096",
+         "name": "9. Court FC Zbrojovka Brno"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "12:00",
+       "endTime": "13:30",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "12:30",
+       "endTime": "14:00",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        },
+        {
+         "id": "60096",
+         "name": "9. Court FC Zbrojovka Brno"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "13:00",
+       "endTime": "14:30",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "13:30",
+       "endTime": "15:00",
+       "courts": [
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        },
+        {
+         "id": "60096",
+         "name": "9. Court FC Zbrojovka Brno"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "14:00",
+       "endTime": "15:30",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "14:30",
+       "endTime": "16:00",
+       "courts": [
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60093",
+         "name": "6. Court"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "15:30",
+       "endTime": "17:00",
+       "courts": [
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "20:00",
+       "endTime": "21:30",
+       "courts": [
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "20:30",
+       "endTime": "22:00",
+       "courts": [
+        {
+         "id": "60096",
+         "name": "9. Court FC Zbrojovka Brno"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "21:30",
+       "endTime": "23:00",
+       "courts": [
+        {
+         "id": "60088",
+         "name": "1. Court L’Osteria"
+        },
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60093",
+         "name": "6. Court"
+        },
+        {
+         "id": "60096",
+         "name": "9. Court FC Zbrojovka Brno"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "duration": "120",
+     "slotCount": 80,
+     "slots": [
+      {
+       "date": "2026-11-27",
+       "startTime": "07:00",
+       "endTime": "09:00",
+       "courts": [
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "08:00",
+       "endTime": "10:00",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "08:30",
+       "endTime": "10:30",
+       "courts": [
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "09:00",
+       "endTime": "11:00",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60093",
+         "name": "6. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "09:30",
+       "endTime": "11:30",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "10:00",
+       "endTime": "12:00",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60093",
+         "name": "6. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "10:30",
+       "endTime": "12:30",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "11:00",
+       "endTime": "13:00",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60093",
+         "name": "6. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "11:30",
+       "endTime": "13:30",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        },
+        {
+         "id": "60096",
+         "name": "9. Court FC Zbrojovka Brno"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "12:00",
+       "endTime": "14:00",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "12:30",
+       "endTime": "14:30",
+       "courts": [
+        {
+         "id": "60088",
+         "name": "1. Court L’Osteria"
+        },
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "13:00",
+       "endTime": "15:00",
+       "courts": [
+        {
+         "id": "60095",
+         "name": "8. Court"
+        },
+        {
+         "id": "60096",
+         "name": "9. Court FC Zbrojovka Brno"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "13:30",
+       "endTime": "15:30",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "14:00",
+       "endTime": "16:00",
+       "courts": [
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "15:00",
+       "endTime": "17:00",
+       "courts": [
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "17:00",
+       "endTime": "19:00",
+       "courts": [
+        {
+         "id": "60096",
+         "name": "9. Court FC Zbrojovka Brno"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "20:00",
+       "endTime": "22:00",
+       "courts": [
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-27",
+       "startTime": "21:00",
+       "endTime": "23:00",
+       "courts": [
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

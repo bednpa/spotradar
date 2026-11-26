@@ -1,0 +1,124 @@
+{
+ "success": true,
+ "data": [
+  {
+   "id": "216930",
+   "name": "Brno, Slatina",
+   "addresses": [
+    {
+     "timezone": "Europe/Prague"
+    }
+   ],
+   "clubPolicies": [
+    {
+     "bookingAheadLimit": "4",
+     "bookingAheadSportLimit": {}
+    }
+   ],
+   "availability": [
+    {
+     "duration": "60",
+     "slotCount": 7,
+     "slots": [
+      {
+       "date": "2026-11-26",
+       "startTime": "21:00",
+       "endTime": "22:00",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        }
+       ]
+      },
+      {
+       "date": "2026-11-26",
+       "startTime": "22:00",
+       "endTime": "23:00",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        },
+        {
+         "id": "60094",
+         "name": "7. Court Porcelanosa"
+        },
+        {
+         "id": "60095",
+         "name": "8. Court"
+        },
+        {
+         "id": "60096",
+         "name": "9. Court FC Zbrojovka Brno"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "duration": "90",
+     "slotCount": 5,
+     "slots": [
+      {
+       "date": "2026-11-26",
+       "startTime": "21:30",
+       "endTime": "23:00",
+       "courts": [
+        {
+         "id": "60088",
+         "name": "1. Court L’Osteria"
+        },
+        {
+         "id": "60090",
+         "name": "3. Court CERTINA & Fr. Hanák"
+        },
+        {
+         "id": "60091",
+         "name": "4. Court CTP"
+        },
+        {
+         "id": "60093",
+         "name": "6. Court"
+        },
+        {
+         "id": "60097",
+         "name": "10. Court OPPORTUNITY"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "duration": "120",
+     "slotCount": 2,
+     "slots": [
+      {
+       "date": "2026-11-26",
+       "startTime": "21:00",
+       "endTime": "23:00",
+       "courts": [
+        {
+         "id": "60089",
+         "name": "2. Court"
+        },
+        {
+         "id": "60092",
+         "name": "5. Court"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
