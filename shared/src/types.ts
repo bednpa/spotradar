@@ -32,7 +32,7 @@ export interface Season {
 }
 
 export interface OpeningHours {
-  /** True when the hours are an estimate (not confirmed by the venue). */
+  /** True when the hours are an estimate (not confirmed by the venue); data only, not shown. */
   approximate: boolean;
   /** null = closed that day. */
   days: Record<Weekday, DayOpeningHours | null>;
@@ -82,11 +82,6 @@ export interface Venue {
   phone?: string;
   /** The venue's own website (not the booking page); absent when unknown. */
   website?: string;
-  /**
-   * Other activities offered at the venue that SpotRadar does not search
-   * (display only, e.g. ["Bowling", "Fitness"]); absent or empty when none.
-   */
-  otherActivities?: string[];
 }
 
 /**

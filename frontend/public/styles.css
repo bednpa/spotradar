@@ -1446,7 +1446,6 @@ input[type='search']:focus-visible {
 
 .price-rules {
   margin: 0.4rem 0 0;
-  padding-left: 1.1rem;
 }
 
 .price-note {
@@ -1655,7 +1654,7 @@ input[type='search']:focus-visible {
 
 .hours-days {
   display: inline-block;
-  min-width: 4.4rem;
+  min-width: 2.6rem;
   font-weight: 700;
 }
 

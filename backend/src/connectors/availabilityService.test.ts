@@ -6,6 +6,7 @@ import {
   AVAILABILITY_CACHE_TTL_MS,
   AVAILABILITY_STALE_MAX_AGE_MS,
   BACKOFF_INITIAL_MS,
+  TIMEOUTS_BEFORE_BACKOFF,
   createAvailabilityService,
   createDefaultConnectors,
   isConnectionError,
@@ -458,6 +459,32 @@ describe('host backoff', () => {
     assert.equal((await service.getAvailability(KUKLENSKA, DATE)).status, 'live');
     assert.equal(service.isHostBackedOff(KUKLENSKA_HOST), false);
     assert.equal(connector.calls.length, 3);
+  });
+
+  it('backs off only after repeated timeouts; a success in between resets the count', async () => {
+    let outcome: 'timeout' | 'ok' = 'timeout';
+    const connector = fakeConnector('clubspire', () =>
+      outcome === 'timeout'
+        ? Promise.reject(new UpstreamTimeoutError(15_000))
+        : Promise.resolve([slot('10:00', '11:00', 1)]),
+    );
+    const service = createAvailabilityService({
+      connectors: [connector],
+      now: fakeClock().now,
+      logger: silentLogger,
+    });
+    assert.equal(TIMEOUTS_BEFORE_BACKOFF, 2);
+    // One slow page: the next date is still read (not "unavailable" for the whole host).
+    assert.equal((await service.getAvailability(KUKLENSKA, DATE)).status, 'unavailable');
+    assert.equal(service.isHostBackedOff(KUKLENSKA_HOST), false);
+    outcome = 'ok';
+    assert.equal((await service.getAvailability(KUKLENSKA, '2026-11-26')).status, 'live');
+    outcome = 'timeout';
+    await service.getAvailability(KUKLENSKA, '2026-11-27');
+    assert.equal(service.isHostBackedOff(KUKLENSKA_HOST), false, 'streak was reset by the success');
+    await service.getAvailability(KUKLENSKA, '2026-11-28');
+    assert.equal(service.isHostBackedOff(KUKLENSKA_HOST), true);
+    assert.equal(connector.calls.length, 4);
   });
 
   it('does not back off on non-connection errors', async () => {

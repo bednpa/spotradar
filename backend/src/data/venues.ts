@@ -160,7 +160,6 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     location: { lat: 49.17627, lng: 16.61661 },
     phone: '776 282 575',
     website: 'https://www.centrumviktoria.cz/',
-    otherActivities: ['Bowling'],
     offerings: [
       {
         sport: 'badminton',
@@ -344,7 +343,6 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     location: { lat: 49.1734, lng: 16.68352 },
     website: 'https://www.xarena.cz/',
     // Table tennis is offered, but its booking and prices were not found (2026-11-25).
-    otherActivities: ['Table tennis'],
     offerings: [
       {
         sport: 'badminton',
@@ -427,7 +425,6 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     location: { lat: 49.25891, lng: 16.57203 },
     website: 'http://www.sportcentrum-ivanovice.cz/',
     phone: '730 899 399',
-    otherActivities: ['Fitness classes', 'Indoor cycling'],
     offerings: [
       {
         sport: 'badminton',
@@ -490,7 +487,6 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     location: { lat: 49.212727, lng: 16.6082265 },
     phone: '607 853 386',
     website: 'https://www.fitnessboby.cz/',
-    otherActivities: ['Fitness'],
     offerings: [
       {
         sport: 'squash',
@@ -657,7 +653,6 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     phone: '725 712 834',
     website: 'https://www.clubclassic.cz/',
     // Also badminton and "paddle tenis" (not padel); no details found (2026-11-25).
-    otherActivities: ['Badminton', 'Paddle tennis'],
     offerings: [
       noConnector({
         sport: 'tennis',
@@ -799,7 +794,6 @@ export const VENUE_RECORDS: readonly VenueRecord[] = [
     location: { lat: 49.1991046, lng: 16.5374565 },
     phone: '721 254 008',
     website: 'https://www.tenisovahalakohoutovice.cz',
-    otherActivities: ['Table tennis'],
     offerings: [
       noConnector({
         sport: 'tennis',

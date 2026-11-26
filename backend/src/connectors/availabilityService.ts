@@ -17,6 +17,11 @@ export const AVAILABILITY_STALE_MAX_AGE_MS = 60 * 60 * 1000;
 export const HOST_WARNING_INTERVAL_MS = 60 * 60 * 1000;
 export const BACKOFF_INITIAL_MS = 5 * 60 * 1000;
 export const BACKOFF_MAX_MS = 60 * 60 * 1000;
+/**
+ * Consecutive timeouts of one host before it is backed off. A refused / reset / DNS failure backs
+ * off at once, but one slow page (ClubSpire pages are ~700 KB) must not hide a host for 5–60 min.
+ */
+export const TIMEOUTS_BEFORE_BACKOFF = 2;
 
 export type WarmResult = 'skipped' | 'ok' | 'failed';
 
@@ -155,6 +160,8 @@ export function createAvailabilityService(
   const cache = new Map<string, CacheEntry>();
   const inFlight = new Map<string, Promise<CacheEntry>>();
   const backoff = new Map<string, { failures: number; until: number }>();
+  /** Consecutive timeouts per host (reset by any success). */
+  const timeoutStreak = new Map<string, number>();
   const warnings = new Map<string, { lastAt: number; suppressed: number }>();
 
   function isBackedOff(host: string | undefined): boolean {
@@ -231,7 +238,10 @@ export function createAvailabilityService(
           };
           cache.set(key, entry);
           evictOld(entry.storedAt);
-          if (host !== undefined) backoff.delete(host);
+          if (host !== undefined) {
+            backoff.delete(host);
+            timeoutStreak.delete(host);
+          }
           logger.info(`[availability] ${label(target)} ${date} read in ${took()} ms (ok)`);
           return entry;
         },
@@ -241,7 +251,14 @@ export function createAvailabilityService(
             `[availability] ${label(target)} ${date} read in ${took()} ms (failed: ${reason})`,
           );
           const hostKey = host ?? label(target);
-          if (host !== undefined && isConnectionError(err)) markConnectionFailure(host);
+          const connection = connectionReason(err);
+          if (host !== undefined && connection === 'timeout') {
+            const streak = (timeoutStreak.get(host) ?? 0) + 1;
+            timeoutStreak.set(host, streak);
+            if (streak >= TIMEOUTS_BEFORE_BACKOFF) markConnectionFailure(host);
+          } else if (host !== undefined && connection !== undefined) {
+            markConnectionFailure(host);
+          }
           warnFailure(target, date, hostKey, err);
           throw err;
         },
